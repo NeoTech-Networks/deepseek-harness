@@ -118,6 +118,7 @@ export function apply(ctx: Context): void {
         })
     },
     renameWorkspace: async (workspaceId, title) => { await workspaces.rename(workspaceId, title) },
+    setGroupWorkspace: async (workspaceId, group) => { await workspaces.setGroup(workspaceId, group) },
     deleteWorkspace: async (workspaceId) => { await workspaces.delete(workspaceId) },
     insertWorkspaceBefore: async (workspaceId, beforeWorkspaceId) => {
       await workspaces.insertBefore(workspaceId, beforeWorkspaceId)

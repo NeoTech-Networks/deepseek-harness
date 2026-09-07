@@ -335,6 +335,7 @@ interface WorkspaceView {
   readonly workspaceId: WorkspaceId
   readonly path: string
   readonly title: string
+  readonly group: string
   readonly sessionIds: readonly SessionId[]
   readonly createdAt: string
   readonly updatedAt: string
@@ -343,6 +344,7 @@ interface WorkspaceView {
 interface WorkspaceCreateRequest { readonly path: string }
 interface WorkspaceCreateValue { readonly workspace: WorkspaceView; readonly created: boolean }
 interface WorkspaceRenameRequest { readonly workspaceId: WorkspaceId; readonly title: string }
+interface WorkspaceSetGroupRequest { readonly workspaceId: WorkspaceId; readonly group: string }
 interface WorkspaceValue { readonly workspace: WorkspaceView }
 interface WorkspaceDeleteRequest { readonly workspaceId: WorkspaceId }
 interface WorkspaceDeleteValue { readonly deleted: true }
@@ -375,6 +377,7 @@ type WorkspaceFollowFrame =
 interface FixtureWorkspaceApi {
   create(request: WorkspaceCreateRequest): Promise<ConnectionRpcResult<WorkspaceCreateValue>>
   rename(request: WorkspaceRenameRequest): Promise<ConnectionRpcResult<WorkspaceValue>>
+  setGroup(request: WorkspaceSetGroupRequest): Promise<ConnectionRpcResult<WorkspaceValue>>
   delete(request: WorkspaceDeleteRequest): Promise<ConnectionRpcResult<WorkspaceDeleteValue>>
   insertBefore(request: WorkspaceInsertBeforeRequest): Promise<ConnectionRpcResult<WorkspaceOrderValue>>
   insertSessionBefore(request: WorkspaceInsertSessionBeforeRequest): Promise<ConnectionRpcResult<WorkspaceValue>>
@@ -385,6 +388,7 @@ interface FixtureWorkspace {
   workspaceId: WorkspaceId
   path: string
   title: string
+  group: string
   sessionIds: SessionId[]
   createdAt: string
   updatedAt: string
@@ -1962,6 +1966,7 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
     workspaceId: wid('fx-ws-fixture'),
     path: '/tmp/fixture',
     title: 'fixture',
+    group: '',
     sessionIds: [sid('fx-alpha'), sid('fx-beta'), sid('fx-gamma')],
     createdAt: fixtureEpoch,
     updatedAt: fixtureEpoch,
@@ -1969,6 +1974,7 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
     workspaceId: wid('fx-ws-home'),
     path: `${FIXTURE_HOME}/Documents/project`,
     title: 'project',
+    group: '',
     sessionIds: [],
     createdAt: fixtureEpoch,
     updatedAt: fixtureEpoch,
@@ -3595,6 +3601,7 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         workspaceId: wid(`fx-ws-${nextWorkspace++}`),
         path: request.path,
         title: request.path.split('/').filter(Boolean).at(-1) ?? request.path,
+        group: '',
         sessionIds: [],
         createdAt: now,
         updatedAt: now,
@@ -3630,6 +3637,23 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
           })
         }
         workspace.title = title
+        workspace.updatedAt = new Date().toISOString()
+        emitWorkspace({ type: 'upsert', workspace: workspaceSnapshot(workspace) })
+      }
+      return sessionOk({ workspace: workspaceSnapshot(workspace) })
+    },
+    setGroup: (request) => {
+      const workspace = workspaces.find(candidate => candidate.workspaceId === request.workspaceId)
+      if (workspace === undefined) {
+        return sessionErr({
+          code: 'workspace/not-found',
+          message: `no workspace ${request.workspaceId}`,
+          details: { workspaceId: request.workspaceId },
+        })
+      }
+      const group = request.group.trim()
+      if (group !== workspace.group) {
+        workspace.group = group
         workspace.updatedAt = new Date().toISOString()
         emitWorkspace({ type: 'upsert', workspace: workspaceSnapshot(workspace) })
       }
@@ -3914,6 +3938,7 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         case '$events/result': return Promise.resolve(answerRemoteEvent(args as unknown as FixtureRemoteEventResult))
         case 'workspace/create': return workspaceApi.create(request as WorkspaceCreateRequest)
         case 'workspace/rename': return workspaceApi.rename(request as WorkspaceRenameRequest)
+        case 'workspace/setGroup': return workspaceApi.setGroup(request as WorkspaceSetGroupRequest)
         case 'workspace/delete': return workspaceApi.delete(request as WorkspaceDeleteRequest)
         case 'workspace/insertBefore': return workspaceApi.insertBefore(request as WorkspaceInsertBeforeRequest)
         case 'workspace/insertSessionBefore': return workspaceApi.insertSessionBefore(

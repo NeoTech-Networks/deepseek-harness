@@ -90,6 +90,10 @@ export class WorkspaceEntity implements Workspace {
     return this.record.title
   }
 
+  get group(): string | undefined {
+    return this.record.group
+  }
+
   get createdAt(): string {
     return this.record.createdAt
   }
@@ -104,6 +108,13 @@ export class WorkspaceEntity implements Workspace {
 
   async setTitle(title: string): Promise<void> {
     await this.mutate(record => ({ ...record, title }))
+  }
+
+  async setGroup(group: string | undefined): Promise<void> {
+    const trimmed = group?.trim()
+    const next = trimmed === undefined || trimmed === '' ? undefined : trimmed
+    if (this.record.group === next) return
+    await this.mutate(record => ({ ...record, group: next }))
   }
 
   async attachSession(sessionId: SessionId): Promise<void> {

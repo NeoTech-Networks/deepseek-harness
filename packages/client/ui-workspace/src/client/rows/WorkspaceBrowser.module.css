@@ -377,6 +377,18 @@
   margin-top: 4px;
 }
 
+/* One named group header, above its Workspace sections. */
+.groupHeader {
+  margin-top: 8px;
+  padding: 2px 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dsw-alias-label-tertiary);
+}
+
 .listTopDropIndicator,
 .workspaceDropBefore::before,
 .workspaceDropAfter::after {

@@ -890,6 +890,19 @@ describe('workspace mutation and status', () => {
     expect(workspace.title).toBe('kept')
   })
 
+  it('sets and clears the grouping label, trimming to the stored value', async () => {
+    const dir = await makeDir('group')
+    const { registry } = await harness()
+    const workspace = await registry.create(dir)
+    expect(workspace.group).toBeUndefined()
+    await workspace.setGroup('  Railway  ')
+    expect(workspace.group).toBe('Railway')
+    await workspace.setGroup('')
+    expect(workspace.group).toBeUndefined()
+    await workspace.setGroup(undefined)
+    expect(workspace.group).toBeUndefined()
+  })
+
   it('reports directory disappearance without mutating the workspace', async () => {
     const dir = await makeDir('vanishing')
     const { registry } = await harness()

@@ -178,6 +178,7 @@ interface FixtureWorkspaceView {
   readonly workspaceId: WorkspaceId
   readonly path: string
   readonly title: string
+  readonly group: string
   readonly sessionIds: readonly SessionId[]
   readonly createdAt: string
   readonly updatedAt: string
@@ -186,6 +187,7 @@ interface FixtureWorkspaceView {
 interface FixtureWorkspaceRequests {
   create: { readonly path: string }
   rename: { readonly workspaceId: WorkspaceId; readonly title: string }
+  setGroup: { readonly workspaceId: WorkspaceId; readonly group: string }
   delete: { readonly workspaceId: WorkspaceId }
   insertBefore: { readonly workspaceId: WorkspaceId; readonly beforeWorkspaceId?: WorkspaceId }
   insertSessionBefore: {
@@ -199,6 +201,7 @@ interface FixtureWorkspaceRequests {
 interface FixtureWorkspaceValues {
   create: { readonly workspace: FixtureWorkspaceView; readonly created: boolean }
   rename: { readonly workspace: FixtureWorkspaceView }
+  setGroup: { readonly workspace: FixtureWorkspaceView }
   delete: { readonly deleted: true }
   insertBefore: { readonly workspaceIds: readonly WorkspaceId[] }
   insertSessionBefore: { readonly workspace: FixtureWorkspaceView }
@@ -467,6 +470,7 @@ function createWorkspaceApi(rpc: ClientConnectionRpc): FixtureWorkspaceApi {
   return {
     create: (request, signal) => call('create', request, signal),
     rename: (request, signal) => call('rename', request, signal),
+    setGroup: (request, signal) => call('setGroup', request, signal),
     delete: (request, signal) => call('delete', request, signal),
     insertBefore: (request, signal) => call('insertBefore', request, signal),
     insertSessionBefore: (request, signal) => call('insertSessionBefore', request, signal),
@@ -479,6 +483,7 @@ function createWorkspaceClient(rpc: ClientConnectionRpc): FixtureWorkspaceClient
   return {
     create: (request, signal) => api.create(req(request), signal),
     rename: (request, signal) => api.rename(req(request), signal),
+    setGroup: (request, signal) => api.setGroup(req(request), signal),
     delete: (request, signal) => api.delete(req(request), signal),
     insertBefore: (request, signal) => api.insertBefore(req(request), signal),
     insertSessionBefore: (request, signal) => api.insertSessionBefore(req(request), signal),

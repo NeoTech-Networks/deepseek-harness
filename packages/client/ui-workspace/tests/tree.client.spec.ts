@@ -5,9 +5,10 @@ import type { SessionPendingInteractionBase } from '@deepseek-ai/dsh-client-ui-s
 import type { ScheduleId, ScheduleRecord } from '@deepseek-ai/dsh-schedule/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
-  deriveFlat, deriveGroups, deriveSearchResults, owningGroupKey, workspaceLabel,
+  deriveFlat, deriveGroups as deriveGroupsSectioned, derivePhase, deriveSearchResults, owningGroupKey, workspaceLabel,
   UNGROUPED_KEY,
 } from '../src/client/tree.ts'
+import type { SessionRowFacts } from '../src/client/tree.ts'
 import { createWorkspaceViewStore } from '../src/client/stores.ts'
 
 const sid = (id: string) => id as SessionId
@@ -22,10 +23,14 @@ const list = (...items: SessionSummary[]): SessionListState => ({
   current: undefined,
   phase: 'ready', subagentsByParent: {}, jobsBySession: {}, currentAddress: undefined,
 })
-const workspace = (id: string, sessionIds: string[], title = id): WorkspaceView => ({
-  workspaceId: wid(id), path: `/projects/${id}`, title,
+const workspace = (id: string, sessionIds: string[], title = id, group = ''): WorkspaceView => ({
+  workspaceId: wid(id), path: `/projects/${id}`, title, group,
   sessionIds: sessionIds.map(sid), createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
 })
+
+/** Flatten the two-level section output back to Workspace rows for the flat-shape assertions. */
+const deriveGroups = (...args: Parameters<typeof deriveGroupsSectioned>) =>
+  deriveGroupsSectioned(...args).flatMap(section => section.workspaces)
 const view = (expandedGroups: readonly string[] = [], ungroupedOrder?: readonly string[]) => ({
   expandedGroups,
   ...(ungroupedOrder === undefined ? {} : { ungroupedOrder }),
@@ -185,6 +190,31 @@ describe('deriveGroups', () => {
     ).items.map(node => [node.id, node.hasActiveSchedule])).toEqual(expected)
   })
 
+  it('derives plan mode from the projection for grouped, flat, and search rows', () => {
+    const absent = summary('absent', 4)
+    const off = { ...summary('off', 3), projectionValues: { plan: { active: false, pending: false } } }
+    // A pending selection is not yet plan mode: the row follows the state in force.
+    const pending = { ...summary('pending', 2), projectionValues: { plan: { active: false, pending: true } } }
+    const on = { ...summary('on', 1), projectionValues: { plan: { active: true, pending: false } } }
+    const sessions = list(absent, off, pending, on)
+    const workspaces = [workspace('project', ['absent', 'off', 'pending', 'on'], 'Project')]
+    const expected = [
+      [sid('absent'), false],
+      [sid('off'), false],
+      [sid('pending'), false],
+      [sid('on'), true],
+    ]
+
+    expect(deriveGroups(
+      sessions, workspaces, noArchive, noAttention, view(['project']),
+    )[0]!.sessions.map(node => [node.id, node.planActive])).toEqual(expected)
+    expect(deriveFlat(sessions, noArchive, noAttention)
+      .map(node => [node.id, node.planActive])).toEqual(expected)
+    expect(deriveSearchResults(
+      sessions, workspaces, 'project', noArchive, noAttention, { items: [], hasMore: false }, 10,
+    ).items.map(node => [node.id, node.planActive])).toEqual(expected)
+  })
+
   it('hides subagent-origin sessions without hiding ordinary forks', () => {
     const parent = summary('parent', 1)
     const subagent = {
@@ -290,6 +320,24 @@ describe('deriveGroups', () => {
       { ...list(owned, loose), current: loose.id }, [ws], noArchive, noAttention, view(),
     )
     expect(looseGroups.find(group => group.key === UNGROUPED_KEY)!.containsCurrent).toBe(true)
+  })
+
+  it('nests Workspaces under named group sections, then ungrouped, then loose sessions', () => {
+    const sessions = list(summary('owned', 1), summary('loose', 2, '/other'))
+    const workspaces = [
+      workspace('railway-a', ['owned'], 'railway-a', 'Railway'),
+      workspace('ungrouped-a', [], 'ungrouped-a'),
+      workspace('railway-b', [], 'railway-b', 'Railway'),
+    ]
+    const sections = deriveGroupsSectioned(
+      sessions, workspaces, noArchive, noAttention,
+      view(['railway-a', 'ungrouped-a', 'railway-b', UNGROUPED_KEY]),
+    )
+    expect(sections.map(section => section.label)).toEqual(['Railway', undefined, undefined])
+    expect(sections[0]!.workspaces.map(w => w.key)).toEqual(['railway-a', 'railway-b'])
+    expect(sections[1]!.workspaces.map(w => w.key)).toEqual(['ungrouped-a'])
+    expect(sections[2]!.workspaces.map(w => w.key)).toEqual([UNGROUPED_KEY])
+    expect(sections[0]!.workspaces[0]!.sessions.map(s => s.id)).toEqual([sid('owned')])
   })
 })
 
@@ -401,7 +449,9 @@ describe('deriveSearchResults', () => {
           runningSubagentCount: 0,
           pendingInteraction: 'plan-review',
           completed: false,
+          planActive: false,
           hasActiveSchedule: false,
+          phase: 'awaiting-plan-review',
           snippet: 'title session body excerpt',
         },
         {
@@ -411,7 +461,9 @@ describe('deriveSearchResults', () => {
           running: false,
           runningSubagentCount: 0,
           completed: false,
+          planActive: false,
           hasActiveSchedule: false,
+          phase: 'idle',
         },
         {
           id: contentHit.id,
@@ -420,7 +472,9 @@ describe('deriveSearchResults', () => {
           running: false,
           runningSubagentCount: 0,
           completed: false,
+          planActive: false,
           hasActiveSchedule: false,
+          phase: 'idle',
           snippet: 'body needle excerpt',
         },
       ],
@@ -486,6 +540,54 @@ describe('deriveSearchResults', () => {
     expect(backendMore.hasMore).toBe(true)
     expect(deriveSearchResults(list(), [], '  ', noArchive, noAttention, { items: [], hasMore: true }, 3))
       .toEqual({ items: [], hasMore: false })
+  })
+})
+
+describe('derivePhase', () => {
+  const facts = (overrides: Partial<Omit<SessionRowFacts, 'phase'>> = {}): Omit<SessionRowFacts, 'phase'> => ({
+    running: false,
+    runningSubagentCount: 0,
+    completed: false,
+    planActive: false,
+    hasActiveSchedule: false,
+    ...overrides,
+  })
+
+  it.each([
+    ['approval', 'awaiting-approval'],
+    ['plan-review', 'awaiting-plan-review'],
+    ['question', 'awaiting-answer'],
+  ] as const)('maps the %s pending interaction to %s', (pendingInteraction, phase) => {
+    expect(derivePhase(facts({ pendingInteraction }))).toBe(phase)
+  })
+
+  it('ranks a blocked operator above every kind of activity', () => {
+    expect(derivePhase(facts({
+      pendingInteraction: 'approval',
+      planActive: true,
+      running: true,
+      runningSubagentCount: 2,
+      completed: true,
+    }))).toBe('awaiting-approval')
+  })
+
+  it('ranks plan mode above own and descendant activity', () => {
+    expect(derivePhase(facts({ planActive: true, running: true, runningSubagentCount: 2 })))
+      .toBe('planning')
+  })
+
+  it('ranks own activity above descendant activity', () => {
+    expect(derivePhase(facts({ running: true, runningSubagentCount: 2 }))).toBe('running')
+    expect(derivePhase(facts({ runningSubagentCount: 2 }))).toBe('subagents')
+  })
+
+  it('separates the finished-but-unopened reminder from idle', () => {
+    expect(derivePhase(facts({ completed: true }))).toBe('done')
+    expect(derivePhase(facts())).toBe('idle')
+  })
+
+  it('lets descendant activity outrank the completion reminder', () => {
+    expect(derivePhase(facts({ completed: true, runningSubagentCount: 1 }))).toBe('subagents')
   })
 })
 

@@ -9,7 +9,7 @@
  * menu in between; the flow and its error dialog live in WorkspacePicker
  * (same package — direct composition, no slot between them).
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   Button, IconCloseFill14, IconPersonalizationOutline16,
@@ -260,6 +260,8 @@ type SessionTreeProps = Pick<
   onRenameRequest: (workspaceId: WorkspaceId, currentTitle: string) => void
   /** Open the browser-owned delete-confirmation dialog for a real Workspace group. */
   onDeleteRequest: (workspaceId: WorkspaceId, currentTitle: string) => void
+  /** Open the browser-owned group-assignment dialog for a real Workspace. */
+  onSetGroupRequest: (workspaceId: WorkspaceId, currentGroup: string) => void
   /** Open the browser-owned session rename dialog. */
   onSessionRename: (sessionId: SessionNode['id'], currentTitle: string) => void
   /** Archive a session (row menu action; the row disappears on the state echo). */
@@ -276,7 +278,7 @@ type SessionTreeProps = Pick<
 function SessionTree({
   useSessions, useSessionPendingInteraction, startSession, open, forkSession, workspaces, archivedSessionIds,
   workspaceReady,
-  onRenameRequest, onDeleteRequest, onSessionRename, onSessionArchive,
+  onRenameRequest, onDeleteRequest, onSetGroupRequest, onSessionRename, onSessionArchive,
   insertWorkspaceBefore, insertSessionBefore, orderBy,
   groupExpansion, setGroupExpanded,
   sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, home, t,
@@ -350,7 +352,7 @@ function SessionTree({
     () => reconciledSessionOrder(ungroupedSessionIds, sessionOrderByAccount[UNGROUPED_KEY]),
     [sessionOrderByAccount, ungroupedSessionIds],
   )
-  const groups = useMemo(
+  const sections = useMemo(
     () => deriveGroups(list, orderedWorkspaces, archivedSessionIds, pendingInteractions, {
       expandedGroups,
       ...(sessionOrderByAccount[UNGROUPED_KEY] === undefined
@@ -359,23 +361,27 @@ function SessionTree({
     }),
     [list, orderedWorkspaces, archivedSessionIds, pendingInteractions, expandedGroups, sessionOrderByAccount],
   )
+  const workspaceNodes = useMemo(
+    () => sections.flatMap(section => section.workspaces),
+    [sections],
+  )
   useEffect(() => {
     if (revealGroup === undefined || groupExpansion[revealGroup] === true) return
     setGroupExpanded(revealGroup, true)
   }, [groupExpansion, revealGroup, setGroupExpanded])
   useEffect(() => {
     if (revealSessionId === undefined || revealGroup === undefined) return
-    const group = groups.find(candidate => candidate.key === revealGroup)
+    const group = workspaceNodes.find(candidate => candidate.key === revealGroup)
     if (group === undefined || !group.expanded || !group.sessions.some(row => row.id === revealSessionId)) return
     if (collapsedSessionRows(group.sessions).rows.some(row => row.id === revealSessionId)) return
     setExpandedSessionGroups(keys => keys.includes(revealGroup) ? keys : [...keys, revealGroup])
-  }, [groups, revealGroup, revealSessionId])
+  }, [workspaceNodes, revealGroup, revealSessionId])
   const now = Date.now()
   const commitSessionDrag = (activeDrag: DragState, over: NonNullable<DragState['over']>): void => {
     if (sessionDropCommitted.current) return
     sessionDropCommitted.current = true
     setDrag(null)
-    const group = groups.find(candidate => candidate.key === activeDrag.accountKey)
+    const group = workspaceNodes.find(candidate => candidate.key === activeDrag.accountKey)
     if (group === undefined) return
     const sessionsExpanded = expandedSessionGroups.includes(group.key)
     const renderedSessions = sessionsExpanded ? group.sessions : collapsedSessionRows(group.sessions).rows
@@ -444,8 +450,8 @@ function SessionTree({
       console.warn('workspace reorder rejected:', reason)
     })
   }
-  const workspaceDropAtListStart = groups[0]?.workspaceId !== undefined
-    && workspaceDrag?.over?.id === groups[0].workspaceId
+  const workspaceDropAtListStart = workspaceNodes[0]?.workspaceId !== undefined
+    && workspaceDrag?.over?.id === workspaceNodes[0].workspaceId
     && workspaceDrag.over.half === 'before'
 
   return (
@@ -456,10 +462,15 @@ function SessionTree({
         role="tree"
         aria-label={t('section.sessions')}
       >
-        {groups.length === 0 && (
+        {workspaceNodes.length === 0 && (
           <div className={css.empty}>{t('empty.none')}</div>
         )}
-        {groups.map((group) => {
+        {sections.map((section) => (
+          <Fragment key={section.key}>
+            {section.label !== undefined && (
+              <div className={css.groupHeader}>{section.label}</div>
+            )}
+            {section.workspaces.map((group) => {
           const workspaceId = group.workspaceId
           const collapsed = collapsedSessionRows(group.sessions)
           const sessionsExpanded = expandedSessionGroups.includes(group.key)
@@ -542,6 +553,9 @@ function SessionTree({
                     /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
                       if (group.workspaceId !== undefined) onRenameRequest(group.workspaceId, group.label)
                     },
+                    setGroup: () => {
+                      if (group.workspaceId !== undefined) onSetGroupRequest(group.workspaceId, group.group)
+                    },
                     delete: () => {
                     /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
                       if (group.workspaceId !== undefined) onDeleteRequest(group.workspaceId, group.label)
@@ -609,7 +623,9 @@ function SessionTree({
               )}
             </div>
           )
-        })}
+            })}
+          </Fragment>
+        ))}
       </div>
       <span className={css.fade} />
     </div>
@@ -845,6 +861,7 @@ export function WorkspaceBrowser({
   forkSession,
   renameWorkspace,
   deleteWorkspace,
+  setGroupWorkspace,
   insertWorkspaceBefore,
   archiveSession,
   insertSessionBefore,
@@ -1033,6 +1050,31 @@ export function WorkspaceBrowser({
     }).catch((reason: unknown) => {
       setRenaming(false)
       setRenameError(reason instanceof Error ? reason.message : String(reason))
+    })
+  }
+
+  // Group assignment dialog (browser-owned; an empty value clears the group).
+  const [groupTarget, setGroupTarget] = useState<{ workspaceId: WorkspaceId; currentGroup: string } | null>(null)
+  const [groupDraft, setGroupDraft] = useState('')
+  const [groupSetting, setGroupSetting] = useState(false)
+  const [groupError, setGroupError] = useState<string | null>(null)
+  const groupTrimmed = groupDraft.trim()
+  const groupBlocked = groupSetting || groupTarget === null || groupTrimmed === groupTarget.currentGroup
+  const closeGroup = () => {
+    if (groupSetting) return
+    setGroupTarget(null)
+    setGroupError(null)
+  }
+  const confirmGroup = () => {
+    if (groupBlocked) return
+    setGroupSetting(true)
+    setGroupError(null)
+    setGroupWorkspace(groupTarget.workspaceId, groupTrimmed).then(() => {
+      setGroupSetting(false)
+      setGroupTarget(null)
+    }).catch((reason: unknown) => {
+      setGroupSetting(false)
+      setGroupError(reason instanceof Error ? reason.message : String(reason))
     })
   }
 
@@ -1313,6 +1355,11 @@ export function WorkspaceBrowser({
                   setDeleteTarget({ workspaceId, title })
                   setDeleteError(null)
                 }}
+                onSetGroupRequest={(workspaceId, currentGroup) => {
+                  setGroupTarget({ workspaceId, currentGroup })
+                  setGroupDraft(currentGroup)
+                  setGroupError(null)
+                }}
               />
             ))}
       </div>
@@ -1350,6 +1397,38 @@ export function WorkspaceBrowser({
           <div className={css.renameError} role="alert">{t('conflict.named', { name: renameTrimmed })}</div>
         )}
         {renameError !== null && <div className={css.renameError} role="alert">{renameError}</div>}
+      </Modal>
+
+      <Modal
+        open={groupTarget !== null}
+        onClose={closeGroup}
+        closeLabel={t('close')}
+        title={t('group.title')}
+        footer={(
+          <>
+            <Button variant="outline" disabled={groupSetting} onClick={closeGroup}>{t('cancel')}</Button>
+            <Button variant="primary" disabled={groupBlocked} onClick={confirmGroup}>{t('group.save')}</Button>
+          </>
+        )}
+      >
+        <input
+          className={css.renameInput}
+          value={groupDraft}
+          aria-label={t('field.groupName')}
+          autoFocus
+          disabled={groupSetting}
+          onFocus={(e) => { e.target.select() }}
+          onChange={(e) => { setGroupDraft(e.target.value); setGroupError(null) }}
+          onCompositionStart={() => { composingRef.current = true }}
+          onCompositionEnd={() => { composingRef.current = false }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !composingRef.current) {
+              e.preventDefault()
+              confirmGroup()
+            }
+          }}
+        />
+        {groupError !== null && <div className={css.renameError} role="alert">{groupError}</div>}
       </Modal>
 
       <Modal

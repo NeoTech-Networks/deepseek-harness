@@ -10,6 +10,7 @@ import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-
 import type {
   SessionPendingInteractionBase,
 } from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-plan-mode/client'
 import type {} from '@deepseek-ai/dsh-schedule/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
@@ -38,13 +39,27 @@ export function owningGroupKey(
 export type SessionPendingInteractionStatus = 'approval' | 'plan-review' | 'question'
 type SessionPendingInteractions = ReadonlyMap<SessionId, SessionPendingInteractionBase>
 
-/** One top-level session row in a group or the flat list. */
-export interface SessionNode {
-  id: SessionId
-  /** Stored display title; the renderer substitutes the localized New Session label for blank rows. */
-  title: string
-  /** The provisional blank session (renderer shows the localized New Session title). */
-  blank: boolean
+/**
+ * The single phase a session row's status slot presents, in the precedence
+ * {@link derivePhase} applies. `subagents` is descendant-only activity; `done`
+ * is the finished-but-unopened reminder, distinct from `idle`.
+ */
+export type SessionPhase =
+  | 'awaiting-approval'
+  | 'awaiting-plan-review'
+  | 'awaiting-answer'
+  | 'planning'
+  | 'running'
+  | 'subagents'
+  | 'done'
+  | 'idle'
+
+/**
+ * Live facts every session row surface derives identically — grouped rows, the
+ * flat list, and search results. They come from the list projection and the
+ * subagent lineage index, never from the surface rendering them.
+ */
+export interface SessionRowFacts {
   /** A Session-scoped UI consumer is awaiting this user. */
   pendingInteraction?: SessionPendingInteractionStatus
   running: boolean
@@ -52,8 +67,21 @@ export interface SessionNode {
   runningSubagentCount: number
   /** Finished running while not selected and not yet opened (the green "done" reminder dot). */
   completed: boolean
+  /** Logged plan mode is in force (the `plan` projection's `active`). */
+  planActive: boolean
   /** The current list projection contains at least one active Schedule record. */
   hasActiveSchedule: boolean
+  /** The winning phase for the row's status slot. */
+  phase: SessionPhase
+}
+
+/** One top-level session row in a group or the flat list. */
+export interface SessionNode extends SessionRowFacts {
+  id: SessionId
+  /** Stored display title; the renderer substitutes the localized New Session label for blank rows. */
+  title: string
+  /** The provisional blank session (renderer shows the localized New Session title). */
+  blank: boolean
   updatedAt: number
 }
 
@@ -70,6 +98,8 @@ export interface GroupNode {
   /** Workspace creation time (epoch ms); absent only for the ungrouped bucket. */
   createdAt: number | undefined
   label: string
+  /** Grouping label; empty string means ungrouped. */
+  group: string
   /** Total visible sessions in the group. */
   sessionCount: number
   expanded: boolean
@@ -79,20 +109,23 @@ export interface GroupNode {
   sessions: readonly SessionNode[]
 }
 
+/** One top-level group section: named groups nest Workspace rows under a header. */
+export interface GroupSectionNode {
+  /** Stable section key. */
+  key: string
+  /** Header label; undefined renders the section's Workspaces without a header. */
+  label: string | undefined
+  /** Some Workspace in the section contains the selected session. */
+  containsCurrent: boolean
+  /** Workspace sections in stable Host order. */
+  workspaces: readonly GroupNode[]
+}
+
 /** One flat search row combining list metadata with an optional content match. */
-export interface SearchResultNode {
+export interface SearchResultNode extends SessionRowFacts {
   id: SessionId
   title: string
   workspace: string
-  /** A Session-scoped UI consumer is awaiting this user. */
-  pendingInteraction?: SessionPendingInteractionStatus
-  running: boolean
-  /** Running descendants connected through uninterrupted subagent-origin lineage. */
-  runningSubagentCount: number
-  /** Finished running while not selected and not yet opened (the green "done" reminder dot). */
-  completed: boolean
-  /** The current list projection contains at least one active Schedule record. */
-  hasActiveSchedule: boolean
   snippet?: string
 }
 
@@ -115,6 +148,7 @@ interface Group {
   cwd: string | undefined
   createdAt: number | undefined
   label: string
+  group: string
   sessions: SessionSummary[]
 }
 
@@ -162,6 +196,45 @@ function hasActiveSchedule(session: SessionSummary): boolean {
   return (session.projectionValues?.schedule?.length ?? 0) > 0
 }
 
+/**
+ * Logged plan mode from the list projection. A `pending` selection is
+ * deliberately not plan mode: the row follows the state in force, so a `/plan`
+ * command that fails never flips the icon. An absent key is capability absence
+ * (plan-mode not composed, or hints that have not warmed) and reads as false.
+ */
+function planActive(session: SessionSummary): boolean {
+  return session.projectionValues?.plan?.active === true
+}
+
+/* v8 ignore next 3 -- closed-union backstop; only reached if a pending kind is forged */
+function assertNever(value: never): never {
+  throw new Error(`unknown pending interaction: ${String(value)}`)
+}
+
+/**
+ * Resolve the one phase a row presents. Anything blocking this operator
+ * outranks everything the agent can do alone; plan mode outranks activity
+ * because it is the durable collaboration state a running turn does not
+ * change; own activity outranks descendant activity; the finished-but-unopened
+ * reminder is last before idle.
+ * @param facts - the row's derived live facts.
+ * @returns the winning phase.
+ */
+export function derivePhase(facts: Omit<SessionRowFacts, 'phase'>): SessionPhase {
+  switch (facts.pendingInteraction) {
+    case 'approval': return 'awaiting-approval'
+    case 'plan-review': return 'awaiting-plan-review'
+    case 'question': return 'awaiting-answer'
+    case undefined: break
+    /* v8 ignore next -- closed SessionPendingInteractionStatus union */
+    default: return assertNever(facts.pendingInteraction)
+  }
+  if (facts.planActive) return 'planning'
+  if (facts.running) return 'running'
+  if (facts.runningSubagentCount > 0) return 'subagents'
+  return facts.completed ? 'done' : 'idle'
+}
+
 /** Build one group without projecting session lineage into presentation. */
 function buildGroup(
   key: string,
@@ -169,6 +242,7 @@ function buildGroup(
   cwd: string | undefined,
   createdAt: number | undefined,
   label: string,
+  group: string,
   members: readonly SessionSummary[],
   order: 'account' | 'recency',
 ): Group {
@@ -176,7 +250,7 @@ function buildGroup(
   // Real Workspace order comes from sessionIds. Ungrouped falls back to
   // recency until the browser supplies its persisted local order.
   if (order === 'recency') sessions.sort(byRecency)
-  return { key, workspaceId, cwd, createdAt, label, sessions }
+  return { key, workspaceId, cwd, createdAt, label, group, sessions }
 }
 
 /** Apply a stored Ungrouped order and append newly loose Sessions by recency. */
@@ -222,7 +296,7 @@ function groupByWorkspace(
     }
     groups.push(buildGroup(
       workspace.workspaceId, workspace.workspaceId, workspace.path,
-      Date.parse(workspace.createdAt), workspace.title, members, 'account',
+      Date.parse(workspace.createdAt), workspace.title, workspace.group, members, 'account',
     ))
   }
   const stray = list.ids
@@ -235,6 +309,7 @@ function groupByWorkspace(
       undefined,
       undefined,
       undefined,
+      '',
       '',
       ungroupedOrder === undefined ? stray : orderedUngrouped(stray, ungroupedOrder),
       ungroupedOrder === undefined ? 'recency' : 'account',
@@ -255,27 +330,90 @@ function visiblePendingKind(kind: string | undefined): SessionPendingInteraction
   }
 }
 
+/** Derive the live facts and the winning phase once, for every row surface. */
+function sessionRowFacts(
+  s: SessionSummary,
+  descendants: ReadonlyMap<SessionId, SubagentDescendantSummary>,
+  pendingInteractions: SessionPendingInteractions,
+): SessionRowFacts {
+  const pendingInteraction = visiblePendingKind(pendingInteractions.get(s.id)?.kind)
+  const facts: Omit<SessionRowFacts, 'phase'> = {
+    running: s.running,
+    runningSubagentCount: descendants.get(s.id)?.runningCount ?? 0,
+    completed: s.completed === true,
+    planActive: planActive(s),
+    hasActiveSchedule: hasActiveSchedule(s),
+    ...(pendingInteraction === undefined ? {} : { pendingInteraction }),
+  }
+  return { ...facts, phase: derivePhase(facts) }
+}
+
 function sessionNode(
   s: SessionSummary,
   descendants: ReadonlyMap<SessionId, SubagentDescendantSummary>,
   pendingInteractions: SessionPendingInteractions,
 ): SessionNode {
-  const pendingInteraction = visiblePendingKind(pendingInteractions.get(s.id)?.kind)
   return {
     id: s.id,
     title: sessionTitle(s),
     blank: s.blank,
-    running: s.running,
-    runningSubagentCount: descendants.get(s.id)?.runningCount ?? 0,
-    completed: s.completed === true,
-    hasActiveSchedule: hasActiveSchedule(s),
     updatedAt: s.updatedAt,
-    ...(pendingInteraction === undefined ? {} : { pendingInteraction }),
+    ...sessionRowFacts(s, descendants, pendingInteractions),
   }
 }
 
+/** Section key for Workspaces without a group label. */
+const UNGROUPED_SECTION_KEY = '\u0000ungrouped'
+/** Section key for Sessions outside every Workspace. */
+const LOOSE_SECTION_KEY = '\u0000loose'
+
+/** Group Workspace rows into sections: named groups first, ungrouped next, loose sessions last. */
+function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
+  const sections: GroupSectionNode[] = []
+  const named = new Map<string, GroupNode[]>()
+  const namedOrder: string[] = []
+  const ungrouped: GroupNode[] = []
+  const loose: GroupNode[] = []
+  for (const node of nodes) {
+    if (node.workspaceId === undefined) { loose.push(node); continue }
+    const label = node.group.trim()
+    if (label === '') { ungrouped.push(node); continue }
+    const bucket = named.get(label)
+    if (bucket === undefined) { named.set(label, [node]); namedOrder.push(label) }
+    else bucket.push(node)
+  }
+  for (const label of namedOrder) {
+    const workspaces = named.get(label) as GroupNode[]
+    sections.push({
+      key: label,
+      label,
+      containsCurrent: workspaces.some(node => node.containsCurrent),
+      workspaces,
+    })
+  }
+  if (ungrouped.length > 0) {
+    sections.push({
+      key: UNGROUPED_SECTION_KEY,
+      label: undefined,
+      containsCurrent: ungrouped.some(node => node.containsCurrent),
+      workspaces: ungrouped,
+    })
+  }
+  if (loose.length > 0) {
+    sections.push({
+      key: LOOSE_SECTION_KEY,
+      label: undefined,
+      containsCurrent: loose.some(node => node.containsCurrent),
+      workspaces: loose,
+    })
+  }
+  return sections
+}
+
 /**
- * Derive the workspace browser groups with every session as a top-level row.
+ * Derive the workspace browser sections: named groups nest Workspace rows
+ * under a header, ungrouped Workspaces render without one, and Sessions
+ * outside every Workspace trail in the browser-local Ungrouped bucket.
  *
  * Every group shows; sessions populate under expanded groups in the selected
  * local order. Blank sessions are excluded except for the selected
@@ -295,7 +433,7 @@ export function deriveGroups(
   archivedSessionIds: readonly SessionId[],
   pendingInteractions: SessionPendingInteractions,
   view: TreeView,
-): GroupNode[] {
+): GroupSectionNode[] {
   const archived = new Set(archivedSessionIds)
   const expandedGroups = new Set(view.expandedGroups)
   const descendants = indexSubagentDescendants(list.byId)
@@ -311,6 +449,7 @@ export function deriveGroups(
       cwd: g.cwd,
       createdAt: g.createdAt,
       label: g.label,
+      group: g.group,
       sessionCount: g.sessions.length,
       expanded,
       containsCurrent: g.key === currentGroup,
@@ -319,7 +458,7 @@ export function deriveGroups(
         : [],
     })
   }
-  return groups
+  return sectionize(groups)
 }
 
 /**
@@ -420,18 +559,11 @@ export function deriveSearchResults(
   return {
     items: ordered.slice(0, limit).map((summary) => {
       const match = contentBySession.get(summary.id)
-      const pendingInteraction = visiblePendingKind(pendingInteractions.get(summary.id)?.kind)
       return {
         id: summary.id,
         title: sessionTitle(summary),
         workspace: labelOf(summary),
-        running: summary.running,
-        runningSubagentCount: descendants.get(summary.id)?.runningCount ?? 0,
-        ...(pendingInteraction === undefined
-          ? {}
-          : { pendingInteraction }),
-        completed: summary.completed === true,
-        hasActiveSchedule: hasActiveSchedule(summary),
+        ...sessionRowFacts(summary, descendants, pendingInteractions),
         ...match === undefined ? {} : { snippet: match.snippet },
       }
     }),

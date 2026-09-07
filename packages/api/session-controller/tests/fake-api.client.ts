@@ -44,6 +44,7 @@ function fakeWorkspace(id: string, over: Partial<WorkspaceView> = {}): Workspace
     workspaceId: id as WorkspaceId,
     path: '/f/ws',
     title: 'ws',
+    group: '',
     sessionIds: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -183,6 +184,9 @@ export class FakeApiClient {
   onWorkspaceRename: (payload: unknown) => Promise<RemoteResult<{ workspace: WorkspaceView }>> =
     () => Promise.resolve(ok({ workspace: fakeWorkspace('fk-ws') }))
 
+  onWorkspaceSetGroup: (payload: unknown) => Promise<RemoteResult<{ workspace: WorkspaceView }>> =
+    () => Promise.resolve(ok({ workspace: fakeWorkspace('fk-ws') }))
+
   onWorkspaceDelete: (payload: unknown) => Promise<RemoteResult<{ deleted: true }>> =
     () => Promise.resolve(ok({ deleted: true }))
 
@@ -257,6 +261,7 @@ export class FakeApiClient {
       workspace: {
         create: payload => this.record('workspace.create', payload, this.onWorkspaceCreate(payload)),
         rename: payload => this.record('workspace.rename', payload, this.onWorkspaceRename(payload)),
+        setGroup: payload => this.record('workspace.setGroup', payload, this.onWorkspaceSetGroup(payload)),
         delete: payload => this.record('workspace.delete', payload, this.onWorkspaceDelete(payload)),
         insertBefore: payload => this.record(
           'workspace.insertBefore',
