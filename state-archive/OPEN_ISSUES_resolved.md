@@ -9,3 +9,7 @@
 ## 2026-09-08 - open-session-in-subfolder
 
 - RESOLVED: "origin is `deepseek-ai/deepseek-harness` with no push access, so a fork target is needed before it can be pushed" - created the `NeoTech-Networks/deepseek-harness` org fork and pushed `feat/open-session-in-subfolder` and `master` there.
+
+## 2026-09-08 - plan-mode-default-active
+
+- RESOLVED: "deepseek-harness state-file sync fails: the save-state commit worker pushes to the upstream remote (`deepseek-ai/deepseek-harness`) where `neotechnet` has no write access, so every sync returns 403. The repo's `origin` points at upstream; the writable fork is `neotech` (`NeoTech-Networks/deepseek-harness`). Fix: point the worker's push (or `origin`) at the fork." - verified this session via `git remote -v`: `origin` now points at the `NeoTech-Networks/deepseek-harness` fork and `upstream` at `deepseek-ai/deepseek-harness`, so the worker's push to origin now lands on the writable fork.
