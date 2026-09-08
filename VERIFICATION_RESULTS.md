@@ -1,3 +1,21 @@
+## 2026-09-08 - Plan mode default active for new sessions
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| plan-mode tests | pass | 93/93 (4 spec files) | VERIFIED |
+| plan-mode typecheck | exit 0 | tsc -b packages/plan/plan-mode/tsconfig.json exit 0 | VERIFIED |
+| host lib build | exit 0 | pnpm build:lib:host exit 0 | VERIFIED |
+| profile lib updated | pinInitialPlanMode present | grep confirms in ~/.dsh/profiles/desktop/node_modules/@deepseek-ai/dsh-plan-mode/lib/index.js | VERIFIED |
+| profile presets updated | defaultActive: true | grep confirms standard/ptc/cordis agent.cordis.yml | VERIFIED |
+| live behavior | new session starts in plan mode | user restarted and confirmed "Appears to work" | VERIFIED |
+
+## 2026-09-08 - origin repoint and state auto-commit
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| remote origin | NeoTech fork | read back correct | VERIFIED |
+| state worker | exit 0 | PR #2/#3 merged | VERIFIED |
+
 ## 2026-09-08 - Plan-mode icon animation and finished icon after save-state
 
 | Check | Expected | Result | Status |
