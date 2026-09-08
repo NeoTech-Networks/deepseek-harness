@@ -1,3 +1,15 @@
+## 2026-09-08 - Plan-mode icon animation and finished icon after save-state
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| ui-workspace tests | 173 pass (1 new) | 173/173 (10 files) | VERIFIED |
+| client typecheck | exit 0 | tsc -b tsconfig.client.json exit 0 | VERIFIED |
+| full pnpm build | exit 0 | exit 0 | VERIFIED |
+| animation in built bundle | scoped pulse rule + keyframe present | confirmed in ui-workspace/lib/client.js | VERIFIED |
+| save-state wrapper regenerated | section 7 present | confirmed in ~/.dsh/skills/save-state.md | VERIFIED |
+| finished status auto-set on save-state | set_session_status called | tool not in agent catalog, step could not run | BLOCKED |
+| live desktop smoke (pulse + Finished) | pulse + green check visible | not run (needs app relaunch) | UNVERIFIED |
+
 ## 2026-09-08 - Workspace group headers: color + alphabetical sort
 
 | Check | Expected | Result | Status |
