@@ -1663,6 +1663,8 @@ Requires: `tools` · `systemPrompt` · `sessionProjections`
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Pin plan mode active for every newly created session that has no logged plan state. */
+  defaultActive?: boolean
 }
 ```
 

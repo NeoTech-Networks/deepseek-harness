@@ -193,7 +193,11 @@ export function explorerTextFace(remote: Pick<ExplorerRemote, 'pinnedFiles'>): E
   }
 }
 
-/** The final segment of an absolute path, for a row label. */
+/**
+ * The final segment of an absolute path, for a row label.
+ * @param path - absolute path whose basename is read.
+ * @returns the trailing segment, or the whole path for a filesystem root with none.
+ */
 export function baseNameOf(path: string): string {
   const trimmed = path.replace(/[/\\]+$/, '')
   const separator = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))

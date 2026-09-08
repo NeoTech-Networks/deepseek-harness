@@ -33,7 +33,10 @@ peerDependencyRules:
 # (git hooks) genuinely need theirs.
 allowBuilds:
   esbuild: true
-  lefthook: true
+  # Disabled on this box: lefthook's postinstall writes into the GLOBAL git
+  # hooks dir (core.hooksPath is global), clobbering the machine's security
+  # hooks. Git commit hooks are not needed to run the desktop app.
+  lefthook: false
   # Cross-platform boundary for the persistent PTY backend, including ConPTY on Windows.
   node-pty: true
   # Pulled in by @earendil-works/pi-ai (optional LLM API backend). pnpm lists
@@ -45,8 +48,10 @@ allowBuilds:
   # JSONL durability calls MoveFileExW with write-through publication on Windows.
   koffi: true
   # The session write lock is flock(2) / LockFileEx; fs-ext compiles its
-  # binding with node-gyp at install.
-  fs-ext: true
+  # binding with node-gyp at install. Disabled on this box: no MSVC toolchain,
+  # and fs-ext is POSIX-only at runtime (Windows uses the koffi semaphore in
+  # src/win32.ts; lease.ts lazy-loads fs-ext only on the POSIX branch).
+  fs-ext: false
   # The Python runtime deploy includes the reviewed workspace postinstall that
   # restores the executable bit on node-pty's macOS spawn helper.
   '@deepseek-ai/dsh-subprocess-local@file:packages/subprocess/subprocess-local': true

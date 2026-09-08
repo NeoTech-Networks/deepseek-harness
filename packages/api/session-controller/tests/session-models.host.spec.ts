@@ -737,4 +737,41 @@ describe('Web session model selection', () => {
     })
     await ctx.fiber.dispose()
   })
+
+  it('describes attached images through the vision service for a text-only selection', async () => {
+    const { ctx, agent, sessionId } = await harness()
+    registerTextOnly(ctx)
+    const savedRef = {
+      attachmentId: 'saved-image', mediaType: 'image/png' as const, bytes: 1, width: 1, height: 1,
+    }
+    ctx.provide('attachments', Object.setPrototypeOf({
+      saveImages: () => Promise.resolve([savedRef]),
+    }, AttachmentStore.prototype) as never)
+    const describe = vi.fn(async (refs: readonly { attachmentId: string }[]) => `described ${refs.length} image(s)`)
+    ctx.provide('visionRouting', { enabled: () => true, describe } as never)
+    const followup = vi.fn()
+    Object.assign(agent, { followup })
+    const remote = createSessionTestRemote(ctx, {
+      defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
+      cwd: '/tmp',
+    })
+    const image = { type: 'image' as const, mediaType: 'image/png' as const, data: 'AQ==' }
+
+    expectValue(await remote.selectModel(request({
+      sessionId, provider: 'text-only', model: 'plain',
+    })))
+    expectValue(await remote.prompt(promptRequest({
+      sessionId, mode: 'queue', content: [image],
+    })))
+
+    expect(describe).toHaveBeenCalledOnce()
+    expect(followup).toHaveBeenCalledOnce()
+    const message = followup.mock.calls[0]?.[0] as UserMessage
+    const text = message.content
+      .filter((block): block is Extract<typeof message.content[number], { type: 'text' }> => block.type === 'text')
+      .map(block => block.text)
+      .join(' ')
+    expect(text).toContain('described 1 image(s)')
+    await ctx.fiber.dispose()
+  })
 })

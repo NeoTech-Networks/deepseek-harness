@@ -104,6 +104,10 @@ kind: "package-reference"
 
 -----
 
+## Runtime invariant
+
+不发布伴随件。词表在插件加载时校验、状态 id 在 `set` 边界校验，`sessionStatus` 投影折叠整值事件，因此没有独立可变关系需要运行时伴随件交叉检查。
+
 <a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work
 

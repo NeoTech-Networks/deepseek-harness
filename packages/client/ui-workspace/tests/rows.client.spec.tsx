@@ -587,6 +587,20 @@ describe('workspace browser rows', () => {
     }
   })
 
+  it('pulses the plan-mode glyph only while the session is working', () => {
+    const active = sessionRow({ id: sid('planner-active'), title: 'Planning', planActive: true, running: true })
+    const view = render(<SessionNodeItem node={active} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    // Working in plan mode: the glyph carries the active flag that drives the pulse.
+    expect(view.container.querySelector('[data-phase="planning"][data-active="true"]')).not.toBeNull()
+
+    view.rerender(<SessionNodeItem node={sessionRow({ ...active, running: false })} currentId={undefined} now={0}
+      onOpen={vi.fn()} onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    // Idle plan mode keeps the glyph but drops the active flag.
+    expect(view.container.querySelector('[data-phase="planning"]')).not.toBeNull()
+    expect(view.container.querySelector('[data-phase="planning"][data-active]')).toBeNull()
+  })
+
   it('idle hover card shows the Idle status line', () => {
     vi.useFakeTimers()
     try {

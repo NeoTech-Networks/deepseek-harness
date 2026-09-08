@@ -3,7 +3,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime, { RUN_CODE_NAME, defineContentToolFixture } from '@deepseek-ai/dsh-tools'
-import { Session, SessionId, type SessionEvent, type UserMessage } from '@deepseek-ai/dsh-session'
+import { Session, SessionId, SessionStore, type SessionEvent, type UserMessage } from '@deepseek-ai/dsh-session'
 import AgentRegistry, { agentEvents, type Agent } from '@deepseek-ai/dsh-agent'
 import { createScope } from '@deepseek-ai/dsh-scope'
 import UserQuestionService, {
@@ -192,13 +192,22 @@ describe('resolveConfig', () => {
   it('returns a detached plan config', () => {
     const config = { section: TEST_PLAN_SECTION }
     const resolved = resolveConfig(config)
-    expect(resolved).toEqual(config)
+    expect(resolved).toEqual({ section: TEST_PLAN_SECTION, defaultActive: false })
     expect(resolved).not.toBe(config)
   })
 
   it('rejects fields outside the plan policy config', () => {
     expect(() => resolveConfig({ section: TEST_PLAN_SECTION, tools: ['read'] } as unknown as PlanModeConfig))
-      .toThrow('unknown key(s) tools — config is { section }')
+      .toThrow('unknown key(s) tools - config is { section, defaultActive }')
+  })
+
+  it('accepts and validates the optional defaultActive flag', () => {
+    expect(resolveConfig({ section: TEST_PLAN_SECTION, defaultActive: true }))
+      .toEqual({ section: TEST_PLAN_SECTION, defaultActive: true })
+    expect(resolveConfig({ section: TEST_PLAN_SECTION }))
+      .toEqual({ section: TEST_PLAN_SECTION, defaultActive: false })
+    expect(() => resolveConfig({ section: TEST_PLAN_SECTION, defaultActive: 'yes' } as unknown as PlanModeConfig))
+      .toThrow('`defaultActive` must be a boolean when provided')
   })
 })
 
@@ -218,6 +227,56 @@ describe('foldPlanMode', () => {
     session.append('plan/mode', { active: false })
     expect(foldPlanMode(session.snapshotEvents(), 1)).toBe(true)
     expect(foldPlanMode(session.snapshotEvents(), 0)).toBe(false)
+  })
+})
+
+describe('defaultActive', () => {
+  async function setupPinning(config: PlanModeConfig): Promise<Context> {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await mountProjectionSeam(ctx)
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(PlanModeController, config)
+    return ctx
+  }
+
+  it('pins a freshly created session active when the deployment opts in', async () => {
+    const ctx = await setupPinning({ section: TEST_PLAN_SECTION, defaultActive: true })
+    const session = ctx.sessions.create(SessionId('default-active-fresh'))
+    expect(foldPlanMode(session.snapshotEvents())).toBe(true)
+    expect(session.snapshotEvents().filter(event => event.type === 'plan/mode')).toHaveLength(1)
+  })
+
+  it('leaves fresh sessions inactive when defaultActive is omitted', async () => {
+    const ctx = await setupPinning({ section: TEST_PLAN_SECTION })
+    const session = ctx.sessions.create(SessionId('default-active-off'))
+    expect(foldPlanMode(session.snapshotEvents())).toBe(false)
+  })
+
+  it('skips subagent sessions', async () => {
+    const ctx = await setupPinning({ section: TEST_PLAN_SECTION, defaultActive: true })
+    const session = ctx.sessions.create(SessionId('default-active-subagent'), { meta: { origin: 'subagent' } })
+    expect(foldPlanMode(session.snapshotEvents())).toBe(false)
+  })
+
+  it('preserves an inherited plan/mode event on resume', async () => {
+    const ctx = await setupPinning({ section: TEST_PLAN_SECTION, defaultActive: true })
+    const parent = Session.create(SessionId('default-active-parent'))
+    parent.append('plan/mode', { active: false })
+    const resumed = ctx.sessions.create(SessionId('default-active-resume'), { seed: parent.snapshotEvents() })
+    expect(foldPlanMode(resumed.snapshotEvents())).toBe(false)
+  })
+
+  it('pins pre-existing sessions once at mount (hot-reload sweep)', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    const preExisting = ctx.sessions.create(SessionId('default-active-sweep'))
+    await mountProjectionSeam(ctx)
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(PlanModeController, { section: TEST_PLAN_SECTION, defaultActive: true })
+    expect(foldPlanMode(preExisting.snapshotEvents())).toBe(true)
   })
 })
 

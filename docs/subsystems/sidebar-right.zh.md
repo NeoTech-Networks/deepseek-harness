@@ -135,3 +135,82 @@ Host 的 `ctx.workspaceFiles` 服务与生成的 `workspaceFiles` Remote 命名�
 - 服务上的地址查找（`find`）：调用方用 `revealIfOpened` 打开，由停靠面去重。
 - Sidebar 自身 `sidebar://<kind>` 记账之外的导航地址；其语法等导航控制器整体做时再定。
 - 面向用户的撤销、内容导航栈、tab 图标与关闭限制（[暂缓](../../.agents/notes/implemented/feature/2026-09-04-right-sidebar-docking-infrastructure.zh.md#deferred)）。
+
+<!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
+
+<a id="cordis-surface"></a>
+
+## Cordis API
+
+Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+
+<a id="ctxpinnedfiles--pinnedfiles"></a>
+
+### `ctx.pinnedFiles` — `PinnedFiles`
+
+Host Remote service over the composed filesystem, confined to nothing and authorized by the operator.
+
+```ts cordis-catalog
+/**
+ * Report the operator's pinned roots and explorer preferences.
+ * @param signal - caller cancellation.
+ * @returns every pinned root with its current reachability, and the auto-open preference.
+ */
+@Remote async state(signal: AbortSignal): Promise<PinnedState>
+
+/**
+ * Pin one directory, appending it to the operator's list.
+ *
+ * Idempotent: pinning a directory already in the list moves nothing and
+ * fails nothing, because the operator's gesture was "make sure this is
+ * there", and a picker can hand back a path they already chose once.
+ * @param path - absolute directory to pin.
+ * @param signal - caller cancellation.
+ * @returns the state after the write.
+ */
+@Remote async addRoot(path: string, signal: AbortSignal): Promise<PinnedState>
+
+/**
+ * Unpin one directory. A path that is not pinned is left alone rather than
+ * refused: the list already says what the caller wanted it to say.
+ * @param path - absolute directory to unpin.
+ * @param signal - caller cancellation.
+ * @returns the state after the write.
+ */
+@Remote async removeRoot(path: string, signal: AbortSignal): Promise<PinnedState>
+
+/**
+ * Set whether the explorer opens itself in every Session.
+ * @param autoOpen - the operator's preference.
+ * @param signal - caller cancellation.
+ * @returns the state after the write.
+ */
+@Remote async setAutoOpen(autoOpen: boolean, signal: AbortSignal): Promise<PinnedState>
+
+/**
+ * List the direct children of one directory anywhere the Host can read.
+ *
+ * The directory does not have to be a pinned root, or under one: the tree
+ * walks downward from a root the operator authorized, and re-checking
+ * ancestry on every level would cost a resolve per row without adding an
+ * authority the caller does not already have.
+ * @param path - absolute directory to list.
+ * @param signal - caller cancellation.
+ * @returns the directory's children in the backend's stable name order, bounded by the entry cap.
+ */
+@Remote async list(path: string, signal: AbortSignal): Promise<PinnedListing>
+
+/**
+ * Read one regular file's whole text from anywhere the Host can read.
+ *
+ * A file above the byte cap is refused with its size rather than shortened,
+ * because a silently cut file reads as the whole file.
+ * @param path - absolute path of the file.
+ * @param signal - caller cancellation.
+ * @returns the file's identity, size, and complete decoded text.
+ */
+@Remote async read(path: string, signal: AbortSignal): Promise<PinnedFileText>
+```
+
+Source: [`packages/api/pinned-files/src/index.ts`](../../packages/api/pinned-files/src/index.ts)
+<!-- END GENERATED cordis-surface -->

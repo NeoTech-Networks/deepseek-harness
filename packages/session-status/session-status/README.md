@@ -102,6 +102,10 @@ None, as the status service registers no tool or prompt and the sessionStatus pr
 
 None; the projection never assembles or sends a provider request.
 
+## Runtime invariant
+
+No companion is published. The vocabulary is validated at plugin load and the status id at the `set` boundary, and the `sessionStatus` projection folds the whole-value event, so there is no independent mutable relationship for a runtime companion to cross-check.
+
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>

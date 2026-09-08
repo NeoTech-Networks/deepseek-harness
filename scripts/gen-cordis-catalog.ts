@@ -127,6 +127,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   workspaceFiles: 'workspace.md',
   pinnedFiles: 'sidebar-right.md',
   directoryPickerController: 'workspace.md',
+  visionRouting: 'vision.md',
 }
 
 /**
@@ -311,6 +312,9 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   RequestErrorAction: 'core.md',
   RequestFailureContext: 'core.md',
   PreparedReferencedMessage: 'session-reference.md',
+  PinnedFileText: 'sidebar-right.md',
+  PinnedListing: 'sidebar-right.md',
+  PinnedState: 'sidebar-right.md',
   FileReferenceCandidate: 'session-reference.md',
   SessionReferenceCandidate: 'session-reference.md',
   SessionReferenceMentionCandidate: 'session-reference.md',

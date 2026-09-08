@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-本服务保存操作者在 Host 机器上固定的目录清单，并在这些目录中列目录、读文件。清单存放在 `pinned-files` 设置命名空间，也就是 `$DSH_HOME/settings.yaml` 的一节：重启后依然存在，在每个 Session 和每个 Workspace 中都相同，也可以手工编辑。这里没有任何东西按 Session 作用域，这正是重点；按 Session 作用域的文件服务已经存在，即 [`dsh-api-workspace-files`](../workspace-files/README.md)。
+本服务保存操作者在 Host 机器上固定的目录清单，并在这些目录中列目录、读文件。清单存放在 `pinned-files` 设置命名空间，也就是 `$DSH_HOME/settings.yaml` 的一节：重启后依然存在，在每个 Session 和每个 Workspace 中都相同，也可以手工编辑。这里没有任何东西按 Session 作用域，这正是重点；按 Session 作用域的文件服务已经存在，即 [`dsh-api-workspace-files`](../workspace-files/README.zh.md)。
 
 ## 目录
 

@@ -243,6 +243,17 @@
   color: var(--dsw-alias-label-secondary);
 }
 
+/* Plan mode + running: pulse the glyph so "working in plan mode" reads as
+   live, without changing the muted color that marks plan mode as a mode. */
+.phaseIcon[data-phase='planning'][data-active='true'] {
+  animation: dsw-plan-active 1.6s var(--ds-ease-in-out) infinite;
+}
+
+@keyframes dsw-plan-active {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 /* Declared status tones: the glyph names the status and the colour carries
    urgency, reusing the state-dot colour tokens. */
 .phaseIcon[data-tone='attention'] {
@@ -394,7 +405,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sessionRow,
-  .arrow {
+  .arrow,
+  .phaseIcon[data-phase='planning'][data-active='true'] {
     animation: none;
     transition: none;
   }

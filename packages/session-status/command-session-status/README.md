@@ -66,6 +66,10 @@ Reading status, setting or clearing it, or receiving a direct command error adds
 
 Command discovery, mutations, and direct output do not affect the cache.
 
+## Runtime invariant
+
+No companion is published. The command delegates vocabulary validation and the durable append to the session-status domain and registers one stateless command, so there is no independent observation for a runtime companion to compare against.
+
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>

@@ -81,6 +81,10 @@ The call arguments and the small structured result remain until compaction.
 
 Append-only; newly visible content follows the reusable request prefix.
 
+## Runtime invariant
+
+No companion is published. The tool delegates vocabulary validation and the durable append to the session-status domain and registers one stateless tool, so there is no independent observation for a runtime companion to compare against.
+
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>

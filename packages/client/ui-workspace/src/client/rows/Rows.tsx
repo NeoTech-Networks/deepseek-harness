@@ -306,10 +306,11 @@ const UNKNOWN_STATUS_ICON = IconEllipsisOutline16
  * draws the status's own glyph with its tone colour instead of the phase
  * table, because the status vocabulary is deployment-owned.
  */
-function SessionStatusDots({ phase, statuses, declared }: {
+function SessionStatusDots({ phase, statuses, declared, running }: {
   phase: SessionPhase
   statuses: readonly [SessionStatus, ...SessionStatus[]]
   declared: SessionStatusValue | undefined
+  running: boolean
 }) {
   if (phase === 'declared' && declared !== undefined) {
     const Glyph = STATUS_ICONS[declared.icon] ?? UNKNOWN_STATUS_ICON
@@ -330,7 +331,12 @@ function SessionStatusDots({ phase, statuses, declared }: {
       {Glyph === undefined
         ? <StateDot state={statuses[0].state} />
         : (
-          <span className={css.phaseIcon} data-phase={phase} aria-hidden="true">
+          <span
+            className={css.phaseIcon}
+            data-phase={phase}
+            data-active={phase === 'planning' && running ? 'true' : undefined}
+            aria-hidden="true"
+          >
             <Glyph size={14} />
           </span>
         )}
@@ -404,7 +410,7 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
       <span className={css.searchResultHeading}>
         <span className={css.slot}>
           {result.phase !== 'idle' && (
-            <SessionStatusDots phase={result.phase} statuses={statuses} declared={result.declaredStatus} />
+            <SessionStatusDots phase={result.phase} statuses={statuses} declared={result.declaredStatus} running={result.running} />
           )}
         </span>
         <span className={css.searchResultTitle}>{result.title}</span>
@@ -530,7 +536,7 @@ export function SessionNodeItem({
           and is cleared by opening the session. */}
       {(!flat || showStatus) && (
         <span className={css.slot}>
-          {showStatus && <SessionStatusDots phase={node.phase} statuses={statuses} declared={node.declaredStatus} />}
+          {showStatus && <SessionStatusDots phase={node.phase} statuses={statuses} declared={node.declaredStatus} running={node.running} />}
         </span>
       )}
       <span className={css.title}>{title}</span>

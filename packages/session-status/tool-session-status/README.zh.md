@@ -83,6 +83,10 @@ kind: "package-reference"
 
 -----
 
+## Runtime invariant
+
+不发布伴随件。该工具把词表校验和持久化追加委托给 session-status 域，并只注册一个无状态工具，因此没有独立观察需要运行时伴随件比较。
+
 <a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work
 

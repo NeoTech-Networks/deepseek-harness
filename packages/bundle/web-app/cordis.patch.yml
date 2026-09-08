@@ -47,6 +47,13 @@
     - id: subagent-model-selection-settings
       name: '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
 
+    # Automatic image description for text-only model sessions. Inert unless
+    # the subagent-model-selection preference above is enabled with an
+    # image-capable route; prompt admission then describes attached images
+    # through the vision model instead of rejecting them.
+    - id: vision-routing
+      name: '@deepseek-ai/dsh-vision-routing'
+
     - id: code-runtime
       name: '@deepseek-ai/dsh-code-runtime-worker-thread'
 
