@@ -15,6 +15,14 @@
 
 <!-- claude-memory-actor:end -->
 
+## 2026-09-08 - Animated plan-mode icon and finished icon after save-state
+
+- Animated the plan-mode sidebar icon while the session runs: `SessionStatusDots` (packages/client/ui-workspace/src/client/rows/Rows.tsx) now takes a `running` flag and sets `data-active="true"` on the planning glyph only when `phase === 'planning' && running`; `Rows.module.css` adds a 1.6s opacity pulse keyframe, disabled under `prefers-reduced-motion`. New test in rows.client.spec.tsx.
+- Added a "Finished" icon after /save-state: the session-status domain already renders the `finished` status (green check) via `declaredStatusOf` plus the `session/status` event; the missing trigger was that /save-state never declared it. Appended a "Declare the session finished" delta to `C:\Claude\skills\dsh_command_bridge.json` (deltas.save-state) and regenerated `~/.dsh/skills/save-state.md` so save-state calls `set_session_status(status: "finished")`, fallback `/status finished`.
+- Verified: ui-workspace suite 173/173 (10 files); client typecheck exit 0; full `pnpm build` exit 0; the scoped pulse rule and keyframe are present in the built `ui-workspace/lib/client.js`.
+- Found a gap in the finished-icon trigger: `set_session_status` (tool-session-status) is not in the agent tool catalog this session (not composed in the standard preset agent plane), so the save-state "declare finished" step cannot run from the agent; the operator fallback is a manual `/status finished`.
+- No deploy (local desktop app, not a Railway repo). Changes are uncommitted in the checkout.
+
 ## 2026-09-08 - Workspace group headers: darker blue + alphabetical sort
 
 - Recolored the workspace group section headers from gray (`--dsw-alias-label-tertiary`) to the DeepSeek brand darker blue (`--dsw-static-deepseek-600`, with `--dsw-static-deepseek-400` for dark theme) in `packages/client/ui-workspace/src/client/rows/WorkspaceBrowser.module.css`.
