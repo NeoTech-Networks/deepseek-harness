@@ -24,6 +24,7 @@ flowchart TD
     pkg_util_workspace_path["util-workspace-path"]
   end
   subgraph group_llm["packages/llm"]
+    pkg_account_usage["account-usage"]
     pkg_deepseek_llm_api_extensions["deepseek-llm-api-extensions"]
     pkg_llm["llm"]
     pkg_llm_deepseek["llm-deepseek"]
@@ -166,6 +167,7 @@ flowchart TD
     pkg_client_ui_renderer["client-ui-renderer"]
     pkg_client_ui_schedule["client-ui-schedule"]
     pkg_client_ui_session["client-ui-session"]
+    pkg_client_ui_sessions_panel["client-ui-sessions-panel"]
     pkg_client_ui_settings["client-ui-settings"]
     pkg_client_ui_settings_general["client-ui-settings-general"]
     pkg_client_ui_settings_models["client-ui-settings-models"]
@@ -364,6 +366,9 @@ flowchart TD
     pkg_typert_loader["typert-loader"]
     pkg_typert_protocol["typert-protocol"]
     pkg_typert_registry["typert-registry"]
+  end
+  subgraph group_vision["packages/vision"]
+    pkg_vision_routing["vision-routing"]
   end
   subgraph group_webhook["packages/webhook"]
     pkg_webhook["webhook"]
@@ -1177,6 +1182,10 @@ flowchart TD
   pkg_client_test_runtime --> pkg_session
   pkg_client_test_runtime --> pkg_subagent
   pkg_client_test_runtime --> pkg_typert_protocol
+  pkg_vision_routing --> pkg_attachment
+  pkg_vision_routing --> pkg_llm
+  pkg_vision_routing --> pkg_timeout
+  pkg_vision_routing --> pkg_tool_subagent
   pkg_subagent_dsh_sdk --> pkg_agent
   pkg_subagent_dsh_sdk --> pkg_llm
   pkg_subagent_dsh_sdk --> pkg_sdk_client
@@ -1201,6 +1210,7 @@ flowchart TD
 | [`util-time`](../packages/util/time) | `util` | — |
 | [`util-values`](../packages/util/values) | `util` | — |
 | [`util-workspace-path`](../packages/util/workspace-path) | `util` | — |
+| [`account-usage`](../packages/llm/account-usage) | `llm` | — |
 | [`deepseek-llm-api-extensions`](../packages/llm/deepseek-llm-api-extensions) | `llm` | — |
 | [`llm`](../packages/llm/llm) | `llm` | — |
 | [`api-gateway`](../packages/api/gateway) | `api` | — |
@@ -1241,6 +1251,7 @@ flowchart TD
 | [`client-ui-renderer`](../packages/client/ui-renderer) | `client` | — |
 | [`client-ui-schedule`](../packages/client/ui-schedule) | `client` | — |
 | [`client-ui-session`](../packages/client/ui-session) | `client` | — |
+| [`client-ui-sessions-panel`](../packages/client/ui-sessions-panel) | `client` | — |
 | [`client-ui-settings`](../packages/client/ui-settings) | `client` | — |
 | [`client-ui-settings-general`](../packages/client/ui-settings-general) | `client` | — |
 | [`client-ui-settings-models`](../packages/client/ui-settings-models) | `client` | — |
@@ -1455,4 +1466,5 @@ flowchart TD
 | [`sdk-client`](../packages/sdk/client) | `sdk` | [`llm`](../packages/llm/llm), [`sdk-protocol`](../packages/sdk/protocol), [`session`](../packages/core/session) |
 | [`sdk-jsonrpc-server`](../packages/sdk/server) | `sdk` | [`agent`](../packages/core/agent), [`attachment`](../packages/attachment/attachment), [`llm`](../packages/llm/llm), [`llm-deepseek`](../packages/llm/llm-deepseek), [`scope`](../packages/core/scope), [`sdk-protocol`](../packages/sdk/protocol), [`session`](../packages/core/session), [`subagent`](../packages/subagent/subagent) |
 | [`client-test-runtime`](../packages/test-support/client-runtime) | `test-support` | [`api-session-controller`](../packages/api/session-controller), [`api-workspace-controller`](../packages/api/workspace-controller), [`attachment`](../packages/attachment/attachment), [`client-connection`](../packages/client/connection), [`client-store`](../packages/client/store), [`client-ui-chat`](../packages/client/ui-chat), [`client-ui-conversation`](../packages/client/ui-conversation), [`client-ui-renderer`](../packages/client/ui-renderer), [`client-ui-session`](../packages/client/ui-session), [`client-ui-settings`](../packages/client/ui-settings), [`client-ui-slots`](../packages/client/ui-slots), [`session`](../packages/core/session), [`subagent`](../packages/subagent/subagent), [`typert-protocol`](../packages/typert/protocol) |
+| [`vision-routing`](../packages/vision/vision-routing) | `vision` | [`attachment`](../packages/attachment/attachment), [`llm`](../packages/llm/llm), [`timeout`](../packages/util/timeout), [`tool-subagent`](../packages/subagent/tool-subagent) |
 | [`subagent-dsh-sdk`](../packages/subagent/subagent-dsh-sdk) | `subagent` | [`agent`](../packages/core/agent), [`llm`](../packages/llm/llm), [`sdk-client`](../packages/sdk/client), [`session`](../packages/core/session), [`subagent`](../packages/subagent/subagent), [`subprocess`](../packages/subprocess/subprocess) |

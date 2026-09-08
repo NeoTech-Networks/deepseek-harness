@@ -82,6 +82,19 @@ export interface TypeApiEntry {
 /** Every harness `ctx.<key>` service, sorted by key. */
 export const SERVICE_API: readonly ServiceApiEntry[] = [
   {
+    key: 'accountUsage',
+    summary: 'Host Remote service reporting the signed-in subscription account\'s usage.',
+    description: 'Host Remote service reporting the signed-in subscription account\'s usage.',
+    methods: [
+      {
+        signature: '@Remote async read(): Promise<AccountUsageSnapshot>',
+        description: 'Report how much of the subscription account\'s limits are consumed.\n\nCheap to call repeatedly: the answer is cached for the configured window and concurrent callers share one upstream read.',
+        parameters: [],
+        returns: 'the current snapshot, whatever state the account read is in.',
+      },
+    ],
+  },
+  {
     key: 'agentDefaultModel',
     summary: 'Owns the default model selection independently of any Host or transport.',
     description: 'Owns the default model selection independently of any Host or transport. The composition entry remains usable without a settings provider; when one is mounted, its user layer is read live.',
@@ -3638,6 +3651,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
 /** Shapes of every exported type the Service and Event signatures reference (transitively), sorted by name. */
 export const TYPE_API: readonly TypeApiEntry[] = [
   {
+    name: 'AccountUsageSnapshot',
+    declaration: 'export interface AccountUsageSnapshot {\n    readonly status: AccountUsageStatus;\n    readonly at?: number;\n    readonly fiveHour?: UsageWindow;\n    readonly sevenDay?: UsageWindow;\n    readonly scoped?: readonly ScopedUsageWindow[];\n    readonly extraUsage?: ExtraUsage;\n}',
+  },
+  {
+    name: 'AccountUsageStatus',
+    declaration: 'export type AccountUsageStatus = \'live\' | \'stale\' | \'unauthorized\' | \'error\' | \'unsupported\';',
+  },
+  {
     name: 'AdapterRegistrationHandle',
     declaration: 'export interface AdapterRegistrationHandle {\n    (): void;\n    replace(providers: string[]): void;\n}',
   },
@@ -4268,6 +4289,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'EpochHeader',
     declaration: 'export interface EpochHeader {\n    config: LlmCallConfig;\n    adapterDefaults?: LlmCallConfigAdapterDefaults;\n    system?: string;\n    tools?: ToolSchema[];\n}',
+  },
+  {
+    name: 'ExtraUsage',
+    declaration: 'export interface ExtraUsage {\n    readonly usedMinor: number;\n    readonly currency: string;\n    readonly exponent: number;\n    readonly limitMinor: number | null;\n}',
   },
   {
     name: 'FiberState',
@@ -5084,6 +5109,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'Scoped',
     declaration: 'export type Scoped<T extends object> = object & {\n    readonly [ScopedBrand]: T;\n};',
+  },
+  {
+    name: 'ScopedUsageWindow',
+    declaration: 'export interface ScopedUsageWindow extends UsageWindow {\n    readonly label: string;\n    readonly active: boolean;\n}',
   },
   {
     name: 'ScopeKey',
@@ -6328,6 +6357,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'UpdateTeamTaskRequest',
     declaration: 'export interface UpdateTeamTaskRequest {\n    readonly taskId: TeamTaskId;\n    readonly expectedRevision: number;\n    readonly action: TeamTaskAction;\n    readonly subject?: string;\n    readonly description?: string;\n    readonly blockedBy?: readonly TeamTaskId[];\n    readonly writeScopes?: readonly string[];\n    readonly owner?: string;\n}',
+  },
+  {
+    name: 'UsageWindow',
+    declaration: 'export interface UsageWindow {\n    readonly percent: number;\n    readonly resetsAt?: string;\n}',
   },
   {
     name: 'UserMessage',

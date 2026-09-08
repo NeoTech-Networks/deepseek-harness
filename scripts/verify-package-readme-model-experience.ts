@@ -116,6 +116,7 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'packages/client/ui-sidebar-files': { kind: 'none', reason: 'Browser-only workspace file tree; registers no tool, prompt section, or session event.' },
   'packages/client/ui-sidebar-explorer': { kind: 'none', reason: 'Browser-only pinned-directory tree and text preview; registers no tool, prompt section, or session event.' },
   'packages/api/pinned-files': { kind: 'none', reason: 'Host Remote service for operator-pinned directories; registers no tool, prompt section, or session event.' },
+  'packages/llm/account-usage': { kind: 'none', reason: 'The service answers a browser readout with the account\'s own limit percentages; it registers no tool, prompt section, or session event.' },
   'packages/client/resources': { kind: 'none', reason: 'Browser-side resource model (providers, pinning, useResource); registers nothing model-facing.' },
   'packages/client/ui-settings': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },
   'packages/client/ui-settings-general': { kind: 'none', reason: 'Browser-side UI plugin layer; registers nothing model-facing.' },

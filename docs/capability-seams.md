@@ -46,6 +46,12 @@ flowchart LR
   svc_settingsController["ctx.settingsController<br/>Host settings-surface Remote controller"]
   pkg_api_workspace_files["api-workspace-files"]
   svc_workspaceFiles["ctx.workspaceFiles<br/>Host workspace file Remote service"]
+  pkg_account_usage["account-usage"]
+  svc_accountUsage["ctx.accountUsage<br/>Subscription account usage Remote service"]
+  pkg_api_pinned_files["api-pinned-files"]
+  svc_pinnedFiles["ctx.pinnedFiles<br/>Operator pinned-directory Remote service"]
+  pkg_vision_routing["vision-routing"]
+  svc_visionRouting["ctx.visionRouting<br/>Automatic image description for text-only sessions"]
   pkg_api_workspace_controller["api-workspace-controller"]
   svc_workspaceController["ctx.workspaceController<br/>Host Workspace Remote controller"]
   svc_directoryPickerController["ctx.directoryPickerController<br/>Host directory-picking Remote controller"]
@@ -226,11 +232,13 @@ flowchart LR
   pkg_cordis_host_runner["cordis-host-runner"]
   svc_dynamicCordisRunner["ctx.dynamicCordisRunner<br/>Dynamic Cordis package host runner"]
   svc_cordisInspect["ctx.cordisInspect<br/>Dynamic Cordis inspect registry"]
+  pkg_account_usage --> svc_accountUsage
   pkg_agent --> svc_agents
   pkg_agent_default_model --> svc_agentDefaultModel
   pkg_agent_loop --> svc_agentLoop
   pkg_agent_presets --> svc_agentPresets
   pkg_api_gateway --> svc_typertGateway
+  pkg_api_pinned_files --> svc_pinnedFiles
   pkg_api_session_controller --> svc_sessionController
   pkg_api_session_controller --> svc_sessionFileReferences
   pkg_api_session_controller --> svc_sessionSkillCatalog
@@ -336,6 +344,7 @@ flowchart LR
   pkg_typert_registry --> svc_typert
   pkg_user_approval --> svc_approval
   pkg_user_questions --> svc_userQuestions
+  pkg_vision_routing --> svc_visionRouting
   pkg_web --> svc_web
   pkg_web_fetch_http --> svc_web
   pkg_web_search_deepseek --> svc_web
@@ -491,6 +500,9 @@ flowchart LR
 | `ctx.credentialsController` | `core` | [`api-settings-controller`](../packages/api/settings-controller) | - | - | - | Projects the credential-reference seam onto the generated Remote namespace: batch fan-out, view projection, and refusal mapping live here, not on the seam Definition. |
 | `ctx.settingsController` | `core` | [`api-settings-controller`](../packages/api/settings-controller) | - | - | - | Projects the user-settings seam onto the generated Remote namespace: the read is always redacted and every refusal is classified here, not on the seam Definition. |
 | `ctx.workspaceFiles` | `core` | [`api-workspace-files`](../packages/api/workspace-files) | - | - | - | Serves stat, paged text, byte windows, directory listings, and the change feed for files inside a Session's workspace root, confined by lstat, containment, and a stat re-check. |
+| `ctx.accountUsage` | `core` | [`account-usage`](../packages/llm/account-usage) | - | - | - | Reads the stored subscription grant Host-side and reports the account's own rolling and weekly limit occupancy as percentages; every fault degrades to a status carrying the last figures read. |
+| `ctx.pinnedFiles` | `core` | [`api-pinned-files`](../packages/api/pinned-files) | - | - | - | Serves the operator's own roots anywhere on the Host, stored in the pinned-files settings namespace, deliberately outside the Session workspace fence. |
+| `ctx.visionRouting` | `core` | [`vision-routing`](../packages/vision/vision-routing) | - | - | - | Describes attached images with an image-capable route so a text-only model receives text instead of a rejected message. |
 | `ctx.workspaceController` | `core` | [`api-workspace-controller`](../packages/api/workspace-controller) | - | - | - | Owns Workspace commands and reconnect-safe Workspace state delivery through the generated Remote namespace. |
 | `ctx.directoryPickerController` | `core` | [`api-workspace-controller`](../packages/api/workspace-controller) | - | - | - | Carries the picking seam onto the wire: capability gating, cancellation, and the seam-coded failures a browser directory flow discriminates on. |
 | `ctx.invariants` | `core` | [`invariants`](../packages/runtime-diagnostics/invariants) | - | [`session`](../packages/core/session), [`agent`](../packages/core/agent), [`scope`](../packages/core/scope), [`agent-loop`](../packages/core/agent-loop) | - | Companion subpaths register owner-local checks; the service owns selection, uniqueness, child fibers, and package-attributed failures. |

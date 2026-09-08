@@ -37,7 +37,9 @@ export const name = 'vision-routing'
 
 /** Exact provider/model route the vision model runs on. */
 export interface VisionRoute {
+  /** Provider route key the vision model is served by. */
   readonly provider: string
+  /** Exact model id on that provider. */
   readonly model: string
 }
 

@@ -9,6 +9,32 @@ This file is GENERATED from source (`scripts/gen-config-catalog.ts`) and verifie
 
 A `Requires:` line lists the service keys the plugin `inject`s: its `cordis.yml` tree must also load providers for those services. Scope is the harness tier (`packages/`); the vendored cordis plugins a config tree may also load (`hmr`, the console logger, …) are pinned upstream source ([vendoring policy](../vendor/README.md)) and not catalogued here.
 
+<a id="deepseek-aidsh-account-usage"></a>
+
+## `@deepseek-ai/dsh-account-usage`
+
+Requires: `typert`
+
+```ts config-catalog
+/** Where the account's usage report lives and how hard this service may ask. */
+export interface Config {
+  /** Full URL of the usage report. */
+  readonly endpoint: string
+  /** Beta opt-in header value sent with the request. */
+  readonly beta: string
+  /** Registered name of the plugin owning the credential record. */
+  readonly credentialScope: string
+  /** That plugin's own addressing unit for the record, its provider route key. */
+  readonly credentialId: string
+  /** Milliseconds one answer stays good for; every caller shares it. */
+  readonly cacheMs: number
+  /** Milliseconds before one read of the report is abandoned. */
+  readonly timeoutMs: number
+}
+```
+
+Source: [`packages/llm/account-usage/src/index.ts:58`](../packages/llm/account-usage/src/index.ts)
+
 <a id="deepseek-aidsh-acp"></a>
 
 ## `@deepseek-ai/dsh-acp`
@@ -198,6 +224,24 @@ export interface Config {
 ```
 
 Source: [`packages/api/gateway/src/index.ts:119`](../packages/api/gateway/src/index.ts)
+
+<a id="deepseek-aidsh-api-pinned-files"></a>
+
+## `@deepseek-ai/dsh-api-pinned-files`
+
+Requires: `fs` · `settings` · `typert`
+
+```ts config-catalog
+/** Deployment caps on one listing and one read. */
+export interface Config {
+  /** Cap on returned directory entries; the rest is dropped and reported cut. */
+  readonly maxEntries: number
+  /** Inclusive byte cap on one file read. A larger file is refused, never truncated. */
+  readonly maxBytes: number
+}
+```
+
+Source: [`packages/api/pinned-files/src/index.ts:51`](../packages/api/pinned-files/src/index.ts)
 
 <a id="deepseek-aidsh-api-session-controller"></a>
 
@@ -3273,6 +3317,34 @@ export type ApprovalPolicy = 'ask' | 'never'
 
 Source: [`packages/interaction/user-approval/src/index.ts:127`](../packages/interaction/user-approval/src/index.ts)
 
+<a id="deepseek-aidsh-vision-routing"></a>
+
+## `@deepseek-ai/dsh-vision-routing`
+
+```ts config-catalog
+/** Plugin configuration. Every field is optional; defaults point at the shipped vision model. */
+export interface Config {
+  /** Exact vision-model route. Defaults to DeepSeek V4 Flash Vision Exp. */
+  visionRoute?: VisionRoute
+  /** Instruction sent with the images. Defaults to the stable describe rubric. */
+  prompt?: string
+  /** Output-token cap for one description. Defaults to 4096. */
+  maxTokens?: number
+  /** End-to-end deadline for one description. Defaults to 60 seconds. */
+  timeoutMs?: number
+}
+
+/** Exact provider/model route the vision model runs on. */
+export interface VisionRoute {
+  /** Provider route key the vision model is served by. */
+  readonly provider: string
+  /** Exact model id on that provider. */
+  readonly model: string
+}
+```
+
+Source: [`packages/vision/vision-routing/src/index.ts:47`](../packages/vision/vision-routing/src/index.ts)
+
 <a id="deepseek-aidsh-web"></a>
 
 ## `@deepseek-ai/dsh-web`
@@ -3510,12 +3582,14 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-client-ui-renderer` ([`packages/client/ui-renderer/src/index.ts`](../packages/client/ui-renderer/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-schedule` ([`packages/client/ui-schedule/src/index.ts`](../packages/client/ui-schedule/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-session` ([`packages/client/ui-session/src/index.ts`](../packages/client/ui-session/src/index.ts))
+- `@deepseek-ai/dsh-client-ui-sessions-panel` ([`packages/client/ui-sessions-panel/src/index.ts`](../packages/client/ui-sessions-panel/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-settings` ([`packages/client/ui-settings/src/index.ts`](../packages/client/ui-settings/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-settings-general` ([`packages/client/ui-settings-general/src/index.ts`](../packages/client/ui-settings-general/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-settings-models` ([`packages/client/ui-settings-models/src/index.ts`](../packages/client/ui-settings-models/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-settings-plugin-inventory` ([`packages/client/ui-settings-plugin-inventory/src/index.ts`](../packages/client/ui-settings-plugin-inventory/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-settings-plugins` ([`packages/client/ui-settings-plugins/src/index.ts`](../packages/client/ui-settings-plugins/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar` ([`packages/client/ui-sidebar/src/index.ts`](../packages/client/ui-sidebar/src/index.ts))
+- `@deepseek-ai/dsh-client-ui-sidebar-explorer` ([`packages/client/ui-sidebar-explorer/src/index.ts`](../packages/client/ui-sidebar-explorer/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar-files` ([`packages/client/ui-sidebar-files/src/index.ts`](../packages/client/ui-sidebar-files/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar-right` ([`packages/client/ui-sidebar-right/src/index.ts`](../packages/client/ui-sidebar-right/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar-textpreview` ([`packages/client/ui-sidebar-textpreview/src/index.ts`](../packages/client/ui-sidebar-textpreview/src/index.ts))

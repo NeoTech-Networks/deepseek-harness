@@ -128,6 +128,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   pinnedFiles: 'sidebar-right.md',
   directoryPickerController: 'workspace.md',
   visionRouting: 'vision.md',
+  accountUsage: 'account-usage.md',
 }
 
 /**
@@ -775,6 +776,7 @@ export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   WorkflowAgentEndInfo: 'event-local snapshot is owned by packages/workflow/workflow/src/index.ts',
   WorkflowAgentInfo: 'event-local snapshot is owned by packages/workflow/workflow/src/index.ts',
   WorkflowResultInfo: 'event-local snapshot is owned by packages/workflow/workflow/src/index.ts',
+  AccountUsageSnapshot: 'Host account usage endpoint contract is owned by packages/llm/account-usage/README.md',
   WorkspaceByteRange: 'Host workspace file endpoint contract is owned by packages/api/workspace-files/README.md',
   WorkspaceDirectoryListing: 'Host workspace file endpoint contract is owned by packages/api/workspace-files/README.md',
   WorkspaceFileBytes: 'Host workspace file endpoint contract is owned by packages/api/workspace-files/README.md',

@@ -1,3 +1,56 @@
+## 2026-09-08 - Claude Max usage readout in the composer footer
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| host suite | grant handling, cache, degraded answers | 15/15 pass (usage.spec.ts) | VERIFIED |
+| client suite | both percentages, panel, feed cadence | 12/12 pass (account-usage-line.client.spec.tsx) | VERIFIED |
+| no token on the wire | snapshot JSON free of the access token | asserted in "reports the account figures" test | VERIFIED |
+| repo typecheck | exit 0 | `pnpm run typecheck` exit 0 | VERIFIED |
+| full build | exit 0 | `pnpm build` exit 0 | VERIFIED |
+| live read-back vs raw endpoint | service figures equal the account's own | 5h 20 / week 20 / credits 11094 both sides at 2026-09-08T21:45:08Z | VERIFIED |
+| desktop footer on screen | two percentages beside the stats line | needs install + relaunch (user-gated) | UNVERIFIED |
+
+## 2026-09-08 - Console window hidden on subprocess spawn
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| flag in source | CREATE_NO_WINDOW in CreateProcessW flags | process.ts:534 ORs CREATE_NO_WINDOW | VERIFIED |
+| bundle folded value | 0x08000404 = 134218756 | lib/index.js line 615 = 134218756 | VERIFIED |
+| profile copy updated | running bundle carries flag | profile lib/index.js grep = 134218756 | VERIFIED |
+| pwsh tool still runs | exit 0, output | pwsh-restored-ok returned | VERIFIED |
+| headless spawn | no visible console window | conhost MainWindowHandle 0, empty title | VERIFIED |
+
+## 2026-09-08 - Session-status triggers composed into the presets
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| session-status vocab lock | 5 tuples id/label/icon/tone | 11/11 tests pass | VERIFIED |
+| shipped-preset completeness | command+tool session-status in std/cordis/ptc | 6/6 tests pass | VERIFIED |
+| ui-workspace rows + tree | unchanged | 36 + 40 pass | VERIFIED |
+| full targeted run | 93/93 across 4 files | 4 files passed | VERIFIED |
+| live desktop smoke (/status icons) | glyphs show | needs app relaunch (user-gated) | UNVERIFIED |
+
+## 2026-09-08 - Drop the [image omitted] placeholder next to vision descriptions
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| session-models host tests | 15 pass (1 new assertion) | 15/15 | VERIFIED |
+| host typecheck | exit 0 | tsc -b tsconfig.host.json exit 0 | VERIFIED |
+| drop-image change in built lib | filter removes image blocks | content.filter(...) present in lib/index.js | VERIFIED |
+| profile lib updated | change in installed profile | 1 match in ~/.dsh/profiles/desktop node_modules lib/index.js | VERIFIED |
+| live end-to-end (attach image) | only description, no placeholder | operator confirmed: only [Attached image description], no [image omitted] | VERIFIED |
+
+## 2026-09-08 - finish-install.ps1 $home fix and vision-routing install
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| finish-install.ps1 re-parses | PARSE OK | PSParser::Tokenize no errors | VERIFIED |
+| no reserved $home assignment | only $dshHome | grep -i '$home' no match; 4x $dshHome | VERIFIED |
+| installer exit code | 0 | installer exit code: 0 (log) | VERIFIED |
+| profile cleared and relaunched | cleared, relaunched | both lines present in log | VERIFIED |
+| app running with vision-routing | process, window, package | 4 procs, window Responding, package in node_modules + seed | VERIFIED |
+| live vision smoke (attach image) | model receives description | not run (user-gated GUI) | UNVERIFIED |
+
 ## 2026-09-08 - Plan-mode icon animation and finished icon after save-state
 
 | Check | Expected | Result | Status |
