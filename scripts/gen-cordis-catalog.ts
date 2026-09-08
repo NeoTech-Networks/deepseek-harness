@@ -101,6 +101,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   sessions: 'session.md',
   settings: 'settings.md',
   sessionTitle: 'session-title.md',
+  sessionStatus: 'session-status.md',
   skills: 'skills.md',
   spillStore: 'spill.md',
   storage: 'storage.md',
@@ -124,6 +125,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   workspaceRegistry: 'workspace.md',
   workspaceController: 'workspace.md',
   workspaceFiles: 'workspace.md',
+  pinnedFiles: 'sidebar-right.md',
   directoryPickerController: 'workspace.md',
 }
 
@@ -684,6 +686,16 @@ export const FOUNDATION_TYPE_NAMES: ReadonlySet<string> = new Set([
 /** Project types deliberately documented outside the subsystems catalog. */
 export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   z: 'schemastery schema constructor is owned by vendor/schemastery (vendored upstream)',
+  SessionStatusValue: 'declared status value is owned by packages/session-status/session-status/README.md',
+  SessionStatusConfig: 'status vocabulary config is owned by packages/session-status/session-status/README.md',
+  SessionStatusIconId: 'status glyph id is owned by packages/session-status/session-status/README.md',
+  SessionStatusTone: 'status tone is owned by packages/session-status/session-status/README.md',
+  SessionStatusVocabularyEntry: 'status vocabulary entry is owned by packages/session-status/session-status/README.md',
+  SessionStatusUnknownError: 'status domain error is owned by packages/session-status/session-status/README.md',
+  SessionSetStatusRequest: 'status request is owned by packages/api/session-controller/README.md',
+  SessionSetStatusValue: 'status result is owned by packages/api/session-controller/README.md',
+  SessionListStatusesValue: 'status vocabulary result is owned by packages/api/session-controller/README.md',
+  WorkspaceSetGroupRequest: 'workspace group request is owned by packages/api/workspace-controller/README.md',
   BeginCommandRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',
   InsertReferenceRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',
   ConsumeTokenRequest: 'event-local request contract is owned by packages/client/ui-input-trigger/src/types.ts',

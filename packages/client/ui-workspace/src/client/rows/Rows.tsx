@@ -8,13 +8,17 @@
 import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  HoverCard, IconAlarmClockOutline16, IconArchiveOutline20, IconBranchOutline16,
-  IconChecklistOutline14, IconEditOutline16, IconEllipsisOutline16, IconFolderClose16,
-  IconFolderOpen16, IconListPenOutline16, IconPlusOutline16, IconQuestionOutline14,
-  IconTrashOutline16, IconTriangleRightFill14, IconWarningOutline16, Menu, relativeTime,
-  StateDot,
+  HoverCard, IconAlarmClockOutline16, IconAgentPresetOutline16, IconArchiveOutline20,
+  IconBranchOutline16, IconCheckOutline16, IconChecklistOutline14, IconClockOutline16,
+  IconEditOutline16, IconEllipsisOutline16, IconFolderClose16, IconFolderOpen16,
+  IconListPenOutline16, IconPauseOutline16, IconPlusOutline16, IconQuestionOutline14,
+  IconRightUpOutline16, IconStopFill16, IconTrashOutline16, IconTriangleRightFill14,
+  IconWarningOutline16, Menu, relativeTime, StateDot,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { IconProps, StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
+import type {
+  SessionStatusIconId, SessionStatusTone, SessionStatusValue,
+} from '@deepseek-ai/dsh-session-status/client'
 import { abbreviateHomePath } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceBrowserProps } from '../contract/slots.ts'
 import type {
@@ -224,6 +228,16 @@ interface SessionStatus {
   label: string
 }
 
+/** Map a status tone to the state-dot colour used in the hover card. */
+function toneState(tone: SessionStatusTone): StateDotState {
+  switch (tone) {
+    case 'attention': return 'warning'
+    case 'error': return 'error'
+    case 'success': return 'done'
+    case 'neutral': return 'idle'
+  }
+}
+
 /**
  * Every live status a row carries, ordered by the same precedence
  * `derivePhase` applies — so the first entry always describes the row's phase
@@ -235,6 +249,9 @@ function sessionStatuses(node: SessionRowFacts, t: RowTranslate): readonly [Sess
   if (node.pendingInteraction === 'approval') active.push({ state: 'warning', label: t('status.waitingApproval') })
   if (node.pendingInteraction === 'plan-review') active.push({ state: 'warning', label: t('status.planReview') })
   if (node.pendingInteraction === 'question') active.push({ state: 'warning', label: t('status.waitingAnswer') })
+  if (node.declaredStatus !== undefined) {
+    active.push({ state: toneState(node.declaredStatus.tone), label: node.declaredStatus.label })
+  }
   if (node.planActive) active.push({ state: 'warning', label: t('status.planning') })
   if (node.running) active.push({ state: 'ongoing', label: t('status.running') })
   if (node.runningSubagentCount > 0) {
@@ -267,17 +284,46 @@ const PHASE_GLYPHS: Partial<Record<SessionPhase, (props: IconProps) => ReturnTyp
   'awaiting-plan-review': IconChecklistOutline14,
   'awaiting-answer': IconQuestionOutline14,
   planning: IconListPenOutline16,
+  subagents: IconAgentPresetOutline16,
 }
+
+/** Status icon id to glyph component, drawn for the declared phase. */
+const STATUS_ICONS: Record<SessionStatusIconId, (props: IconProps) => ReturnType<typeof IconWarningOutline16>> = {
+  'right-up': IconRightUpOutline16,
+  stop: IconStopFill16,
+  check: IconCheckOutline16,
+  clock: IconClockOutline16,
+  pause: IconPauseOutline16,
+}
+
+/** Neutral fallback for an icon id this client does not know (never throws). */
+const UNKNOWN_STATUS_ICON = IconEllipsisOutline16
 
 /**
  * The row's phase mark plus every status's screen-reader label, shared by the
  * search and session rows. The mark itself stays `aria-hidden` in both
- * branches: the labels below it are the accessible text.
+ * branches: the labels below it are the accessible text. The declared phase
+ * draws the status's own glyph with its tone colour instead of the phase
+ * table, because the status vocabulary is deployment-owned.
  */
-function SessionStatusDots({ phase, statuses }: {
+function SessionStatusDots({ phase, statuses, declared }: {
   phase: SessionPhase
   statuses: readonly [SessionStatus, ...SessionStatus[]]
+  declared: SessionStatusValue | undefined
 }) {
+  if (phase === 'declared' && declared !== undefined) {
+    const Glyph = STATUS_ICONS[declared.icon] ?? UNKNOWN_STATUS_ICON
+    return (
+      <>
+        <span className={css.phaseIcon} data-tone={declared.tone} aria-hidden="true">
+          <Glyph size={14} />
+        </span>
+        {statuses.map(status => (
+          <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
+        ))}
+      </>
+    )
+  }
   const Glyph = PHASE_GLYPHS[phase]
   return (
     <>
@@ -358,7 +404,7 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
       <span className={css.searchResultHeading}>
         <span className={css.slot}>
           {result.phase !== 'idle' && (
-            <SessionStatusDots phase={result.phase} statuses={statuses} />
+            <SessionStatusDots phase={result.phase} statuses={statuses} declared={result.declaredStatus} />
           )}
         </span>
         <span className={css.searchResultTitle}>{result.title}</span>
@@ -391,7 +437,7 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
  * @returns the session row.
  */
 export function SessionNodeItem({
-  node, currentId, now, onOpen, onRename, onFork, onArchive, onReveal, drag, flat = false, t,
+  node, currentId, now, onOpen, onRename, onFork, onArchive, onSetStatus, onClearStatus, onReveal, drag, flat = false, t,
 }: {
   node: SessionNode
   currentId: string | undefined
@@ -403,6 +449,10 @@ export function SessionNodeItem({
   onFork: (id: SessionNode['id']) => void
   /** Archive this session (row menu action; commits without a dialog). */
   onArchive: (id: SessionNode['id']) => void
+  /** Open the browser-owned set-status dialog (row menu action). */
+  onSetStatus?: ((id: SessionNode['id']) => void) | undefined
+  /** Clear this session's declared status (row menu action; commits without a dialog). */
+  onClearStatus?: ((id: SessionNode['id']) => void) | undefined
   /** Scroll this row into view after search navigation, then acknowledge it. */
   onReveal?: (() => void) | undefined
   /** Present only on draggable rows (workspace-group sessions outside search). */
@@ -429,6 +479,12 @@ export function SessionNodeItem({
   const sessionMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutline16 /> },
     { id: 'fork', label: t('menu.fork'), icon: <IconBranchOutline16 /> },
+    ...(onSetStatus === undefined
+      ? []
+      : [{ id: 'setStatus', label: t('menu.setStatus'), icon: <IconPauseOutline16 /> }]),
+    ...(onClearStatus !== undefined && node.declaredStatus !== undefined
+      ? [{ id: 'clearStatus', label: t('menu.clearStatus'), icon: <IconStopFill16 /> }]
+      : []),
     // 20-native glyph in the menu's 16px icon slot (Menu.module.css .itemIcon).
     { id: 'archive', label: t('menu.archiveSession'), icon: <IconArchiveOutline20 size={16} /> },
   ]
@@ -474,7 +530,7 @@ export function SessionNodeItem({
           and is cleared by opening the session. */}
       {(!flat || showStatus) && (
         <span className={css.slot}>
-          {showStatus && <SessionStatusDots phase={node.phase} statuses={statuses} />}
+          {showStatus && <SessionStatusDots phase={node.phase} statuses={statuses} declared={node.declaredStatus} />}
         </span>
       )}
       <span className={css.title}>{title}</span>
@@ -494,6 +550,8 @@ export function SessionNodeItem({
               setMenuOpen(false)
               if (id === 'rename') onRename(node.id, row.title)
               if (id === 'fork') onFork(node.id)
+              if (id === 'setStatus' && onSetStatus !== undefined) onSetStatus(node.id)
+              if (id === 'clearStatus' && onClearStatus !== undefined) onClearStatus(node.id)
               if (id === 'archive') onArchive(node.id)
             }}
             portal

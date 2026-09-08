@@ -87,6 +87,8 @@ function mount(overrides: Partial<WorkspaceBrowserProps> = {}) {
     searchSessions: vi.fn(async () => ({ items: [], hasMore: false })),
     searchResultLimit: 20,
     renameSession: vi.fn(async () => {}),
+    setSessionStatus: vi.fn(async () => {}),
+    listSessionStatuses: vi.fn(async () => []),
     forkSession: vi.fn(),
     renameWorkspace: vi.fn(async () => {}),
     setGroupWorkspace: vi.fn(async () => {}),

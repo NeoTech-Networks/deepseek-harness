@@ -355,6 +355,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Owns the deterministic fallback, latest-title fold, and sole optional asynchronous provider registration.',
   },
   {
+    key: 'sessionStatus',
+    pkg: 'session-status',
+    title: 'Declared session statuses',
+    mode: 'seam',
+    consumers: ['tool-session-status', 'command-session-status'],
+    note: 'Owns the status vocabulary, the whole-value session/status event, and the sessionStatus projection; a human prompt clears the status.',
+  },
+  {
     key: 'systemPrompt',
     pkg: 'system-prompt',
     title: 'System prompt assembly registry',

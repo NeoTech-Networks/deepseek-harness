@@ -18,6 +18,7 @@ import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionHeader, SessionId, UserMessage } from '@deepseek-ai/dsh-session'
 import { SessionQueryError, type SessionObservation } from '@deepseek-ai/dsh-session-query'
 import { SessionTitleInvalidError } from '@deepseek-ai/dsh-session-title'
+import { SessionStatusUnknownError } from '@deepseek-ai/dsh-session-status'
 import { canonicalClientTimeZone } from '@deepseek-ai/dsh-util-time'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
 import { RemoteError, remoteErrorOf } from '@deepseek-ai/dsh-typert-protocol'
@@ -41,12 +42,15 @@ import type {
   SessionCreateValue,
   SessionForkRequest,
   SessionForkValue,
+  SessionListStatusesValue,
   SessionPromptRequest,
   SessionPromptValue,
   SessionRenameRequest,
   SessionRenameValue,
   SessionSelectModelRequest,
   SessionSelectModelValue,
+  SessionSetStatusRequest,
+  SessionSetStatusValue,
   SessionUpdateQueueRequest,
   SessionUpdateQueueValue,
   SessionRequestId,
@@ -184,6 +188,56 @@ export class SessionCommandController {
         {},
       )
     }
+  }
+
+  /**
+   * Set or clear one declared session status on a resumed Session.
+   * @param request - Session identity and the vocabulary id, or null to clear.
+   * @returns the resolved status and the durable event sequence.
+   */
+  async setStatus(request: SessionSetStatusRequest): Promise<SessionSetStatusValue> {
+    const agent = await this.resolveAgent(request.sessionId)
+    const service = this.ctx.get('sessionStatus')
+    if (service === undefined) {
+      throw new RemoteError(
+        'gateway/internal',
+        'session status is unavailable: this deployment mounts no session-status service',
+        {},
+      )
+    }
+    try {
+      if (request.statusId === null) service.clear(agent.session)
+      else service.set(agent.session, request.statusId)
+      return { status: service.current(agent.session), seq: agent.session.seq - 1 }
+    } catch (error) {
+      if (error instanceof SessionStatusUnknownError) {
+        throw new RemoteError('session/status-unknown', error.message, {
+          statusId: request.statusId ?? '',
+        })
+      }
+      throw new RemoteError(
+        'gateway/internal',
+        `failed to set session status for "${request.sessionId}": ${String(error)}`,
+        {},
+      )
+    }
+  }
+
+  /**
+   * Read the deployment's declared status vocabulary, for a row menu that
+   * offers the operator the same choices the tool offers the model.
+   * @returns the vocabulary in declaration order.
+   */
+  listStatuses(): SessionListStatusesValue {
+    const service = this.ctx.get('sessionStatus')
+    if (service === undefined) {
+      throw new RemoteError(
+        'gateway/internal',
+        'session status is unavailable: this deployment mounts no session-status service',
+        {},
+      )
+    }
+    return { statuses: service.list() }
   }
 
   /**

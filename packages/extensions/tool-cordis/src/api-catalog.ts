@@ -1507,6 +1507,18 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the accepted title and durable event sequence.',
       },
       {
+        signature: '@Remote(\'setStatus\') setStatus(request: SessionSetStatusRequest): Promise<SessionSetStatusValue>',
+        description: 'Set or clear one declared session status after explicitly resuming it.',
+        parameters: [{ name: 'request', description: 'Session identity and the vocabulary id, or null to clear.' }],
+        returns: 'the resolved status and the durable event sequence.',
+      },
+      {
+        signature: '@Remote(\'listStatuses\') listStatuses(): SessionListStatusesValue',
+        description: 'Read the deployment\'s declared status vocabulary, for the row menu.',
+        parameters: [],
+        returns: 'the vocabulary in declaration order.',
+      },
+      {
         signature: '@Remote(\'fork\') fork(request: SessionForkRequest): Promise<SessionForkValue>',
         description: 'Fork one cold-readable completed-turn prefix into a new Session.',
         parameters: [{ name: 'request', description: 'source Session and optional event anchor.' }],
@@ -1915,6 +1927,35 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'request', description: 'Session identity whose cwd and preset select the catalog view.' }, { name: 'signal', description: 'caller lifetime carried by the Remote transport; admitted catalog reads retain their existing completion semantics.' }],
         returns: 'user-invocable skill metadata without loading skill bodies.',
         throws: ['RemoteError when the Session cannot be inspected or no registry can serve it.'],
+      },
+    ],
+  },
+  {
+    key: 'sessionStatus',
+    summary: '`ctx.sessionStatus`: owns the status vocabulary and the projection registration, and appends the whole-value `session/status` event on set and clear.',
+    description: '`ctx.sessionStatus`: owns the status vocabulary and the projection registration, and appends the whole-value `session/status` event on set and clear. Carriers serve the projection on the history tail page and the `session/projection` push frame, so a cold sidebar row reads it without the session being opened.',
+    methods: [
+      {
+        signature: 'list(): readonly SessionStatusValue[]',
+        description: 'The deployment\'s current vocabulary, in declaration order.',
+        parameters: [],
+        returns: 'the vocabulary entries.',
+      },
+      {
+        signature: 'set(session: Session, id: string, note?: string): void',
+        description: 'Append the whole-value status for one vocabulary id, or throw when the id is not in the vocabulary so an unknown id is a rendered error rather than a silently dropped write.',
+        parameters: [{ name: 'session', description: 'the owning session.' }, { name: 'id', description: 'a vocabulary id.' }, { name: 'note', description: 'optional operator or agent note recorded beside the status.' }],
+      },
+      {
+        signature: 'clear(session: Session): void',
+        description: 'Clear the declared status.',
+        parameters: [{ name: 'session', description: 'the owning session.' }],
+      },
+      {
+        signature: 'current(session: Session): SessionStatusValue | null',
+        description: 'The current declared status, or null while none is in force.',
+        parameters: [{ name: 'session', description: 'the owning session.' }],
+        returns: 'the current declared status, or null.',
       },
     ],
   },
@@ -2863,6 +2904,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         signature: '@Remote(\'rename\') rename(request: WorkspaceRenameRequest): Promise<WorkspaceValue>',
         description: 'Rename one Workspace to a unique non-blank title.',
         parameters: [{ name: 'request', description: 'Workspace identity and proposed title.' }],
+        returns: 'the updated Workspace projection.',
+      },
+      {
+        signature: '@Remote(\'setGroup\') setGroup(request: WorkspaceSetGroupRequest): Promise<WorkspaceValue>',
+        description: 'Assign or clear one Workspace grouping label.',
+        parameters: [{ name: 'request', description: 'Workspace identity and proposed group.' }],
         returns: 'the updated Workspace projection.',
       },
       {
@@ -5188,6 +5235,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface SessionListRequest {\n    readonly cursor?: string;\n}',
   },
   {
+    name: 'SessionListStatusesValue',
+    declaration: 'export interface SessionListStatusesValue {\n    readonly statuses: readonly SessionStatusValue[];\n}',
+  },
+  {
     name: 'SessionListValue',
     declaration: 'export interface SessionListValue {\n    readonly items: readonly SessionSummary[];\n}',
   },
@@ -5368,8 +5419,28 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type SessionSeqCursor = SessionSeq | -1;',
   },
   {
+    name: 'SessionSetStatusRequest',
+    declaration: 'export interface SessionSetStatusRequest {\n    readonly sessionId: SessionId;\n    readonly statusId: string | null;\n}',
+  },
+  {
+    name: 'SessionSetStatusValue',
+    declaration: 'export interface SessionSetStatusValue {\n    readonly status: SessionStatusValue | null;\n    readonly seq: number;\n}',
+  },
+  {
     name: 'SessionStartSource',
     declaration: 'export type SessionStartSource = \'startup\' | \'resume\' | \'clear\' | \'compact\';',
+  },
+  {
+    name: 'SessionStatusIconId',
+    declaration: 'export type SessionStatusIconId = \'right-up\' | \'stop\' | \'check\' | \'clock\' | \'pause\';',
+  },
+  {
+    name: 'SessionStatusTone',
+    declaration: 'export type SessionStatusTone = \'attention\' | \'error\' | \'success\' | \'neutral\';',
+  },
+  {
+    name: 'SessionStatusValue',
+    declaration: 'export interface SessionStatusValue {\n    readonly id: string;\n    readonly label: string;\n    readonly icon: SessionStatusIconId;\n    readonly tone: SessionStatusTone;\n}',
   },
   {
     name: 'SessionStorageMetadata',
@@ -6341,7 +6412,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'Workspace',
-    declaration: 'export interface Workspace {\n    readonly id: WorkspaceId;\n    readonly path: string;\n    readonly title: string;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n    readonly sessionIds: readonly SessionId[];\n    setTitle(title: string): Promise<void>;\n    attachSession(sessionId: SessionId): Promise<void>;\n    insertSessionBefore(sessionId: SessionId, beforeSessionId?: SessionId): Promise<void>;\n    detachSession(sessionId: SessionId): Promise<void>;\n    status(): Promise<\'ok\' | \'missing-dir\'>;\n}',
+    declaration: 'export interface Workspace {\n    readonly id: WorkspaceId;\n    readonly path: string;\n    readonly title: string;\n    readonly group: string | undefined;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n    readonly sessionIds: readonly SessionId[];\n    setTitle(title: string): Promise<void>;\n    setGroup(group: string | undefined): Promise<void>;\n    attachSession(sessionId: SessionId): Promise<void>;\n    insertSessionBefore(sessionId: SessionId, beforeSessionId?: SessionId): Promise<void>;\n    detachSession(sessionId: SessionId): Promise<void>;\n    status(): Promise<\'ok\' | \'missing-dir\'>;\n}',
   },
   {
     name: 'WorkspaceArchiveSessionRequest',
@@ -6432,12 +6503,16 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface WorkspaceRenameRequest {\n    readonly workspaceId: WorkspaceId;\n    readonly title: string;\n}',
   },
   {
+    name: 'WorkspaceSetGroupRequest',
+    declaration: 'export interface WorkspaceSetGroupRequest {\n    readonly workspaceId: WorkspaceId;\n    readonly group: string;\n}',
+  },
+  {
     name: 'WorkspaceValue',
     declaration: 'export interface WorkspaceValue {\n    readonly workspace: WorkspaceView;\n}',
   },
   {
     name: 'WorkspaceView',
-    declaration: 'export interface WorkspaceView {\n    readonly workspaceId: WorkspaceId;\n    readonly path: string;\n    readonly title: string;\n    readonly sessionIds: readonly SessionId[];\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+    declaration: 'export interface WorkspaceView {\n    readonly workspaceId: WorkspaceId;\n    readonly path: string;\n    readonly title: string;\n    readonly group: string;\n    readonly sessionIds: readonly SessionId[];\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
   },
 ]
 

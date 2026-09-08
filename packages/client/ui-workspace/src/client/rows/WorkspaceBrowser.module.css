@@ -492,6 +492,35 @@
   color: var(--dsw-alias-state-error-primary);
 }
 
+.statusList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statusOption {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.statusOption:hover:not(:disabled) {
+  background: var(--dsw-alias-surface-hover);
+}
+
+.statusOption:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
 .deleteAction:not(:disabled) {
   color: var(--dsw-alias-state-error-primary);
 }

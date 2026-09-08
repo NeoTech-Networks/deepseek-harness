@@ -29,6 +29,7 @@ import type {
   SessionSeqCursor,
 } from '@deepseek-ai/dsh-session/types'
 import { SESSION_FORMAT_VERSION, SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { TodoItem } from '@deepseek-ai/dsh-tool-todo/client'
 // Type-only: the brand constructor is host-side; the fixture casts at its
@@ -297,6 +298,8 @@ interface FixtureSessionApi {
     readonly agentPreset?: string
   }): Promise<ConnectionRpcResult<unknown>>
   rename(request: { readonly sessionId: SessionId; readonly title: string }): Promise<ConnectionRpcResult<unknown>>
+  setStatus(request: { readonly sessionId: SessionId; readonly statusId: string | null }): Promise<ConnectionRpcResult<unknown>>
+  listStatuses(): Promise<ConnectionRpcResult<unknown>>
   fork(request: { readonly sessionId: SessionId; readonly atSeq?: number }): Promise<ConnectionRpcResult<unknown>>
   history(request: {
     readonly sessionId: SessionId
@@ -2147,6 +2150,18 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
     return Promise.resolve({ ok: false, error })
   }
 
+  // The fixture ships the same status vocabulary the session-status domain
+  // defaults to, so a cold list/setStatus round-trips without a host service.
+  const statuses = {
+    list: (): readonly SessionStatusValue[] => ([
+      { id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'right-up', tone: 'attention' },
+      { id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error' },
+      { id: 'finished', label: 'Finished', icon: 'check', tone: 'success' },
+      { id: 'waiting-external', label: 'Waiting on someone else', icon: 'clock', tone: 'attention' },
+      { id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral' },
+    ]),
+  }
+
   const summaryOf = (id: SessionId): FixtureSessionSummary | undefined => sessions.find(s => s.sessionId === id)
   const requireRemoteSession = (
     request: { readonly sessionId: SessionId },
@@ -3152,6 +3167,27 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
       const appended = logOf(sessionId).at(-1) as SessionEvent
       return sessionOk({ title: normalized, seq: appended.seq })
     },
+    setStatus: (request) => {
+      const missing = requireRemoteSession(request)
+      if (missing !== undefined) return missing
+      const { sessionId, statusId } = request
+      const vocabulary = statuses.list()
+      const status = statusId === null ? null : vocabulary.find(entry => entry.id === statusId)
+      if (statusId !== null && status === undefined) {
+        return sessionErr({
+          code: 'session/status-unknown',
+          message: `unknown session status ${JSON.stringify(statusId)}`,
+          details: { statusId },
+        })
+      }
+      append(sessionId, {
+        type: 'session/status',
+        data: { status },
+      })
+      const appended = logOf(sessionId).at(-1) as SessionEvent
+      return sessionOk({ status, seq: appended.seq })
+    },
+    listStatuses: () => sessionOk({ statuses: statuses.list() }),
     fork: (request) => {
       const { sessionId, atSeq } = request
       const source = summaryOf(sessionId)
@@ -3908,6 +3944,10 @@ function createFixtureWorld(options: FixtureOptions): FixtureWorld {
         case 'session/rename': return sessionApi.rename(
           request as Parameters<FixtureSessionApi['rename']>[0],
         )
+        case 'session/setStatus': return sessionApi.setStatus(
+          request as Parameters<FixtureSessionApi['setStatus']>[0],
+        )
+        case 'session/listStatuses': return sessionApi.listStatuses()
         case 'session/fork': return sessionApi.fork(
           request as Parameters<FixtureSessionApi['fork']>[0],
         )

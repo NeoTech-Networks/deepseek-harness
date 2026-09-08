@@ -542,7 +542,7 @@ Source: [`packages/llm/llm-retry/src/types.ts:11`](../packages/llm/llm-retry/src
 'model/selection': ModelSelection
 ```
 
-Source: [`packages/api/session-controller/src/types.ts:40`](../packages/api/session-controller/src/types.ts)
+Source: [`packages/api/session-controller/src/types.ts:41`](../packages/api/session-controller/src/types.ts)
 
 ### `permission/*`
 
@@ -688,6 +688,22 @@ Source: [`packages/schedule/schedule/src/types.ts:219`](../packages/schedule/sch
 ```
 
 Source: [`packages/core/session/src/types.ts:381`](../packages/core/session/src/types.ts)
+
+<a id="sessionstatus--log-only"></a>
+
+#### `session/status` — log-only
+
+```ts persistence-catalog
+/**
+ * Whole-value session status. `status: null` clears the status; otherwise
+ * the event carries the complete post-change value plus an optional note.
+ * Last write wins on replay, and any human-authored `user/message` clears
+ * the status, so a prompt answers the hold the status described.
+ */
+'session/status': { status: SessionStatusValue | null; note?: string }
+```
+
+Source: [`packages/session-status/session-status/src/types.ts:71`](../packages/session-status/session-status/src/types.ts)
 
 <a id="sessiontitle--log-only"></a>
 

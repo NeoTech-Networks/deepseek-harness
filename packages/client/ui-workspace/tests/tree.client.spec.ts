@@ -3,6 +3,7 @@ import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-sess
 import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { SessionPendingInteractionBase } from '@deepseek-ai/dsh-client-ui-session/client'
 import type { ScheduleId, ScheduleRecord } from '@deepseek-ai/dsh-schedule/client'
+import type { GoalId } from '@deepseek-ai/dsh-goal/types'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
   deriveFlat, deriveGroups as deriveGroupsSectioned, derivePhase, deriveSearchResults, owningGroupKey, workspaceLabel,
@@ -213,6 +214,53 @@ describe('deriveGroups', () => {
     expect(deriveSearchResults(
       sessions, workspaces, 'project', noArchive, noAttention, { items: [], hasMore: false }, 10,
     ).items.map(node => [node.id, node.planActive])).toEqual(expected)
+  })
+
+  it('derives a declared status from sessionStatus, falling back to the goal phase', () => {
+    const explicit = {
+      ...summary('explicit', 5),
+      projectionValues: { sessionStatus: { id: 'paused', label: 'Paused', icon: 'pause' as const, tone: 'neutral' as const } },
+    }
+    const blocked = {
+      ...summary('blocked', 4),
+      projectionValues: {
+        goal: { goal: { id: 'g1' as GoalId, revision: 1, objective: 'x', phase: 'blocked' as const, maxGoalRounds: 1 }, roundsStarted: 0, createdAt: 0, updatedAt: 0 },
+      },
+    }
+    const complete = {
+      ...summary('complete', 3),
+      projectionValues: {
+        goal: { goal: { id: 'g2' as GoalId, revision: 1, objective: 'x', phase: 'complete' as const, maxGoalRounds: 1 }, roundsStarted: 0, createdAt: 0, updatedAt: 0 },
+      },
+    }
+    const active = {
+      ...summary('active', 2),
+      projectionValues: {
+        goal: { goal: { id: 'g3' as GoalId, revision: 1, objective: 'x', phase: 'active' as const, maxGoalRounds: 1 }, roundsStarted: 0, createdAt: 0, updatedAt: 0 },
+      },
+    }
+    const pausedGoal = {
+      ...summary('paused-goal', 1),
+      projectionValues: {
+        goal: { goal: { id: 'g4' as GoalId, revision: 1, objective: 'x', phase: 'paused' as const, maxGoalRounds: 1 }, roundsStarted: 0, createdAt: 0, updatedAt: 0 },
+      },
+    }
+    const sessions = list(explicit, blocked, complete, active, pausedGoal)
+    const rows = deriveFlat(sessions, noArchive, noAttention)
+
+    expect(rows.find(row => row.id === explicit.id)?.declaredStatus).toEqual({
+      id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral',
+    })
+    expect(rows.find(row => row.id === blocked.id)?.declaredStatus).toEqual({
+      id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error',
+    })
+    expect(rows.find(row => row.id === complete.id)?.declaredStatus).toEqual({
+      id: 'finished', label: 'Finished', icon: 'check', tone: 'success',
+    })
+    expect(rows.find(row => row.id === active.id)?.declaredStatus).toBeUndefined()
+    expect(rows.find(row => row.id === pausedGoal.id)?.declaredStatus).toEqual({
+      id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral',
+    })
   })
 
   it('hides subagent-origin sessions without hiding ordinary forks', () => {
@@ -574,6 +622,12 @@ describe('derivePhase', () => {
   it('ranks plan mode above own and descendant activity', () => {
     expect(derivePhase(facts({ planActive: true, running: true, runningSubagentCount: 2 })))
       .toBe('planning')
+  })
+
+  it('ranks a declared status below operator-blocking phases and above plan mode', () => {
+    const declared = { id: 'stuck', label: 'Stuck', icon: 'stop' as const, tone: 'error' as const }
+    expect(derivePhase(facts({ declaredStatus: declared, planActive: true, running: true }))).toBe('declared')
+    expect(derivePhase(facts({ pendingInteraction: 'approval', declaredStatus: declared }))).toBe('awaiting-approval')
   })
 
   it('ranks own activity above descendant activity', () => {

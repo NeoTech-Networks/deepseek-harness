@@ -61,6 +61,8 @@ import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
 import type TeamService from '@deepseek-ai/dsh-experimental-agent-team'
 import * as ToolTeam from '@deepseek-ai/dsh-experimental-tool-agent-team'
 import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
+import * as ToolSessionStatus from '@deepseek-ai/dsh-tool-session-status'
+import SessionStatusService from '@deepseek-ai/dsh-session-status'
 import * as ToolSubagent from '@deepseek-ai/dsh-tool-subagent'
 import { registerListSubagentModels } from '../packages/subagent/tool-subagent/src/list-models.ts'
 import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
@@ -556,6 +558,19 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-session-status',
+    dir: 'tool-session-status',
+    source: 'packages/session-status/tool-session-status/src/index.ts',
+    requires: ['ctx.tools', 'ctx.sessionStatus', 'owning Agent session'],
+    writes: ['tool/call', 'session/status', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(SessionStatusService)
+      await ctx.plugin(ToolSessionStatus)
+    },
+    note:
+      'set_session_status is a harness tool over the session-status domain: the status enum is the live vocabulary plus a clear sentinel, so a model cannot invent an id the deployment does not declare.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-workflow',

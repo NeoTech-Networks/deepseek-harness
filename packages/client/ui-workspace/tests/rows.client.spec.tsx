@@ -240,7 +240,7 @@ describe('workspace browser rows', () => {
     running.unmount()
     // Descendant activity also wins until the last running descendant stops.
     const delegated = renderRow({ completed: true, runningSubagentCount: 1 })
-    expect(delegated.container.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    expect(delegated.container.querySelector('[data-phase="subagents"]')).not.toBeNull()
     expect(delegated.container.querySelector('[data-state="done"]')).toBeNull()
   })
 
@@ -251,7 +251,7 @@ describe('workspace browser rows', () => {
       render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
       const row = screen.getByRole('treeitem')
-      expect(row.querySelector('[data-state="ongoing"]')).not.toBeNull()
+      expect(row.querySelector('[data-phase="subagents"]')).not.toBeNull()
       expect(screen.getByText('2 个子代理运行中')).toBeTruthy()
       expect(screen.queryByText('进行中')).toBeNull()
 
@@ -261,6 +261,33 @@ describe('workspace browser rows', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it.each([
+    ['attention', 'right-up'],
+    ['error', 'stop'],
+    ['success', 'check'],
+    ['neutral', 'pause'],
+  ] as const)('names a declared %s status with its glyph and tone', (tone, icon) => {
+    const declared = sessionRow({
+      id: sid(`declared-${tone}`), title: 'Declared',
+      declaredStatus: { id: tone, label: tone, icon, tone },
+    })
+    render(<SessionNodeItem node={declared} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    const row = screen.getByRole('treeitem')
+    expect(row.querySelector(`[data-tone="${tone}"]`)).not.toBeNull()
+    expect(screen.getByText(tone)).toBeTruthy()
+  })
+
+  it('falls back to a neutral glyph for an icon id this client does not know', () => {
+    const declared = sessionRow({
+      id: sid('declared-unknown'), title: 'Unknown',
+      declaredStatus: { id: 'weird', label: 'Weird', icon: 'banana' as never, tone: 'neutral' },
+    })
+    render(<SessionNodeItem node={declared} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    expect(screen.getByRole('treeitem').querySelector('[data-tone="neutral"]')).not.toBeNull()
   })
 
   it('keeps descendant activity secondary while the parent is running', () => {

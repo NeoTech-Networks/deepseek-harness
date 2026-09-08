@@ -19,6 +19,7 @@ import type {
   SessionListState, SessionSearchResultItem,
 } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceBrowserProps } from '../contract/slots.ts'
 import type { SessionNode, SessionOrderBy } from '../tree.ts'
@@ -266,6 +267,10 @@ type SessionTreeProps = Pick<
   onSessionRename: (sessionId: SessionNode['id'], currentTitle: string) => void
   /** Archive a session (row menu action; the row disappears on the state echo). */
   onSessionArchive: (sessionId: SessionNode['id']) => void
+  /** Open the browser-owned set-status dialog. */
+  onSessionSetStatus: (sessionId: SessionNode['id']) => void
+  /** Clear a session's declared status (row menu action). */
+  onSessionClearStatus: (sessionId: SessionNode['id']) => void
   /** Session order behavior: fixed after edits, or additionally promoted by user activity. */
   orderBy: SessionOrderBy
   /** One Session chosen from search that must be exposed and scrolled into view. */
@@ -279,6 +284,7 @@ function SessionTree({
   useSessions, useSessionPendingInteraction, startSession, open, forkSession, workspaces, archivedSessionIds,
   workspaceReady,
   onRenameRequest, onDeleteRequest, onSetGroupRequest, onSessionRename, onSessionArchive,
+  onSessionSetStatus, onSessionClearStatus,
   insertWorkspaceBefore, insertSessionBefore, orderBy,
   groupExpansion, setGroupExpanded,
   sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, home, t,
@@ -601,6 +607,8 @@ function SessionTree({
                     onRename={onSessionRename}
                     onFork={forkSession}
                     onArchive={onSessionArchive}
+                    onSetStatus={onSessionSetStatus}
+                    onClearStatus={onSessionClearStatus}
                     onReveal={node.id === revealSessionId && group.key === revealGroup
                       ? () => { onSessionRevealed(node.id) }
                       : undefined}
@@ -635,6 +643,7 @@ function SessionTree({
 /** The flat "In one list" body: every session is one draggable top-level row. */
 function FlatList({
   useSessions, useSessionPendingInteraction, open, forkSession, onSessionRename, onSessionArchive,
+  onSessionSetStatus, onSessionClearStatus,
   archivedSessionIds,
   orderBy, sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder,
   revealSessionId, onSessionRevealed, t,
@@ -646,6 +655,8 @@ function FlatList({
   | 'forkSession'
   | 'onSessionRename'
   | 'onSessionArchive'
+  | 'onSessionSetStatus'
+  | 'onSessionClearStatus'
   | 'archivedSessionIds'
   | 'orderBy'
   | 'sessionOrderByAccount'
@@ -728,6 +739,8 @@ function FlatList({
               onRename={onSessionRename}
               onFork={forkSession}
               onArchive={onSessionArchive}
+              onSetStatus={onSessionSetStatus}
+              onClearStatus={onSessionClearStatus}
               onReveal={node.id === revealSessionId
                 ? () => { onSessionRevealed(node.id) }
                 : undefined}
@@ -858,6 +871,8 @@ export function WorkspaceBrowser({
   startSession,
   open,
   renameSession,
+  setSessionStatus,
+  listSessionStatuses,
   forkSession,
   renameWorkspace,
   deleteWorkspace,
@@ -1121,6 +1136,43 @@ export function WorkspaceBrowser({
     })
   }
 
+  // Set-status dialog: the operator picks from the same vocabulary the tool
+  // offers the model, plus a Clear row. The vocabulary is fetched on open.
+  const [statusTarget, setStatusTarget] = useState<SessionNode['id'] | null>(null)
+  const [statusVocabulary, setStatusVocabulary] = useState<readonly SessionStatusValue[] | null>(null)
+  const [statusSetting, setStatusSetting] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const openStatusDialog = (sessionId: SessionNode['id']) => {
+    setStatusTarget(sessionId)
+    setStatusVocabulary(null)
+    setStatusError(null)
+    listSessionStatuses().then(setStatusVocabulary).catch((reason: unknown) => {
+      setStatusError(reason instanceof Error ? reason.message : String(reason))
+    })
+  }
+  const closeStatusDialog = () => {
+    if (statusSetting) return
+    setStatusTarget(null)
+  }
+  const commitStatus = (statusId: string | null) => {
+    if (statusTarget === null || statusSetting) return
+    setStatusSetting(true)
+    setStatusError(null)
+    setSessionStatus(statusTarget, statusId).then(() => {
+      setStatusSetting(false)
+      setStatusTarget(null)
+    }).catch((reason: unknown) => {
+      setStatusSetting(false)
+      setStatusError(reason instanceof Error ? reason.message : String(reason))
+    })
+  }
+  const onSessionSetStatus = (sessionId: SessionNode['id']) => { openStatusDialog(sessionId) }
+  const onSessionClearStatus = (sessionId: SessionNode['id']) => {
+    setSessionStatus(sessionId, null).catch((reason: unknown) => {
+      console.warn('session status clear rejected:', reason)
+    })
+  }
+
   // Delete dialog is separate from the row so a successful removal can
   // unmount that row without tearing down the in-flight confirmation state.
   const [deleteTarget, setDeleteTarget] = useState<{ workspaceId: WorkspaceId; title: string } | null>(null)
@@ -1310,6 +1362,7 @@ export function WorkspaceBrowser({
                 useSessions={useSessions} useSessionPendingInteraction={useSessionPendingInteraction}
                 open={open} forkSession={forkSession}
                 onSessionRename={onSessionRename} onSessionArchive={onSessionArchive}
+                onSessionSetStatus={onSessionSetStatus} onSessionClearStatus={onSessionClearStatus}
                 archivedSessionIds={archivedSessionIds}
                 orderBy={orderBy}
                 sessionOrderByAccount={sessionOrderByAccount}
@@ -1327,6 +1380,8 @@ export function WorkspaceBrowser({
                 useSessionPendingInteraction={useSessionPendingInteraction}
                 onSessionRename={onSessionRename}
                 onSessionArchive={onSessionArchive}
+                onSessionSetStatus={onSessionSetStatus}
+                onSessionClearStatus={onSessionClearStatus}
                 forkSession={forkSession}
                 workspaces={workspaces}
                 workspaceReady={workspacePhase === 'ready' && workspaceStreamState !== 'loading'}
@@ -1461,6 +1516,37 @@ export function WorkspaceBrowser({
           }}
         />
         {sessionRenameError !== null && <div className={css.renameError} role="alert">{sessionRenameError}</div>}
+      </Modal>
+
+      <Modal
+        open={statusTarget !== null}
+        onClose={closeStatusDialog}
+        closeLabel={t('close')}
+        title={t('status.title')}
+        footer={(
+          <Button variant="outline" disabled={statusSetting} onClick={() => { commitStatus(null) }}>{t('status.clear')}</Button>
+        )}
+      >
+        {statusError !== null && <div className={css.renameError} role="alert">{statusError}</div>}
+        {statusVocabulary === null && statusError === null && (
+          <div className={css.renameError} role="status">{t('status.loading')}</div>
+        )}
+        {statusVocabulary !== null && (
+          <div className={css.statusList} role="list">
+            {statusVocabulary.map(status => (
+              <button
+                key={status.id}
+                type="button"
+                role="listitem"
+                className={css.statusOption}
+                disabled={statusSetting}
+                onClick={() => { commitStatus(status.id) }}
+              >
+                {status.label}
+              </button>
+            ))}
+          </div>
+        )}
       </Modal>
       <Modal
         open={deleteTarget !== null}

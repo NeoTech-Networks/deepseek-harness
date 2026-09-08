@@ -10,6 +10,7 @@
 import type { AttachmentIdType, FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { PromptContentPart, QueueAction, SessionRequestId } from '../../types.ts'
@@ -117,6 +118,17 @@ export interface ISession {
    * @returns the normalized accepted title and its event seq, or the business error.
    */
   rename(title: string): Promise<RemoteResult<{ title: string; seq: SessionSeq }>>
+  /**
+   * Set or clear this session's declared status.
+   * @param statusId - vocabulary id to set, or null to clear.
+   * @returns the resolved status and its event seq, or the business error.
+   */
+  setStatus(statusId: string | null): Promise<RemoteResult<{ status: SessionStatusValue | null; seq: SessionSeq }>>
+  /**
+   * Read the deployment's declared status vocabulary.
+   * @returns the vocabulary in declaration order, or the business error.
+   */
+  listStatuses(): Promise<RemoteResult<{ statuses: readonly SessionStatusValue[] }>>
   /**
    * Extend the history window backwards (older messages pagination).
    * @returns completion; failures land in snapshot.openState/loadingOlder.

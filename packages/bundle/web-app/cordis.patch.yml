@@ -110,6 +110,13 @@
     - id: workspace-files
       name: '@deepseek-ai/dsh-api-workspace-files'
 
+    # Pinned-directory service: the operator's own roots anywhere on the Host,
+    # stored in the `pinned-files` settings namespace, plus unconfined
+    # directory listings and text reads for them. Deliberately outside the
+    # workspace fence; read the package README before widening it further.
+    - id: pinned-files
+      name: '@deepseek-ai/dsh-api-pinned-files'
+
     # Configuration-surface reads and writes over Typert Remote. Each method
     # reports an actionable error when its settings-domain provider is absent.
     - id: settings-controller
@@ -233,6 +240,13 @@
     # The right Sidebar's workspace file tree tab type.
     - id: ui-sidebar-files
       name: '@deepseek-ai/dsh-client-ui-sidebar-files'
+
+    # The right Sidebar's pinned-directory explorer: roots the operator keeps
+    # in the settings document, identical in every Session and Workspace, plus
+    # its own file preview. It opens itself once per Session; set
+    # `autoOpen: false` under `pinned-files` in that document to stop it.
+    - id: ui-sidebar-explorer
+      name: '@deepseek-ai/dsh-client-ui-sidebar-explorer'
 
     - id: ui-settings
       name: '@deepseek-ai/dsh-client-ui-settings'
@@ -411,6 +425,12 @@
   disabled: true
 
 - id: tool-goal
+  disabled: true
+
+- id: command-session-status
+  disabled: true
+
+- id: tool-session-status
   disabled: true
 
 - id: plan-mode

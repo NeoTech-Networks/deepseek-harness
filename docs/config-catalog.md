@@ -213,7 +213,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/api/session-controller/src/index.ts:69`](../packages/api/session-controller/src/index.ts)
+Source: [`packages/api/session-controller/src/index.ts:72`](../packages/api/session-controller/src/index.ts)
 
 <a id="deepseek-aidsh-api-settings-controller"></a>
 
@@ -2028,6 +2028,65 @@ export interface Config {
 
 Source: [`packages/context/session-reference/src/config.ts:11`](../packages/context/session-reference/src/config.ts)
 
+<a id="deepseek-aidsh-session-status"></a>
+
+## `@deepseek-ai/dsh-session-status`
+
+Requires: `sessionProjections`
+
+```ts config-catalog
+/** Deployment-owned status vocabulary, validated at plugin load. */
+export interface SessionStatusConfig {
+  /**
+   * The allowed statuses. Ids must be non-empty and unique, every icon id must
+   * be one of {@link SessionStatusIconId}, and every tone must be one of
+   * {@link SessionStatusTone}; a malformed entry fails the plugin load loudly.
+   */
+  readonly vocabulary: readonly SessionStatusVocabularyEntry[]
+}
+
+/** One vocabulary entry the deployment declares; the folded value is the entry. */
+export interface SessionStatusVocabularyEntry extends SessionStatusValue {}
+
+/**
+ * One durable declared session status. The whole value travels in the
+ * `session/status` event so a later vocabulary edit cannot retroactively
+ * change or break a row already logged.
+ */
+export interface SessionStatusValue {
+  /** Stable kebab-case identity, resolved against the deployment vocabulary. */
+  readonly id: string
+  /** Human label shown in the row and hover card; operator-authored copy. */
+  readonly label: string
+  /** Glyph id the client resolves to a component. */
+  readonly icon: SessionStatusIconId
+  /** Colour urgency of the glyph. */
+  readonly tone: SessionStatusTone
+}
+
+/**
+ * The shipped glyph identifiers, drawn from the ui-primitives icon set. An id
+ * is a stable wire value, never a component: the client resolves the id
+ * through its own allowlist so a deployment that authors a new icon id keeps
+ * working, and a client that does not know an id falls back to a neutral
+ * generic glyph instead of throwing.
+ */
+export type SessionStatusIconId =
+  | 'right-up'
+  | 'stop'
+  | 'check'
+  | 'clock'
+  | 'pause'
+
+/**
+ * Colour urgency of one status glyph. Identity lives in the glyph, urgency in
+ * the colour, matching the workspace row's existing phase-mark arrangement.
+ */
+export type SessionStatusTone = 'attention' | 'error' | 'success' | 'neutral'
+```
+
+Source: [`packages/session-status/session-status/src/types.ts:54`](../packages/session-status/session-status/src/types.ts)
+
 <a id="deepseek-aidsh-session-telemetry-otel"></a>
 
 ## `@deepseek-ai/dsh-session-telemetry-otel`
@@ -3469,6 +3528,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-command-compact` — requires `commands` · `compaction` ([`packages/compaction/command-compact/src/index.ts`](../packages/compaction/command-compact/src/index.ts))
 - `@deepseek-ai/dsh-command-feedback` — requires `commands` ([`packages/feedback/command-feedback/src/index.ts`](../packages/feedback/command-feedback/src/index.ts))
 - `@deepseek-ai/dsh-command-goal` — requires `commands` · `goals` ([`packages/goal/command-goal/src/index.ts`](../packages/goal/command-goal/src/index.ts))
+- `@deepseek-ai/dsh-command-session-status` — requires `commands` · `sessionStatus` ([`packages/session-status/command-session-status/src/index.ts`](../packages/session-status/command-session-status/src/index.ts))
 - `@deepseek-ai/dsh-commands` ([`packages/interaction/commands/src/index.ts`](../packages/interaction/commands/src/index.ts))
 - `@deepseek-ai/dsh-cordis-client-runner` ([`packages/extensions/cordis-client-runner/src/index.ts`](../packages/extensions/cordis-client-runner/src/index.ts))
 - `@deepseek-ai/dsh-deepseek-llm-api-extensions` ([`packages/llm/deepseek-llm-api-extensions/src/index.ts`](../packages/llm/deepseek-llm-api-extensions/src/index.ts))
@@ -3495,6 +3555,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-tool-ask-user` — requires `tools` · `userQuestions` ([`packages/interaction/tool-ask-user/src/index.ts`](../packages/interaction/tool-ask-user/src/index.ts))
 - `@deepseek-ai/dsh-tool-call-timeout-policy` — requires `tools` ([`packages/guard/timeout-policy/src/index.ts`](../packages/guard/timeout-policy/src/index.ts))
 - `@deepseek-ai/dsh-tool-cordis` — requires `tools` · `systemPrompt` · `dynamicCordisRunner` · `cordisInspect` ([`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts))
+- `@deepseek-ai/dsh-tool-session-status` — requires `tools` · `sessionStatus` ([`packages/session-status/tool-session-status/src/index.ts`](../packages/session-status/tool-session-status/src/index.ts))
 - `@deepseek-ai/dsh-tool-subagent-control` — requires `tools` · `subagents` ([`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts))
 - `@deepseek-ai/dsh-user-questions` ([`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts))
 - `@deepseek-ai/dsh-webhook` — requires `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry` ([`packages/webhook/webhook/src/index.ts`](../packages/webhook/webhook/src/index.ts))

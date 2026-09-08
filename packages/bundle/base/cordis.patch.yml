@@ -298,6 +298,12 @@
     - id: command-goal
       name: '@deepseek-ai/dsh-command-goal'
 
+    - id: session-status
+      name: '@deepseek-ai/dsh-session-status'
+
+    - id: command-session-status
+      name: '@deepseek-ai/dsh-command-session-status'
+
     - id: plan-mode
       name: '@deepseek-ai/dsh-plan-mode'
       config:
@@ -402,6 +408,9 @@
       name: '@deepseek-ai/dsh-tool-todo'
       config:
         allowParallelInProgress: true
+
+    - id: tool-session-status
+      name: '@deepseek-ai/dsh-tool-session-status'
 
     # Persisted same-session goals reach the model and the slash menu here; the
     # domain, driver, and `/goal` command are above.

@@ -38,6 +38,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-jobs` | `job_kill`, `job_list`, `job_output` | `ctx.tools`, `ctx.jobs`, `ctx.systemPrompt` | `tool/call`, `tool/result`, `user/message via agent.inject() for background completion notices` | - | The kind-agnostic background-job controller: background bash commands, PTY sends, and subagents are read, listed, and killed through the same three tools. Loading the plugin attaches the controller that arms producers' `ctx.jobs.start()`. |
 | `@deepseek-ai/dsh-experimental-tool-agent-team` | `interrupt_agent`, `list_agents`, `send_message`, `spawn_teammate`, `team_task_create`, `team_task_get`, `team_task_list`, `team_task_update`, `wait_agent` | `ctx.tools`, `ctx.systemPrompt`, `ctx.agentTeams`, `an exact live Team member Agent` | `tool/call`, `team/member`, `team/message/queued`, `team/message/delivered`, `team/task`, `tool/result` | - | All nine tools are scoped to implicit Team Leads and durable teammates. The shipped dsh-base bundle keeps the package disabled; the documented Agent Teams profile patch enables it while disabling the legacy continuable-child control names. |
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
+| `@deepseek-ai/dsh-tool-session-status` | `set_session_status` | `ctx.tools`, `ctx.sessionStatus`, `owning Agent session` | `tool/call`, `session/status`, `tool/result` | - | set_session_status is a harness tool over the session-status domain: the status enum is the live vocabulary plus a clear sentinel, so a model cannot invent an id the deployment does not declare. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
 
@@ -2077,6 +2078,45 @@ Record and update a structured task list for the current work. Send the ENTIRE l
 Source: [`packages/todo/tool-todo/src/index.ts`](../packages/todo/tool-todo/src/index.ts)
 
 todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task.
+
+<a id="deepseek-aidsh-tool-session-status"></a>
+
+## `@deepseek-ai/dsh-tool-session-status`
+
+### `set_session_status`
+
+Set a durable status on the current session so the operator's sidebar shows what the session is doing at a glance, independent of which model is running. Call it when the session reaches a state the operator should see without opening the session. Use "waiting-production" when the work is built and holding for the operator's deploy phrase, "stuck" when the session cannot make progress without the operator, "finished" when the objective is met, "waiting-external" when waiting on a third party, and "paused" when it is parked. Send "clear" to remove the status. The status clears automatically when the operator next prompts the session.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "description": "The status to set, or \"clear\" to remove the current status.",
+      "enum": [
+        "waiting-production",
+        "stuck",
+        "finished",
+        "waiting-external",
+        "paused",
+        "clear"
+      ]
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional one-line reason, recorded beside the status."
+    }
+  },
+  "required": [
+    "status"
+  ]
+}
+```
+
+Source: [`packages/session-status/tool-session-status/src/index.ts`](../packages/session-status/tool-session-status/src/index.ts)
+
+set_session_status is a harness tool over the session-status domain: the status enum is the live vocabulary plus a clear sentinel, so a model cannot invent an id the deployment does not declare.
 
 <a id="deepseek-aidsh-tool-workflow"></a>
 

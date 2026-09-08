@@ -12,6 +12,8 @@ import type {
 } from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-plan-mode/client'
 import type {} from '@deepseek-ai/dsh-schedule/client'
+import type {} from '@deepseek-ai/dsh-goal/client'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
 import {
@@ -48,6 +50,7 @@ export type SessionPhase =
   | 'awaiting-approval'
   | 'awaiting-plan-review'
   | 'awaiting-answer'
+  | 'declared'
   | 'planning'
   | 'running'
   | 'subagents'
@@ -69,6 +72,8 @@ export interface SessionRowFacts {
   completed: boolean
   /** Logged plan mode is in force (the `plan` projection's `active`). */
   planActive: boolean
+  /** A declared status, from `sessionStatus` or the goal-phase fallback. */
+  declaredStatus?: SessionStatusValue
   /** The current list projection contains at least one active Schedule record. */
   hasActiveSchedule: boolean
   /** The winning phase for the row's status slot. */
@@ -206,6 +211,26 @@ function planActive(session: SessionSummary): boolean {
   return session.projectionValues?.plan?.active === true
 }
 
+/**
+ * The declared status a row presents. The `sessionStatus` projection wins when
+ * present; otherwise a goal's durable phase maps to the matching shipped
+ * status, so a session that manages a goal through the goal tools lights up
+ * the icon without a second declaration. An absent key is capability absence
+ * (session-status not composed, or hints that have not warmed) and reads as no
+ * status.
+ */
+function declaredStatusOf(session: SessionSummary): SessionStatusValue | undefined {
+  const explicit = session.projectionValues?.sessionStatus
+  if (explicit != null) return explicit
+  const goal = session.projectionValues?.goal?.goal
+  switch (goal?.phase) {
+    case 'blocked': return { id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error' }
+    case 'complete': return { id: 'finished', label: 'Finished', icon: 'check', tone: 'success' }
+    case 'paused': return { id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral' }
+    default: return undefined
+  }
+}
+
 /* v8 ignore next 3 -- closed-union backstop; only reached if a pending kind is forged */
 function assertNever(value: never): never {
   throw new Error(`unknown pending interaction: ${String(value)}`)
@@ -213,10 +238,12 @@ function assertNever(value: never): never {
 
 /**
  * Resolve the one phase a row presents. Anything blocking this operator
- * outranks everything the agent can do alone; plan mode outranks activity
- * because it is the durable collaboration state a running turn does not
- * change; own activity outranks descendant activity; the finished-but-unopened
- * reminder is last before idle.
+ * outranks everything the agent can do alone; a declared status outranks plan
+ * mode and activity because it is the durable state the operator asked to see,
+ * and a new prompt clears it anyway; plan mode outranks activity because it is
+ * the durable collaboration state a running turn does not change; own activity
+ * outranks descendant activity; the finished-but-unopened reminder is last
+ * before idle.
  * @param facts - the row's derived live facts.
  * @returns the winning phase.
  */
@@ -229,6 +256,7 @@ export function derivePhase(facts: Omit<SessionRowFacts, 'phase'>): SessionPhase
     /* v8 ignore next -- closed SessionPendingInteractionStatus union */
     default: return assertNever(facts.pendingInteraction)
   }
+  if (facts.declaredStatus !== undefined) return 'declared'
   if (facts.planActive) return 'planning'
   if (facts.running) return 'running'
   if (facts.runningSubagentCount > 0) return 'subagents'
@@ -337,6 +365,7 @@ function sessionRowFacts(
   pendingInteractions: SessionPendingInteractions,
 ): SessionRowFacts {
   const pendingInteraction = visiblePendingKind(pendingInteractions.get(s.id)?.kind)
+  const declaredStatus = declaredStatusOf(s)
   const facts: Omit<SessionRowFacts, 'phase'> = {
     running: s.running,
     runningSubagentCount: descendants.get(s.id)?.runningCount ?? 0,
@@ -344,6 +373,7 @@ function sessionRowFacts(
     planActive: planActive(s),
     hasActiveSchedule: hasActiveSchedule(s),
     ...(pendingInteraction === undefined ? {} : { pendingInteraction }),
+    ...(declaredStatus === undefined ? {} : { declaredStatus }),
   }
   return { ...facts, phase: derivePhase(facts) }
 }
