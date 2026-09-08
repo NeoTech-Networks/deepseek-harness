@@ -386,7 +386,11 @@
   line-height: 16px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--dsw-alias-label-tertiary);
+  color: var(--dsw-static-deepseek-600);
+}
+
+:global(body[data-ds-dark-theme]) .groupHeader {
+  color: var(--dsw-static-deepseek-400);
 }
 
 .listTopDropIndicator,
