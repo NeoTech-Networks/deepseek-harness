@@ -418,12 +418,16 @@ export class SessionCommandController {
           for (const part of content) {
             if (part.type === 'image') refs.push(part.attachment)
           }
+          let description: string
           try {
-            const description = await vision.describe(refs)
-            content = [...content, { type: 'text', text: imageDescriptionBlock(description) }]
+            description = imageDescriptionBlock(await vision.describe(refs))
           } catch (error) {
-            content = [...content, { type: 'text', text: imageDescriptionUnavailable(error) }]
+            description = imageDescriptionUnavailable(error)
           }
+          // Replace the raw image blocks with the vision model's text so the
+          // text-only model sees only the description, not an "image omitted"
+          // placeholder alongside it.
+          content = [...content.filter(part => part.type !== 'image'), { type: 'text', text: description }]
         }
         const message: UserMessage = createUserMessage({ content, source })
         if (this.ctx.agents.get(agent.id) !== agent) {

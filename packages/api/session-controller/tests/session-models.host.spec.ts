@@ -772,6 +772,7 @@ describe('Web session model selection', () => {
       .map(block => block.text)
       .join(' ')
     expect(text).toContain('described 1 image(s)')
+    expect(message.content.some(block => block.type === 'image')).toBe(false)
     await ctx.fiber.dispose()
   })
 })
