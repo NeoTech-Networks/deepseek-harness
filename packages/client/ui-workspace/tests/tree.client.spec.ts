@@ -387,6 +387,18 @@ describe('deriveGroups', () => {
     expect(sections[2]!.workspaces.map(w => w.key)).toEqual([UNGROUPED_KEY])
     expect(sections[0]!.workspaces[0]!.sessions.map(s => s.id)).toEqual([sid('owned')])
   })
+
+  it('sorts named group sections alphabetically regardless of workspace order', () => {
+    const workspaces = [
+      workspace('z', [], 'z', 'Zeta'),
+      workspace('a', [], 'a', 'Alpha'),
+      workspace('m', [], 'm', 'Mike'),
+      workspace('b', [], 'b', 'Beta'),
+    ]
+    const sections = deriveGroupsSectioned(list(), workspaces, noArchive, noAttention, view())
+    expect(sections.map(section => section.label)).toEqual(['Alpha', 'Beta', 'Mike', 'Zeta'])
+    expect(sections.map(section => section.workspaces.map(w => w.key))).toEqual([['a'], ['b'], ['m'], ['z']])
+  })
 })
 
 describe('deriveFlat', () => {

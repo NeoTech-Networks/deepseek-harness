@@ -412,6 +412,9 @@ function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
     if (bucket === undefined) { named.set(label, [node]); namedOrder.push(label) }
     else bucket.push(node)
   }
+  // Named groups render alphabetically, independent of the order their
+  // members appear in Host order, so a newly added group slots in place.
+  namedOrder.sort((a, b) => a.localeCompare(b))
   for (const label of namedOrder) {
     const workspaces = named.get(label) as GroupNode[]
     sections.push({
