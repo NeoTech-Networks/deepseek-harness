@@ -47,14 +47,27 @@ async function boot() {
     }),
   }
   const workspaceFiles = { list: vi.fn() }
+  const workspaces = {
+    list: { getSnapshot: vi.fn(() => ({ items: [] as { workspaceId: string; title: string; group: string; sessionIds: string[] }[] })) },
+    create: vi.fn(async ({ path }: { path: string }) => ({ workspaceId: path, title: path, group: '' })),
+    setGroup: vi.fn(async () => ({})),
+  }
+  const sessions = { open: vi.fn() }
+  const uiWorkspace = {
+    openDirectory: vi.fn(async () => {}),
+    connectWorkspace: vi.fn(async () => 'session-1'),
+  }
   ctx.provide('sidebarRightTabs', tabs as never)
   ctx.provide('slots', slots as never)
   ctx.provide('locale', locale as never)
   ctx.provide('remote', { workspaceFiles } as never)
   ctx.provide('remote.workspaceFiles', workspaceFiles as never)
+  ctx.provide('workspaces', workspaces as never)
+  ctx.provide('sessions', sessions as never)
+  ctx.provide('uiWorkspace', uiWorkspace as never)
   const fiber = ctx.plugin({ inject: [...inject], apply })
   await fiber.await()
-  return { tabs, registered, dictionaries, fiber }
+  return { tabs, registered, dictionaries, fiber, workspaces, sessions, uiWorkspace, workspaceFiles }
 }
 
 describe('ui-sidebar-files apply', () => {
@@ -85,5 +98,41 @@ describe('ui-sidebar-files apply', () => {
     expect(tabs.get(FILES_KIND)).toBeUndefined()
     expect(registered).toEqual([])
     expect(dictionaries.size).toBe(0)
+  })
+
+  it('the injected face delegates open-in-session gestures to the Workspace capability', async () => {
+    const { registered, workspaces, sessions, uiWorkspace } = await boot()
+    const injectFace = registered[0]!.inject as (sessionId: string, actions: object) => {
+      openDirectory(path: string): void
+      openSubDirectories(paths: readonly string[], group: string): Promise<number>
+      inheritedGroup: string
+    }
+
+    // groupFor prefers the owner's group, then its title, then nothing.
+    workspaces.list.getSnapshot.mockReturnValue({
+      items: [{ workspaceId: 'w1', title: 'sig-railway-services', group: 'sig', sessionIds: ['s-1'] }],
+    })
+    expect(injectFace('s-1', {}).inheritedGroup).toBe('sig')
+    workspaces.list.getSnapshot.mockReturnValue({
+      items: [{ workspaceId: 'w1', title: 'sig-railway-services', group: '', sessionIds: ['s-1'] }],
+    })
+    expect(injectFace('s-1', {}).inheritedGroup).toBe('sig-railway-services')
+    workspaces.list.getSnapshot.mockReturnValue({ items: [] })
+    expect(injectFace('s-1', {}).inheritedGroup).toBe('')
+
+    // openDirectory adopts one folder.
+    injectFace('s-1', {}).openDirectory('/w/overlord')
+    expect(uiWorkspace.openDirectory).toHaveBeenCalledWith('/w/overlord')
+
+    // openSubDirectories registers each path, groups it, and opens only the first.
+    workspaces.create.mockResolvedValueOnce({ workspaceId: 'overlord', title: 'overlord', group: '' })
+    workspaces.create.mockResolvedValueOnce({ workspaceId: 'service-pages', title: 'service-pages', group: '' })
+    await expect(injectFace('s-1', {}).openSubDirectories(['/w/overlord', '/w/service-pages'], 'sig')).resolves.toBe(2)
+    expect(workspaces.create).toHaveBeenNthCalledWith(1, { path: '/w/overlord' })
+    expect(workspaces.create).toHaveBeenNthCalledWith(2, { path: '/w/service-pages' })
+    expect(workspaces.setGroup).toHaveBeenCalledTimes(2)
+    expect(uiWorkspace.connectWorkspace).toHaveBeenCalledTimes(1)
+    expect(uiWorkspace.connectWorkspace).toHaveBeenCalledWith('overlord')
+    expect(sessions.open).toHaveBeenCalledWith('session-1')
   })
 })
