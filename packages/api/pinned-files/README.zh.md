@@ -51,7 +51,7 @@ pinned-files:
   roots:
     - C:/Projects/repos
     - C:/Claude/skills
-  autoOpen: true
+  autoOpen: false
 ```
 
 -----

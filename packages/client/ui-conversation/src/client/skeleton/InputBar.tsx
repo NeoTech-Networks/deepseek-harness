@@ -37,6 +37,11 @@ import { ContextMeter } from './ContextMeter.tsx'
 import { PermissionSelect } from './PermissionSelect.tsx'
 import css from './InputBar.module.css'
 
+/** Alt+S fills the composer with this operator command and submits it. */
+const SAVE_STATE_SHORTCUT = '/save-state'
+/** Alt+P fills the composer with this text and submits it. */
+const DEPLOY_SHORTCUT = 'Deploy To Production'
+
 export type InputBarProps = ComposerBarProps
 
 export const InputBar = memo(function InputBar({
@@ -307,6 +312,26 @@ export const InputBar = memo(function InputBar({
       },
     })
   }, [editor, keyboard])
+
+  // Operator shortcuts: Alt+S submits the save-state command, Alt+P submits the
+  // production promote phrase. A renderer-level listener keeps these inside the
+  // focused app window, so they never collide with system-wide hotkeys. The
+  // draft is replaced wholesale (setDraft), then submitted through the same
+  // path as the primary send button; /save-state is not a slash command, so it
+  // falls through to the default sink and resolves as a user-invocable skill.
+  useEffect(() => {
+    if (inputActions === undefined) return
+    const onShortcut = (event: WindowEventMap['keydown']): void => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+      if (event.code !== 'KeyS' && event.code !== 'KeyP') return
+      if (locked || machineBusy) return
+      event.preventDefault()
+      inputActions.setDraft(event.code === 'KeyS' ? SAVE_STATE_SHORTCUT : DEPLOY_SHORTCUT)
+      inputActions.submit()
+    }
+    window.addEventListener('keydown', onShortcut)
+    return () => { window.removeEventListener('keydown', onShortcut) }
+  }, [inputActions, locked, machineBusy])
 
   // Button presses steal focus from the editor; suppress at mousedown so
   // typing continues seamlessly. Lexical's focus() carries preventScroll and

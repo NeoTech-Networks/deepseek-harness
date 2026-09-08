@@ -69,7 +69,7 @@ const NAMESPACE = 'pinned-files'
 /** The operator's section as the settings document stores and validates it. */
 const SECTION_SCHEMA: z<PinnedSection> = z.object({
   roots: z.array(z.string()).default([]),
-  autoOpen: z.boolean().default(true),
+  autoOpen: z.boolean().default(false),
 })
 
 /**
