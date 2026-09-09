@@ -19,7 +19,10 @@
 | Vault drift detection | exit 3 and names the file | yes, and prints the restore command | VERIFIED |
 | Daily snapshot task | exists and runs | `DSH Config Vault Snapshot`, next 2026-09-10 09:00, manual run LastTaskResult 0 | VERIFIED |
 | Local-feature marker check | catches a missing feature | yes; reports exactly the two shortcut markers as absent from the build not yet installed | VERIFIED |
-| Alt+S in the INSTALLED app | works | NOT YET; installer built, install is operator gated | UNVERIFIED |
+| Fixed build under a REAL Electron window, REAL OS keystroke | Alt+S submits | SUBMITTED `/save-state`; turn ran and failed only on the scratch home's missing API key, which is the admission proof | VERIFIED |
+| Same, Alt+P | submits the promote phrase | SUBMITTED `deploy to production`, lowercase and exact | VERIFIED |
+| The keyup-only behaviour in that same run | reconfirmed | main process logged `keyDown AltLeft`, then `keyUp KeyS` / `keyUp KeyP`, no letter keydown | VERIFIED |
+| Alt+S in the INSTALLED app | works | NOT YET; installer built and the fix proven live in Electron, but the install itself is operator gated | UNVERIFIED |
 
 ## 2026-09-09 - Why no state-sync PR can merge on this fork
 
