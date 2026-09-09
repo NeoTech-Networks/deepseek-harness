@@ -16,10 +16,28 @@ import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-sess
 import type { SessionPendingInteractionBase } from '@deepseek-ai/dsh-client-ui-session/client'
 // Type-only: pulls the `plan` projection key into SessionProjectionMap.
 import type {} from '@deepseek-ai/dsh-plan-mode/client'
+// Type-only: pulls the `sessionStatus` projection key into SessionProjectionMap.
+import type {} from '@deepseek-ai/dsh-session-status/client'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
-/** The phase a session row presents in this panel, the same precedence the left sidebar applies. */
-export type SessionPanelPhase = 'awaiting' | 'planning' | 'running' | 'subagents' | 'done' | 'idle'
+/**
+ * The phase a session row presents in this panel, the same precedence the left
+ * sidebar applies.
+ *
+ * `declared` is the durable status the session declared about itself. This
+ * panel had no such state at all, so one session could read as "waiting on you
+ * to deploy" in the workspace sidebar and as a plain idle row here, in the
+ * same window.
+ */
+export type SessionPanelPhase =
+  | 'awaiting'
+  | 'planning'
+  | 'running'
+  | 'subagents'
+  | 'declared'
+  | 'done'
+  | 'idle'
 
 /** One list row the panel renders: identity, display title, phase, and recency. */
 export interface SessionPanelRow {
@@ -28,6 +46,8 @@ export interface SessionPanelRow {
   title: string
   blank: boolean
   phase: SessionPanelPhase
+  /** The declared status behind a `declared` phase; absent for every other phase. */
+  declaredStatus?: SessionStatusValue
   updatedAt: number
   /** Whether this row is the currently selected session. */
   current: boolean
@@ -42,8 +62,9 @@ const PHASE_RANK: Readonly<Record<SessionPanelPhase, number>> = {
   planning: 1,
   running: 2,
   subagents: 3,
-  done: 4,
-  idle: 5,
+  declared: 4,
+  done: 5,
+  idle: 6,
 }
 
 /**
@@ -69,7 +90,13 @@ function runningSubagentCounts(
   return counts
 }
 
-/** The one phase a session presents, mirroring the left sidebar's precedence. */
+/**
+ * The one phase a session presents, mirroring the left sidebar's precedence.
+ *
+ * A declared status sits below everything the session is actually doing, for
+ * the same reason it does there: the mark reports what is happening, and a
+ * status is what an idle session says about why it is idle.
+ */
 function phaseOf(
   summary: SessionSummary,
   runningSubagentCount: number,
@@ -79,6 +106,7 @@ function phaseOf(
   if (summary.projectionValues?.plan?.active === true) return 'planning'
   if (summary.running) return 'running'
   if (runningSubagentCount > 0) return 'subagents'
+  if (summary.projectionValues?.sessionStatus != null) return 'declared'
   if (summary.completed === true) return 'done'
   return 'idle'
 }
@@ -114,11 +142,14 @@ export function deriveSessions(
   for (const id of list.ids) {
     const summary = list.byId[id]
     if (summary === undefined || !visible(summary, list.current, archived)) continue
+    const phase = phaseOf(summary, runningCounts.get(id) ?? 0, pendingInteractions.get(id)?.kind)
+    const declaredStatus = summary.projectionValues?.sessionStatus
     rows.push({
       id,
       title: summary.blank ? '' : summary.displayTitle,
       blank: summary.blank,
-      phase: phaseOf(summary, runningCounts.get(id) ?? 0, pendingInteractions.get(id)?.kind),
+      phase,
+      ...(phase === 'declared' && declaredStatus != null ? { declaredStatus } : {}),
       updatedAt: summary.updatedAt,
       current: id === list.current,
     })

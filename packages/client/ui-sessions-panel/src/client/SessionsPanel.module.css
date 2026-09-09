@@ -81,6 +81,50 @@
   width: 10px;
 }
 
+/* Phase and declared-status glyphs, drawn in the dot's slot. Same vocabulary
+   and same colour tokens as the workspace sidebar, so one session cannot read
+   as two different things in one window. */
+.glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.glyph[data-tone='attention'] {
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+.glyph[data-tone='error'] {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.glyph[data-tone='success'] {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.glyph[data-tone='neutral'] {
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* A glyph standing in for a running indicator carries that indicator's
+   liveness: the ongoing blue plus a pulse. */
+.glyph[data-active='true'] {
+  color: var(--dsw-static-deepseek-450);
+  animation: dsh-sessions-panel-live 1.6s var(--ds-ease-in-out) infinite;
+}
+
+@keyframes dsh-sessions-panel-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glyph[data-active='true'] {
+    animation: none;
+  }
+}
+
 .body {
   display: flex;
   flex: 1 1 auto;
