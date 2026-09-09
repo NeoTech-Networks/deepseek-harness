@@ -5,7 +5,9 @@
 # it force-closes the app, which would kill the very session hosting the app.
 #
 # It does six things:
-#   1. Force-closes any running DeepSeek Harness processes.
+#   1. Force-closes any running DeepSeek Harness processes. This is a forced
+#      kill, so Windows and any session inside the app report it as a CRASH.
+#      That is expected and is not the install failing.
 #   2. Clears the OLD packaged seed, so the new install cannot inherit the
 #      previous release's package archives (see the note below).
 #   3. Silently reinstalls from the freshly built unsigned installer.
@@ -39,8 +41,15 @@ $dshHome  = 'C:\Users\SteveDempsey\.dsh'
 $checker  = Join-Path $PSScriptRoot 'check-seed-integrity.py'
 
 # 1. Close the app.
+#
+# EXPECTED, NOT A FAULT: this is a forced termination, so Windows (and any
+# session that was running inside the app) reports it as a CRASH. That report
+# is this line doing its job. It is not the install failing, and it is not
+# something to diagnose. The app has no clean-shutdown switch to use instead.
+Write-Host "closing the app (Windows will report this as a crash - that is expected, it is a forced close)" -ForegroundColor Yellow
 taskkill /F /IM "DeepSeek Harness.exe" /T 2>$null | Out-Null
 Start-Sleep -Seconds 3
+Write-Host "app closed"
 
 # 2. Clear the old seed before installing, so /S cannot leave a previous
 #    release's archives behind. The installer recreates it in full.
