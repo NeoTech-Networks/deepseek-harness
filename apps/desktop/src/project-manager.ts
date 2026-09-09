@@ -32,6 +32,7 @@ import {
   verifyDesktopCorePackageSet,
 } from './core-package-set.ts'
 import type { DesktopPaths } from './paths.ts'
+import { openProvisionLog, SILENT_PROVISION_LOG, type ProvisionLog } from './provision-log.ts'
 import { parseDesktopRelease, type DesktopRelease } from './release.ts'
 import { extractPnpmStoreArchives, mergePnpmStore } from './seed-store.ts'
 
@@ -77,6 +78,18 @@ export interface DesktopRuntimeExecutables {
   readonly pnpm: string
 }
 
+/** Injectable deadlines and transcript directory for one package transaction owner. */
+export interface DesktopProjectOptions {
+  /** Deadline for one pnpm invocation. Defaults to twenty minutes. */
+  readonly pnpmTimeoutMs?: number
+  /** Grace after pnpm exits for its stdio pipes to close. Defaults to ten seconds. */
+  readonly pnpmExitGraceMs?: number
+  /** Age past which an unclaimed staging directory is swept. Defaults to six hours. */
+  readonly stagingMaxAgeMs?: number
+  /** Write transaction transcripts. Defaults to true. */
+  readonly log?: boolean
+}
+
 /** Hooks that bind project replacement to backend lifecycle and health. */
 export interface DesktopProjectHooks {
   /** Prove the staged dependency graph while the active backend is stopped. */
@@ -108,6 +121,13 @@ const PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._~-]*\/[a-z0-9][a-z0-9._~-]*|
 const VERSION_PATTERN = /^[0-9A-Za-z][0-9A-Za-z.+_-]*$/u
 const MAX_PNPM_DIAGNOSTIC_BYTES = 64 * 1024
 const DESKTOP_REGISTRY = 'https://registry.npmjs.org/'
+
+/** Deadline for one pnpm invocation, generous against a real cold offline install. */
+const DESKTOP_PNPM_TIMEOUT_MS = 20 * 60 * 1000
+/** Grace after pnpm exits for its stdio pipes to close before the transaction moves on. */
+const DESKTOP_PNPM_EXIT_GRACE_MS = 10 * 1000
+/** Age past which an unclaimed staging directory belongs to an abandoned transaction. */
+const DESKTOP_STAGING_MAX_AGE_MS = 6 * 60 * 60 * 1000
 
 function errorOf(reason: unknown, fallback: string): Error {
   return reason instanceof Error ? reason : new Error(fallback)
@@ -326,17 +346,77 @@ function inspectPlugin(projectDir: string, requestedName: string): DesktopPlugin
 }
 
 /** Transactional desktop npm project manager. */
+/**
+ * Kill one child and every descendant it may have left holding the stdio pipes.
+ * @param pid - the child's process id.
+ * @param child - the spawned child, used for the non-Windows signal path.
+ */
+function killProcessTree(pid: number, child: { kill(signal: NodeJS.Signals): boolean }): void {
+  if (process.platform === 'win32') {
+    try {
+      spawn('taskkill', ['/pid', String(pid), '/f', '/t'], { stdio: 'ignore' }).unref()
+      return
+    } catch {
+      // Fall through to the signal path when taskkill cannot be spawned.
+    }
+  }
+  try {
+    child.kill('SIGKILL')
+  } catch {
+    // The child is already gone.
+  }
+}
+
 export class DesktopProjectManager {
   private lockDescriptor: number | undefined
+  private log: ProvisionLog = SILENT_PROVISION_LOG
 
   /**
    * @param paths - Electron-owned package state and reserved desktop profile paths.
    * @param runtime - absolute bundled Node.js and pnpm entry paths.
+   * @param options - injectable deadlines and transcript switch, so tests need no real waiting.
    */
   constructor(
     readonly paths: DesktopPaths,
     readonly runtime: DesktopRuntimeExecutables,
+    readonly options: DesktopProjectOptions = {},
   ) {}
+
+  private openLog(label: string): ProvisionLog {
+    this.log = this.options.log === false
+      ? SILENT_PROVISION_LOG
+      : openProvisionLog(this.paths.logs, label)
+    return this.log
+  }
+
+  /**
+   * Remove staging directories left behind by transactions that never finished.
+   * @param now - clock reading the sweep ages against.
+   */
+  private sweepStaging(now: number = Date.now()): void {
+    if (!existsSync(this.paths.staging)) return
+    let claimed: string | undefined
+    if (existsSync(this.paths.pending)) {
+      const value = readJson(this.paths.pending)
+      if (isRecord(value) && typeof value.stagingProfile === 'string') {
+        claimed = basename(dirname(value.stagingProfile))
+      }
+    }
+    const maxAge = this.options.stagingMaxAgeMs ?? DESKTOP_STAGING_MAX_AGE_MS
+    for (const entry of readdirSync(this.paths.staging, { withFileTypes: true })) {
+      if (!entry.isDirectory() || entry.name === claimed) continue
+      const path = join(this.paths.staging, entry.name)
+      let age: number
+      try {
+        age = now - lstatSync(path).mtimeMs
+      } catch {
+        continue
+      }
+      if (age < maxAge) continue
+      this.log.step(`sweeping abandoned staging directory ${entry.name} (${String(Math.round(age / 1000))}s old)`)
+      removeOwnedDirectory(path)
+    }
+  }
 
   /** Recover an interrupted directory replacement before reading the active project. */
   recover(): void {
@@ -392,48 +472,67 @@ export class DesktopProjectManager {
 
   /** Install or reconcile the active project to the Electron package's exact release. */
   async applyRelease(seedDir: string, electronVersion: string, hooks: DesktopProjectHooks): Promise<boolean> {
-    return this.withLock(async () => {
-      this.recover()
-      verifySeedIntegrity(seedDir)
-      const target = releaseFile(seedDir)
-      verifyDesktopCorePackageSet(seedDir, target.version)
-      if (target.version !== electronVersion) {
-        throw new Error(`desktop project: seed ${target.version} does not match Electron ${electronVersion}`)
-      }
-      if (existsSync(this.paths.profile) && this.releaseVersion() === target.version
-        && this.dshVersion() === target.version
-        && this.installedPackageVersion(DESKTOP_HOST_PACKAGE) === target.version) {
-        verifyDesktopCorePackageSet(this.paths.profile, target.version)
-        return false
-      }
-      this.mergeSeedPnpmState(seedDir)
-      const stagingProfile = this.newStagingProfile()
-      try {
-        if (existsSync(this.paths.profile)) {
-          const plugins = pluginRecords(this.paths.profile)
-          copyMetadata(seedDir, stagingProfile)
-          await this.runPnpm(stagingProfile, ['install', '--offline', '--frozen-lockfile', '--trust-lockfile'])
-          if (plugins.length > 0) {
-            await this.runPnpm(stagingProfile, [
-              'add',
-              ...plugins.map(plugin => `${plugin.name}@${plugin.version}`),
-              '--save-exact',
-              '--offline',
-            ])
-            writeProfilePlugins(stagingProfile, plugins)
-          }
-        } else {
-          copyMetadata(seedDir, stagingProfile)
-          await this.runPnpm(stagingProfile, ['install', '--offline', '--frozen-lockfile', '--trust-lockfile'])
+    const log = this.openLog('provision')
+    log.step(`applyRelease started for Electron ${electronVersion}`)
+    try {
+      return await this.withLock(async () => {
+        log.step('package transaction lock acquired')
+        this.sweepStaging()
+        this.recover()
+        verifySeedIntegrity(seedDir)
+        log.step('seed integrity verified')
+        const target = releaseFile(seedDir)
+        verifyDesktopCorePackageSet(seedDir, target.version)
+        if (target.version !== electronVersion) {
+          throw new Error(`desktop project: seed ${target.version} does not match Electron ${electronVersion}`)
         }
-        await hooks.healthCheck(stagingProfile)
-        await this.activate(stagingProfile, hooks)
-        return true
-      } catch (error) {
-        removeOwnedDirectory(stagingProfile)
-        throw error
-      }
-    })
+        if (existsSync(this.paths.profile) && this.releaseVersion() === target.version
+          && this.dshVersion() === target.version
+          && this.installedPackageVersion(DESKTOP_HOST_PACKAGE) === target.version) {
+          verifyDesktopCorePackageSet(this.paths.profile, target.version)
+          log.step(`active profile already at ${target.version}: nothing to do`)
+          return false
+        }
+        this.mergeSeedPnpmState(seedDir)
+        log.step('seed pnpm store merged')
+        const stagingProfile = this.newStagingProfile()
+        log.step(`staging profile created at ${stagingProfile}`)
+        try {
+          if (existsSync(this.paths.profile)) {
+            const plugins = pluginRecords(this.paths.profile)
+            copyMetadata(seedDir, stagingProfile)
+            await this.runPnpm(stagingProfile, ['install', '--offline', '--frozen-lockfile', '--trust-lockfile'])
+            if (plugins.length > 0) {
+              await this.runPnpm(stagingProfile, [
+                'add',
+                ...plugins.map(plugin => `${plugin.name}@${plugin.version}`),
+                '--save-exact',
+                '--offline',
+              ])
+              writeProfilePlugins(stagingProfile, plugins)
+            }
+          } else {
+            copyMetadata(seedDir, stagingProfile)
+            await this.runPnpm(stagingProfile, ['install', '--offline', '--frozen-lockfile', '--trust-lockfile'])
+          }
+          log.step('staged health check started')
+          await hooks.healthCheck(stagingProfile)
+          log.step('staged health check passed')
+          await this.activate(stagingProfile, hooks)
+          log.step(`staging profile activated as ${target.version}`)
+          return true
+        } catch (error) {
+          removeOwnedDirectory(stagingProfile)
+          throw error
+        }
+      })
+    } catch (error) {
+      log.step(`applyRelease failed: ${error instanceof Error ? error.message : String(error)}`)
+      throw error
+    } finally {
+      log.step('applyRelease finished')
+      this.log = SILENT_PROVISION_LOG
+    }
   }
 
   /** Apply one exact dependency mutation through a staging project. */
@@ -551,6 +650,9 @@ export class DesktopProjectManager {
   private async runPnpm(projectDir: string, args: readonly string[]): Promise<void> {
     const [command, ...commandArgs] = args
     if (command === undefined) throw new Error('desktop project: pnpm command is required')
+    const log = this.log
+    const timeoutMs = this.options.pnpmTimeoutMs ?? DESKTOP_PNPM_TIMEOUT_MS
+    const graceMs = this.options.pnpmExitGraceMs ?? DESKTOP_PNPM_EXIT_GRACE_MS
     for (const path of [this.paths.root, this.paths.pnpm.store, this.paths.pnpm.cache,
       this.paths.pnpm.state, this.paths.pnpm.config, this.paths.pnpm.home]) {
       mkdirSync(path, { recursive: true, mode: 0o700 })
@@ -598,10 +700,14 @@ export class DesktopProjectManager {
         reject(errorOf(error, 'desktop project: failed to assign the package transaction lock to pnpm'))
         return
       }
+      log.step(`pnpm ${command} started as pid ${String(childPid)} in ${projectDir}`)
       let diagnostics = ''
       let completed = false
+      let timedOut = false
+      const timers: { deadline?: NodeJS.Timeout; grace?: NodeJS.Timeout; kill?: NodeJS.Timeout } = {}
       const appendDiagnostics = (chunk: string): void => {
         diagnostics = (diagnostics + chunk).slice(-MAX_PNPM_DIAGNOSTIC_BYTES)
+        log.raw(chunk)
       }
       child.stdout.setEncoding('utf8')
       child.stdout.on('data', appendDiagnostics)
@@ -610,6 +716,9 @@ export class DesktopProjectManager {
       const complete = (settleChild: () => void): void => {
         if (completed) return
         completed = true
+        if (timers.deadline !== undefined) clearTimeout(timers.deadline)
+        if (timers.grace !== undefined) clearTimeout(timers.grace)
+        if (timers.kill !== undefined) clearTimeout(timers.kill)
         try {
           this.writeLockOwner(process.pid)
         } catch (error) {
@@ -618,18 +727,60 @@ export class DesktopProjectManager {
         }
         settleChild()
       }
-      child.once('error', (error) => { complete(() => { reject(error) }) })
-      child.once('close', (code, signal) => {
+      const rejectTimedOut = (): void => {
+        complete(() => {
+          reject(new Error(
+            `desktop project: pnpm ${command} did not finish within ${String(timeoutMs)}ms`
+            + `${log.path === '' ? '' : ` (transcript: ${log.path})`}`
+            + `${diagnostics.trim() === '' ? '' : `: ${diagnostics.trim()}`}`,
+          ))
+        })
+      }
+      const finish = (code: number | null, signal: NodeJS.Signals | null): void => {
+        if (timedOut) {
+          log.step(`pnpm ${command} tree exited after the deadline kill`)
+          rejectTimedOut()
+          return
+        }
         complete(() => {
           if (code === 0) {
+            log.step(`pnpm ${command} exited with 0`)
             settle()
             return
           }
+          log.step(`pnpm ${command} exited with ${String(code ?? signal)}`)
           reject(new Error(
             `desktop project: pnpm exited with ${String(code ?? signal)}${diagnostics.trim() === '' ? '' : `: ${diagnostics.trim()}`}`,
           ))
         })
+      }
+      timers.deadline = setTimeout(() => {
+        if (completed) return
+        timedOut = true
+        log.step(`pnpm ${command} exceeded its ${String(timeoutMs)}ms deadline: killing pid ${String(childPid)}`)
+        killProcessTree(childPid, child)
+        // Give the killed tree time to release the staging directory it holds open as its cwd,
+        // so the caller's cleanup does not race a process Windows has not finished reaping.
+        timers.kill = setTimeout(rejectTimedOut, Math.max(graceMs, 2_000))
+        timers.kill.unref()
+      }, timeoutMs)
+      timers.deadline.unref()
+      child.once('error', (error) => { complete(() => { reject(error) }) })
+      // pnpm can exit while a build script grandchild still holds the inherited stdio pipes,
+      // which never lets `close` fire. Exit is the authoritative signal; the pipes get a grace.
+      child.once('exit', (code, signal) => {
+        if (completed) return
+        if (timedOut) {
+          finish(code, signal)
+          return
+        }
+        timers.grace = setTimeout(() => {
+          log.step(`pnpm ${command} stdio stayed open ${String(graceMs)}ms after exit: settling on exit`)
+          finish(code, signal)
+        }, graceMs)
+        timers.grace.unref()
       })
+      child.once('close', (code, signal) => { finish(code, signal) })
     })
   }
 
