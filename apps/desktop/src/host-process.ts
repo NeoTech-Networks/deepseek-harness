@@ -110,6 +110,9 @@ export class DesktopHostProcess {
         name !== 'NODE_OPTIONS' && !/^DSH_DESKTOP_/u.test(name) && !/^(?:npm|pnpm|corepack)_/iu.test(name)
       ))),
       stdio: ['ignore', 'pipe', 'pipe', 'pipe', 'pipe', 'ipc'],
+      // Electron has no console of its own, so the bundled console-subsystem
+      // Node would be handed a visible terminal window for the whole session.
+      windowsHide: true,
     })
     const requestPipe = child.stdio[DESKTOP_REQUEST_PIPE_FD]
     const responsePipe = child.stdio[DESKTOP_RESPONSE_PIPE_FD]

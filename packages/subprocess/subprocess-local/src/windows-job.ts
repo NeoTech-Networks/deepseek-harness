@@ -139,6 +139,11 @@ export function launchWindowsJob(
       cwd: process.cwd(),
       env: runnerEnvironment(WINDOWS_RUNNER_SELECTION, invocation),
       stdio: runnerStdio(spec, true, ignoredStdinFd ?? 'pipe'),
+      // The runner is a console-subsystem executable started once per spawn. A
+      // host with no console of its own (the desktop app) would otherwise get a
+      // fresh console per subprocess, which Windows shows as a terminal window
+      // for the lifetime of the command.
+      windowsHide: true,
     }) as RunnerProcess
   } finally {
     if (ignoredStdinFd !== undefined) closeSync(ignoredStdinFd)
