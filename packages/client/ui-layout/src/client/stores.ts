@@ -27,10 +27,12 @@ type LayoutInfo = {
   viewportWidth: number
   narrowExpanded: boolean
   /**
-   * Saved right panel width in px, or null before its first opening. Resizing
-   * the frame and closing the panel preserve this preference.
+   * Saved right panel width per session id (px). A session's entry appears on
+   * its first opening and persists across resizes and close, so one session
+   * narrowing the panel never changes another session's width. Absent before
+   * the session's first opening, where the contract default applies.
    */
-  rightbar: number | null
+  rightbarBySession: Readonly<Record<string, number>>
   /**
    * Whether the right panel is drawn at all, in either presentation.
    *
@@ -61,18 +63,19 @@ type LayoutActions = {
   setSidebar: (draft: LayoutState, px: number) => void
   toggleSidebar: (draft: LayoutState) => void
   setViewportWidth: (draft: LayoutState, width: number) => void
-  setRightbar: (draft: LayoutState, px: number) => void
-  openRightbar: (draft: LayoutState, track: boolean, fullscreen: boolean) => void
+  setRightbar: (draft: LayoutState, sessionId: string, px: number) => void
+  openRightbar: (draft: LayoutState, sessionId: string, track: boolean, fullscreen: boolean) => void
   closeRightbar: (draft: LayoutState) => void
 }
 
 /**
  * Create the layout panel store handle. For the sidebar the preference IS the
  * width, so closing it forgets its drag width — reopening restores the contract
- * default. The right panel initializes at 45% of the frame on first opening
- * and keeps that px preference across resizes and close. Drag writes clamp to
- * the current frame's range. Narrow sidebar toggles change only the expansion
- * override; opening the right panel clears that override.
+ * default. The right panel initializes at 45% of the frame on its first
+ * opening per session and keeps that px preference across resizes and close;
+ * each session remembers its own width. Drag writes clamp to the current
+ * frame's range. Narrow sidebar toggles change only the expansion override;
+ * opening the right panel clears that override.
  * @returns the store handle (spec + type + identity + factory in one).
  */
 export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutActions>  {
@@ -83,7 +86,7 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
         sidebar: SIDEBAR_DEFAULT,
         viewportWidth: window.innerWidth,
         narrowExpanded: false,
-        rightbar: null,
+        rightbarBySession: {},
         rightbarShown: false,
         rightbarTrack: false,
         rightbarFullscreen: false,
@@ -120,16 +123,24 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
         }
         d.layoutInfo.viewportWidth = width
       },
-      setRightbar: (d, px: number) => {
+      setRightbar: (d, sessionId: string, px: number) => {
         d.layoutInfo.rightbarInstant = false
-        d.layoutInfo.rightbar = clampWidth(px, RIGHTBAR_MIN, Math.max(RIGHTBAR_MIN, d.layoutInfo.viewportWidth * RIGHTBAR_MAX_RATIO))
+        d.layoutInfo.rightbarBySession = {
+          ...d.layoutInfo.rightbarBySession,
+          [sessionId]: clampWidth(px, RIGHTBAR_MIN, Math.max(RIGHTBAR_MIN, d.layoutInfo.viewportWidth * RIGHTBAR_MAX_RATIO)),
+        }
       },
-      openRightbar: (d, track: boolean, fullscreen: boolean) => {
+      openRightbar: (d, sessionId: string, track: boolean, fullscreen: boolean) => {
         if (!d.layoutInfo.rightbarShown || d.layoutInfo.rightbarTrack !== track || d.layoutInfo.rightbarFullscreen !== fullscreen) {
           d.layoutInfo.rightbarInstant = d.layoutInfo.rightbarFullscreen && !fullscreen
         }
         if (!d.layoutInfo.rightbarShown && d.layoutInfo.viewportWidth < SIDEBAR_AUTO_COLLAPSE) d.layoutInfo.narrowExpanded = false
-        d.layoutInfo.rightbar ??= Math.max(RIGHTBAR_MIN, Math.round(d.layoutInfo.viewportWidth * RIGHTBAR_DEFAULT_RATIO))
+        if (d.layoutInfo.rightbarBySession[sessionId] === undefined) {
+          d.layoutInfo.rightbarBySession = {
+            ...d.layoutInfo.rightbarBySession,
+            [sessionId]: Math.max(RIGHTBAR_MIN, Math.round(d.layoutInfo.viewportWidth * RIGHTBAR_DEFAULT_RATIO)),
+          }
+        }
         d.layoutInfo.rightbarShown = true
         d.layoutInfo.rightbarTrack = track
         d.layoutInfo.rightbarFullscreen = fullscreen
