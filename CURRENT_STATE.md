@@ -15,6 +15,30 @@
 
 <!-- claude-memory-actor:end -->
 
+## 2026-09-09 - First-run setup now reports itself instead of hanging
+
+The 0.1.5-alpha.1 install at 07:20 never drew a window: first-run setup stalled
+and never returned, and the app produced no output anywhere to say why.
+
+- **Recovered.** A clean relaunch of the SAME installed build completed setup in
+  4 min 45 s and the window opened at 07:47:53. Not reproducible; no rollback
+  was needed and none was performed. Evidence in
+  `C:/Projects/logs/2026-09-09/dsh-wont-start/FINDINGS.md`.
+- **Root cause still open.** The leading candidate is `runPnpm` resolving on the
+  child's `close` event, which needs both exit AND stdio-pipe close, so a build
+  script grandchild holding an inherited pipe leaves it pending with no process
+  alive. That matches the state the stall was found in exactly, but was not
+  proven, because the stalled run wrote nothing.
+- **Shipped on `fix/provision-diagnostics` (f82bb8df30).** Every transaction now
+  writes `~/.dsh/desktop/logs/provision-<ISO>.log` with one line per step and a
+  tee of pnpm's own output; `exit` settles the transaction after a grace instead
+  of waiting for `close`; `runPnpm` has a twenty-minute deadline that kills the
+  tree and rejects naming the transcript; `DesktopHostProcess.start()` has a
+  five-minute ready deadline; abandoned staging directories are swept.
+- **Installer built and awaiting the operator.**
+  `C:/Projects/worktrees/dsh-provision-diag/apps/desktop/.desktop-build/targets/win-x64/artifacts/deepseek-harness-0.1.5-alpha.1-win-x64.exe`
+  (190,753,863 bytes). NOT installed yet.
+
 ## 2026-09-08 - Live Claude Max usage readout in the composer footer
 
 - New package `packages/llm/account-usage` (`@deepseek-ai/dsh-account-usage`), both faces: a Host `TypertRemoteService` (`ctx.accountUsage.read()`) and a browser dock entry seated on `conversation.composer.dock` beside the stats line.

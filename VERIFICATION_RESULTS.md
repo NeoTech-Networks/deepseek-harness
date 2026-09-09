@@ -1,3 +1,18 @@
+## 2026-09-09 - Provisioning diagnostics
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| App recovered | window opens on the installed 0.1.5 build | profile promoted 07:47:53, window titled "Fix broken session status icon animations", 4 processes | VERIFIED |
+| Captured output names the stalled step | a step name | console carried only a Chromium network-service restart and "Checking for update"; no diagnostic file written; nothing about setup at all | VERIFIED as the finding, not as a diagnosis |
+| apps/desktop suite | all pass | 85/85 (17 files) | VERIFIED |
+| plan-mode baseline | 94/94 | 94/94 | VERIFIED |
+| fs-local baseline | 13 known POSIX failures on Windows | 13 failed, 142 passed, 1 skipped | VERIFIED |
+| Workspace build | exit 0 | exit 0; new code present in the built `apps/desktop/lib/main.js` | VERIFIED |
+| Timeout fires and names the transcript | rejects, does not hang | unit test with a real hanging child: rejects `did not finish within 1500ms`, lock removed, staging removed | VERIFIED |
+| Windows installer | packaged | exit 0, 190,753,863 bytes, 2026-09-09 08:06 | VERIFIED |
+| Built seed integrity | PASS | `expected 269, actual 269 / extra 0, missing 0, mismatch 0`, exit 0 | VERIFIED |
+| Installed version / profile / boot line / provision log on disk | post-install | NOT RUN - the operator installs | UNVERIFIED |
+
 ## 2026-09-08 - Claude Max usage readout in the composer footer
 
 | Check | Expected | Result | Status |
