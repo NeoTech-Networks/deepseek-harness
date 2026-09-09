@@ -752,13 +752,81 @@ describe('writeFileAtomic — temp-file safety', () => {
     await writeFile(file, 'old')
     const denied = Object.assign(new Error('replace denied'), { code: 'EACCES' })
 
+    // Both publication primitives are down, so the write genuinely cannot be
+    // made and the ReplaceFileW error (not the fallback's) is what surfaces.
     await expect(writeFileAtomic(file, 'new', 0o666, undefined, {
       platform: 'win32',
       copyFileDacl: () => Promise.resolve(),
       replaceFile: async () => { throw denied },
+      renameFile: async () => { throw new Error('rename also denied') },
+      publishRetryDelaysMs: [],
     })).rejects.toBe(denied)
     expect(await readFile(file, 'utf8')).toBe('old')
     expect((await readdir(dir)).filter(name => name.includes('.tmp'))).toEqual([])
+  })
+
+  it('retries a contended Windows replacement instead of losing the write', async () => {
+    // Win32 1175 (ERROR_UNABLE_TO_REMOVE_REPLACED) reaches this layer as EIO.
+    // Before 2026-09-08 a single failure discarded the staged content, which
+    // lost 9 real writes in one day across concurrent sessions.
+    const file = join(dir, 'a.txt')
+    await writeFile(file, 'old')
+    const contended = Object.assign(new Error('ReplaceFileW EIO (Win32 1175): a.txt'), { code: 'EIO' })
+    let attempts = 0
+
+    await writeFileAtomic(file, 'new', 0o666, undefined, {
+      platform: 'win32',
+      copyFileDacl: () => Promise.resolve(),
+      replaceFile: async (replaced, replacement) => {
+        attempts += 1
+        if (attempts < 3) throw contended
+        await rename(replacement, replaced)
+      },
+      publishRetryDelaysMs: [0, 0, 0, 0],
+    })
+
+    expect(attempts).toBe(3)
+    expect(await readFile(file, 'utf8')).toBe('new')
+    expect((await readdir(dir)).filter(name => name.includes('.tmp'))).toEqual([])
+  })
+
+  it('falls back to rename only after the ACL-preserving replace is exhausted', async () => {
+    const file = join(dir, 'a.txt')
+    await writeFile(file, 'old')
+    const contended = Object.assign(new Error('ReplaceFileW EIO (Win32 1175): a.txt'), { code: 'EIO' })
+    let attempts = 0
+    let renamed = 0
+
+    await writeFileAtomic(file, 'new', 0o666, undefined, {
+      platform: 'win32',
+      copyFileDacl: () => Promise.resolve(),
+      replaceFile: async () => { attempts += 1; throw contended },
+      renameFile: async (from, to) => { renamed += 1; await rename(from, to) },
+      publishRetryDelaysMs: [0, 0],
+    })
+
+    // Every replace attempt is spent before the descriptor-losing fallback runs.
+    expect(attempts).toBe(3)
+    expect(renamed).toBe(1)
+    expect(await readFile(file, 'utf8')).toBe('new')
+    expect((await readdir(dir)).filter(name => name.includes('.tmp'))).toEqual([])
+  })
+
+  it('does not retry a vanished target: ENOENT renames on the first attempt', async () => {
+    const file = join(dir, 'a.txt')
+    await writeFile(file, 'old')
+    const missing = Object.assign(new Error('target vanished'), { code: 'ENOENT' })
+    let attempts = 0
+
+    await writeFileAtomic(file, 'new', 0o666, undefined, {
+      platform: 'win32',
+      copyFileDacl: () => Promise.resolve(),
+      replaceFile: async () => { attempts += 1; throw missing },
+      publishRetryDelaysMs: [0, 0, 0],
+    })
+
+    expect(attempts).toBe(1)
+    expect(await readFile(file, 'utf8')).toBe('new')
   })
 
   it('maps a non-collision guarded-create publication failure and cleans staging', async () => {
@@ -917,6 +985,35 @@ describe('readForEdit + restoreLineEndings', () => {
     await expect(readForEdit(join(dir, 'bin'), join(dir, 'bin'))).rejects.toMatchObject({ code: 'FS_NOT_TEXT' })
     await writeFile(join(dir, 'bad'), Buffer.from([0x68, 0xff, 0x69]))
     await expect(readForEdit(join(dir, 'bad'), join(dir, 'bad'))).rejects.toMatchObject({ code: 'FS_NOT_TEXT' })
+  })
+
+  it('re-reads once before calling a file binary, so a torn read is not fatal', async () => {
+    // Measured 2026-09-08: four reads of a real state file were rejected as
+    // binary while another process rewrote it non-atomically. The file itself
+    // had no NUL byte in it. One confirming read separates the two cases.
+    const file = join(dir, 'torn.md')
+    await writeFile(file, Buffer.from([0x00, 0x00, 0x00, 0x00]))
+    setTimeout(() => { void writeFile(file, '## real content\n') }, 5)
+
+    const edited = await readForEdit(file, file)
+    expect(edited.content).toBe('## real content\n')
+  })
+
+  it('still rejects a genuinely binary file after the confirming read', async () => {
+    const file = join(dir, 'really-bin')
+    await writeFile(file, Buffer.from([0x00, 0x01, 0x02]))
+    await expect(readForEdit(file, file, undefined, { binaryRecheckDelayMs: 0 }))
+      .rejects.toMatchObject({ code: 'FS_NOT_TEXT' })
+  })
+
+  it('readWholeText re-reads a torn sample and rejects a stable binary one', async () => {
+    await writeFile(join(dir, 'torn-whole.md'), Buffer.from([0x00, 0x00, 0x00]))
+    setTimeout(() => { void writeFile(join(dir, 'torn-whole.md'), 'recovered\n') }, 5)
+    expect(await readWholeText(await resolveLocalTarget(dir, 'torn-whole.md'))).toBe('recovered\n')
+
+    await writeFile(join(dir, 'stable-bin'), Buffer.from([0x00, 0x01]))
+    await expect(readWholeText(await resolveLocalTarget(dir, 'stable-bin'), undefined, { binaryRecheckDelayMs: 0 }))
+      .rejects.toMatchObject({ code: 'FS_NOT_TEXT' })
   })
 
   it('passes a live (non-aborted) signal through the read', async () => {
