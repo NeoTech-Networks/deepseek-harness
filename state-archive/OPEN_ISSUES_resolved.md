@@ -1,6 +1,16 @@
-## 2026-09-08 - vision-routing auto-vision smoke test
+## 2026-09-08 - resolved during session account-usage-footer-readout (remote-mount fix)
 
-- RESOLVED: "- [UNVERIFIED] Live desktop smoke test of vision-routing auto-vision (added 2026-09-08): attach an image to a DeepSeek Pro or Flash session with the `subagent-model-selection` setting enabled and the vision model in the allowed list, and confirm the model receives the description instead of "Model does not support image input"" - the fix is shipped and verified end-to-end. The operator attached an image to a DeepSeek Pro session and the model received ONLY `[Attached image description (vision model): ...]` (an accurate reading of the screenshot) with no `[image omitted ...]` placeholder. The feature shipped via `5fee33421f` + `41050689df`; the placeholder drop via `c1a9951d60`.
+Moved out of OPEN_ISSUES.md. Original wording preserved verbatim.
+
+- [was UNVERIFIED, now VERIFIED] Live desktop smoke test of vision-routing auto-vision (added 2026-09-08): attach an image to a DeepSeek Pro or Flash session with the subagent-model-selection setting enabled and the vision model in the allowed list, and confirm the model receives the description instead of "Model does not support image input".
+  RESOLVED: on DeepSeek-V4-Flash an attached PNG was replaced with `[Attached image description (vision model): A single solid red circle centered on a plain white background...]` and no raw image placeholder was left behind. Evidence: scratchpad screenshot `vision-textonly.png` for session 1fa89993.
+
+- [was UNVERIFIED, now VERIFIED in part] On-screen check of the Claude Max usage readout (added 2026-09-08): the installer was built and installed at 19:10 and the app relaunched at 19:59 carrying the package in its extracted profile, so only the pixels are unproven. Open a session and confirm the two percentages sit beside the stats line under the composer and that clicking them opens the reset times.
+  RESOLVED for the percentages: the composer dock renders `5h 37% - Week 24%` in a live session, and again in a session created after the reinstall. Evidence: scratchpad screenshot `app-booted.png`. The click-to-open reset panel was NOT exercised; it is carried forward as a new item in OPEN_ISSUES.md rather than being silently closed.
+
+## 2026-09-08 - session-status triggers composed into the presets
+
+- RESOLVED: "The save-state 'declare finished' step has no working agent trigger: set_session_status (tool-session-status) is not in the agent tool catalog this session (not composed in the standard preset agent plane) and /status is human-only" - composed `command-session-status` (/status) and `tool-session-status` (set_session_status) into the standard, cordis, and ptc presets (mirroring command-goal / tool-goal); added a shipped-preset completeness test asserting the two rows are composed and not disabled. 93/93 targeted tests pass.
 
 ## 2026-09-08 - session creation fixed (standard-hooks preset path)
 
@@ -13,6 +23,9 @@
 ## 2026-09-08 - open-session-in-subfolder
 
 - RESOLVED: "origin is `deepseek-ai/deepseek-harness` with no push access, so a fork target is needed before it can be pushed" - created the `NeoTech-Networks/deepseek-harness` org fork and pushed `feat/open-session-in-subfolder` and `master` there.
+## 2026-09-08 - vision-routing auto-vision smoke test
+
+- RESOLVED: "- [UNVERIFIED] Live desktop smoke test of vision-routing auto-vision (added 2026-09-08): attach an image to a DeepSeek Pro or Flash session with the `subagent-model-selection` setting enabled and the vision model in the allowed list, and confirm the model receives the description instead of "Model does not support image input"" - the fix is shipped and verified end-to-end. The operator attached an image to a DeepSeek Pro session and the model received ONLY `[Attached image description (vision model): ...]` (an accurate reading of the screenshot) with no `[image omitted ...]` placeholder. The feature shipped via `5fee33421f` + `41050689df`; the placeholder drop via `c1a9951d60`.
 
 ## 2026-09-08 - plan-mode-default-active
 
