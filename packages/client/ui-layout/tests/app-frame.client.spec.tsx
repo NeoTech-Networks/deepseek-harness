@@ -255,15 +255,27 @@ describe('AppFrame normal width concessions', () => {
     const { instance, rightOwner } = mountFrame(1920)
     expect(instance.getSnapshot().layoutInfo.viewportWidth).toBe(1000)
     expect(rightOwner()).toEqual({ width: 450, viewportWidth: 1000, canShow: true })
-    act(() => { instance.actions.openRightbar(true, false) })
-    expect(instance.getSnapshot().layoutInfo.rightbar).toBe(450)
+    act(() => { instance.actions.openRightbar('s-test', true, false) })
+    expect(instance.getSnapshot().layoutInfo.rightbarBySession['s-test']).toBe(450)
     resize(1920)
     expect(rightOwner().width).toBe(450)
   })
 
+  it('keys the saved right panel width by session, not globally', () => {
+    const { instance, rightOwner, rerenderFrame } = mountFrame()
+    act(() => { instance.actions.openRightbar('s-test', true, false) })
+    act(() => { instance.actions.setRightbar('s-test', 500) })
+    expect(rightOwner().width).toBe(500)
+    // Switching to a session that never opened the panel restores its own 45% default.
+    selectedSession = 's-other' as SessionId
+    rerenderFrame()
+    expect(rightOwner().width).toBe(864)
+    expect(instance.getSnapshot().layoutInfo.rightbarBySession['s-test']).toBe(500)
+  })
+
   it('shrinks the right panel to 300px, drops its track, and only then squeezes center', () => {
     const { frame, instance, rightOwner } = mountFrame()
-    act(() => { instance.actions.setSidebar(420); instance.actions.openRightbar(true, false) })
+    act(() => { instance.actions.setSidebar(420); instance.actions.openRightbar('s-test', true, false) })
     resize(1200)
     expect(tracks(frame)).toEqual([420, 380])
     expect(rightOwner()).toEqual({ width: 380, viewportWidth: 1200, canShow: true })
@@ -273,7 +285,7 @@ describe('AppFrame normal width concessions', () => {
     expect(tracks(frame)).toEqual([420, 0])
     expect(rightOwner()).toEqual({ width: 0, viewportWidth: 1119, canShow: false })
     expect(frame.querySelector('[data-side="rightbar"]')).toBeNull()
-    expect(instance.getSnapshot().layoutInfo).toMatchObject({ rightbarShown: true, rightbar: 864 })
+    expect(instance.getSnapshot().layoutInfo).toMatchObject({ rightbarShown: true, rightbarBySession: { 's-test': 864 } })
     act(() => { instance.actions.closeRightbar() })
     resize(455)
     expect(tracks(frame)).toEqual([56, 0])
@@ -287,9 +299,9 @@ describe('AppFrame normal width concessions', () => {
     act(() => { instance.actions.toggleSidebar() })
     expect(tracks(frame)).toEqual([280, 0])
     expect(rightOwner()).toEqual({ width: 344, viewportWidth: 800, canShow: true })
-    act(() => { instance.actions.openRightbar(true, false) })
+    act(() => { instance.actions.openRightbar('s-test', true, false) })
     expect(tracks(frame)).toEqual([56, 344])
-    expect(instance.getSnapshot().layoutInfo).toMatchObject({ narrowExpanded: false, rightbar: 360 })
+    expect(instance.getSnapshot().layoutInfo).toMatchObject({ narrowExpanded: false, rightbarBySession: { 's-test': 360 } })
     expect(rightOwner().canShow).toBe(true)
   })
 
@@ -303,7 +315,7 @@ describe('AppFrame normal width concessions', () => {
   it('does not anticipate another left collapse after the right panel is already shown', () => {
     frameWidth = 800
     const { instance, rightOwner } = mountFrame()
-    act(() => { instance.actions.openRightbar(true, false); instance.actions.toggleSidebar() })
+    act(() => { instance.actions.openRightbar('s-test', true, false); instance.actions.toggleSidebar() })
     expect(rightOwner().canShow).toBe(false)
   })
 
@@ -337,7 +349,7 @@ describe('AppFrame normal width concessions', () => {
 describe('AppFrame right panel presentation', () => {
   it('releases the fullscreen track with the instant marker while clearing fullscreen', () => {
     const { frame, instance } = mountFrame()
-    act(() => { instance.actions.openRightbar(true, true) })
+    act(() => { instance.actions.openRightbar('s-test', true, true) })
     expect(tracks(frame)).toEqual([280, 864])
     act(() => { instance.actions.closeRightbar() })
     expect(tracks(frame)).toEqual([280, 0])
@@ -350,8 +362,8 @@ describe('AppFrame right panel presentation', () => {
 
   it('marks restoration instant without suppressing the following normal close', () => {
     const { frame, instance } = mountFrame()
-    act(() => { instance.actions.openRightbar(true, true) })
-    act(() => { instance.actions.openRightbar(true, false) })
+    act(() => { instance.actions.openRightbar('s-test', true, true) })
+    act(() => { instance.actions.openRightbar('s-test', true, false) })
     expect(tracks(frame)).toEqual([280, 864])
     expect(frame.dataset.rightbarFullscreen).toBeUndefined()
     expect(frame.dataset.rightbarInstant).toBe('true')
@@ -363,12 +375,13 @@ describe('AppFrame right panel presentation', () => {
 
   it.each(['setSidebar', 'toggleSidebar', 'setRightbar', 'viewport', 'open'] as const)('reenables normal transitions after %s', (action) => {
     const { frame, instance } = mountFrame()
-    act(() => { instance.actions.openRightbar(true, true); instance.actions.closeRightbar() })
+    act(() => { instance.actions.openRightbar('s-test', true, true); instance.actions.closeRightbar() })
     expect(frame.dataset.rightbarInstant).toBe('true')
     act(() => {
       if (action === 'viewport') resize(1800)
-      else if (action === 'open') instance.actions.openRightbar(true, false)
+      else if (action === 'open') instance.actions.openRightbar('s-test', true, false)
       else if (action === 'toggleSidebar') instance.actions.toggleSidebar()
+      else if (action === 'setRightbar') instance.actions.setRightbar('s-test', 350)
       else instance.actions[action](350)
     })
     expect(frame.dataset.rightbarInstant).toBeUndefined()
@@ -377,7 +390,7 @@ describe('AppFrame right panel presentation', () => {
 
   it('keeps fullscreen suppression independent from resetting the instant marker', () => {
     const { frame, instance } = mountFrame()
-    act(() => { instance.actions.openRightbar(true, true) })
+    act(() => { instance.actions.openRightbar('s-test', true, true) })
     act(() => { instance.actions.setSidebar(350) })
     expect(frame.dataset.rightbarInstant).toBeUndefined()
     expect(frame.dataset.rightbarFullscreen).toBe('true')
@@ -385,15 +398,15 @@ describe('AppFrame right panel presentation', () => {
 
   it('preserves normal tracks through fullscreen and hides the outer resize handle', () => {
     const { frame, instance, rightOwner } = mountFrame()
-    act(() => { instance.actions.openRightbar(true, false) })
+    act(() => { instance.actions.openRightbar('s-test', true, false) })
     expect(tracks(frame)).toEqual([280, 864])
     expect(handleFor(frame, 'rightbar').style.left).toBe('1056px')
-    act(() => { instance.actions.openRightbar(true, true) })
+    act(() => { instance.actions.openRightbar('s-test', true, true) })
     expect(tracks(frame)).toEqual([280, 864])
     expect(rightOwner().width).toBe(864)
     expect(frame.dataset.rightbarFullscreen).toBe('true')
     expect(frame.querySelector('[data-side="rightbar"]')).toBeNull()
-    act(() => { instance.actions.openRightbar(true, false) })
+    act(() => { instance.actions.openRightbar('s-test', true, false) })
     expect(tracks(frame)).toEqual([280, 864])
     expect(handleFor(frame, 'rightbar').style.left).toBe('1056px')
     expect(frame.dataset.rightbarFullscreen).toBeUndefined()
@@ -407,11 +420,11 @@ describe('AppFrame right panel presentation', () => {
     const { frame, instance } = mountFrame()
     expect(tracks(frame)).toEqual([280, 0])
     expect(frame.dataset.rightbarFullscreen).toBeUndefined()
-    act(() => { instance.actions.openRightbar(true, true) })
+    act(() => { instance.actions.openRightbar('s-test', true, true) })
     expect(tracks(frame)).toEqual([280, 864])
     expect(frame.dataset.rightbarFullscreen).toBe('true')
     expect(frame.querySelector('[data-side="rightbar"]')).toBeNull()
-    act(() => { instance.actions.openRightbar(true, false) })
+    act(() => { instance.actions.openRightbar('s-test', true, false) })
     expect(tracks(frame)).toEqual([280, 864])
     expect(frame.dataset.rightbarFullscreen).toBeUndefined()
   })
@@ -419,7 +432,7 @@ describe('AppFrame right panel presentation', () => {
   it('retains fullscreen without a track when normal columns cannot fit', () => {
     frameWidth = 700
     const { frame, instance, rightOwner } = mountFrame()
-    act(() => { instance.actions.openRightbar(false, true) })
+    act(() => { instance.actions.openRightbar('s-test', false, true) })
     expect(tracks(frame)).toEqual([56, 0])
     expect(rightOwner()).toEqual({ width: 0, viewportWidth: 700, canShow: false })
     expect(instance.getSnapshot().layoutInfo.rightbarShown).toBe(true)
@@ -428,12 +441,12 @@ describe('AppFrame right panel presentation', () => {
 
   it('keeps resolved panel width independent of the requested track', () => {
     const { frame, instance, rightOwner } = mountFrame()
-    act(() => { instance.actions.openRightbar(false, false) })
+    act(() => { instance.actions.openRightbar('s-test', false, false) })
     resize(1100)
     expect(tracks(frame)).toEqual([280, 0])
     expect(rightOwner().width).toBe(420)
     drag(handleFor(frame, 'rightbar'), 680, 690)
-    expect(instance.getSnapshot().layoutInfo.rightbar).toBe(410)
+    expect(instance.getSnapshot().layoutInfo.rightbarBySession['s-test']).toBe(410)
     expect(rightOwner().width).toBe(410)
     expect(tracks(frame)[1]).toBe(0)
   })
@@ -461,14 +474,14 @@ describe('AppFrame pointer resizing', () => {
 
   it('starts a conceded right drag at its actual width, shared by panel and track', () => {
     const { frame, instance, rightOwner } = mountFrame()
-    act(() => { instance.actions.openRightbar(true, false) })
+    act(() => { instance.actions.openRightbar('s-test', true, false) })
     resize(1100)
     const handle = handleFor(frame, 'rightbar')
     expect(rightOwner().width).toBe(420)
     expect(tracks(frame)[1]).toBe(420)
     expect(handle.style.left).toBe('680px')
     drag(handle, 680, 690)
-    expect(instance.getSnapshot().layoutInfo.rightbar).toBe(410)
+    expect(instance.getSnapshot().layoutInfo.rightbarBySession['s-test']).toBe(410)
     expect(rightOwner().width).toBe(410)
     expect(tracks(frame)[1]).toBe(410)
     expect(handle.style.left).toBe('690px')
@@ -477,7 +490,7 @@ describe('AppFrame pointer resizing', () => {
   it('widens to the 70% limit and shrinks to 300px through pointer input', () => {
     frameWidth = 3000
     const { frame, instance, rightOwner } = mountFrame()
-    act(() => { instance.actions.toggleSidebar(); instance.actions.openRightbar(true, false) })
+    act(() => { instance.actions.toggleSidebar(); instance.actions.openRightbar('s-test', true, false) })
     drag(handleFor(frame, 'rightbar'), 1650, 0)
     expect(rightOwner().width).toBe(2100)
     expect(tracks(frame)[1]).toBe(2100)
@@ -532,19 +545,19 @@ describe('AppFrame pointer resizing', () => {
 
   it.each(['fullscreen', 'close', 'unmount'])('cancels a pending drag on %s', (change) => {
     const { frame, instance, unmount } = mountFrame()
-    act(() => { instance.actions.openRightbar(true, false) })
+    act(() => { instance.actions.openRightbar('s-test', true, false) })
     const handle = handleFor(frame, 'rightbar')
     pointer(handle, 'pointerdown', 1056)
     pointer(handle, 'pointermove', 1000)
     act(() => {
-      if (change === 'fullscreen') instance.actions.openRightbar(true, true)
+      if (change === 'fullscreen') instance.actions.openRightbar('s-test', true, true)
       else if (change === 'close') instance.actions.closeRightbar()
       else unmount()
     })
     const settled = instance.getSnapshot()
     act(flushFrames)
     expect(instance.getSnapshot()).toBe(settled)
-    expect(instance.getSnapshot().layoutInfo.rightbar).toBe(864)
+    expect(instance.getSnapshot().layoutInfo.rightbarBySession['s-test']).toBe(864)
     expect(animationFrames.size).toBe(0)
     expect(handle.hasPointerCapture(1)).toBe(false)
     if (change !== 'unmount') expect(frame.dataset.dragging).toBeUndefined()
@@ -566,7 +579,7 @@ describe('AppFrame frame measurement lifecycle', () => {
     act(flushFrames)
     expect(instance.getSnapshot().layoutInfo.viewportWidth).toBe(1200)
     expect(rightOwner().viewportWidth).toBe(1200)
-    expect(instance.getSnapshot().layoutInfo.rightbar).toBeNull()
+    expect(instance.getSnapshot().layoutInfo.rightbarBySession['s-test']).toBeUndefined()
   })
 
   it('retains the last positive measurement while the frame is hidden', () => {

@@ -117,13 +117,13 @@ describe('ui-sidebar-right apply', () => {
     const { ctx, layout, resources, seat, injectedOf } = await boot()
     const injected = injectedOf(seat('rightbar.session')) as SidebarRightInjected
     // The frame learns the composition of expanded and presentation, nothing else.
-    injected.syncPresentation({ shown: true, track: true, fullscreen: false })
-    expect(layout.openRightbar).toHaveBeenLastCalledWith(true, false)
-    injected.syncPresentation({ shown: true, track: true, fullscreen: true })
-    expect(layout.openRightbar).toHaveBeenLastCalledWith(true, true)
-    injected.syncPresentation({ shown: true, track: false, fullscreen: true })
-    expect(layout.openRightbar).toHaveBeenLastCalledWith(false, true)
-    injected.syncPresentation({ shown: false, track: false, fullscreen: false })
+    injected.syncPresentation(SESSION, { shown: true, track: true, fullscreen: false })
+    expect(layout.openRightbar).toHaveBeenLastCalledWith(SESSION, true, false)
+    injected.syncPresentation(SESSION, { shown: true, track: true, fullscreen: true })
+    expect(layout.openRightbar).toHaveBeenLastCalledWith(SESSION, true, true)
+    injected.syncPresentation(SESSION, { shown: true, track: false, fullscreen: true })
+    expect(layout.openRightbar).toHaveBeenLastCalledWith(SESSION, false, true)
+    injected.syncPresentation(SESSION, { shown: false, track: false, fullscreen: false })
     expect(layout.closeRightbar).toHaveBeenCalledOnce()
     // The registry, observable: what the seat dispatches a kind to.
     expect(injected.hooks.tabTypes.getSnapshot().find(type => type.kind === 'guide')?.id).toBe(GUIDE_ID)
