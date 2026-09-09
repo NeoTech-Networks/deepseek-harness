@@ -15,6 +15,47 @@
 
 <!-- claude-memory-actor:end -->
 
+## 2026-09-09 - DSH daily review: state-file loss fixed at source, corruption attributed, model gaps closed
+
+Audited all 52 DSH sessions from 2026-09-08 by decompressing the multi-frame zstd
+session logs: 6,202 tool calls, 160 failures (2.58%), Opus 2.48% vs DeepSeek 2.75%.
+New reusable tool `C:\Claude\bin\dsh_session_audit.mjs` reproduces the whole audit in
+one command and is the regression check for everything below.
+
+- **Three of my own first-pass conclusions were wrong and were corrected before any fix
+  shipped.** Win32 1175 is "unable to remove the file to be replaced" (target held open),
+  not a replacement-move fault. The tool-argument corruption is NOT a harness bug. Kimi
+  and GLM authenticate fine.
+- **State-file loss, root cause found and fixed at source.** `memory_save_state_actor.py`
+  wrote state files with a plain `Path.write_text` (truncate-in-place) at four sites, and
+  on a transient read failure overwrote the whole file with just the marker block. Now
+  atomic (temp + fsync + os.replace, bounded retry) and the read-failure branch skips
+  instead of destroying. Verified with a four-arm concurrency test: the old method showed
+  a reader an incomplete file on 1,621 of 3,854 reads (42%); the new one 0 of 4,329, with
+  the file always complete afterwards.
+- **Harness hardened against any other non-atomic writer** (commit `92e043bf4d`):
+  publication now retries and falls back to rename (9 lost writes on 2026-09-08), and
+  read/edit confirm with a second read before declaring a file binary (4 false verdicts on
+  a file containing no NUL byte). 6 new tests; fs-local failures unchanged at the 13
+  pre-existing POSIX-on-Windows ones.
+- **Argument corruption ATTRIBUTED, and it is provider-side.** `assistant/message` already
+  records the raw provider stream. In all three damaged calls the damage is in the model's
+  own FIRST JSON delta (`{"plan": "and#`), before any harness code. The accumulator is
+  exonerated and was deliberately left alone. Three other plan rejections were the harness
+  validator being too strict, now fixed.
+- **`exit_plan_mode` accepts plans it used to reject** (blockquote or blank lines before the
+  H1, which the local plan format itself mandates). It rejected this session's own plan
+  twice. 94/94 plan-mode tests.
+- **State files reconciled across three repos** with `C:\Claude\bin\state_file_reconcile.py`;
+  the real worker now reports 0 needing attention for all three. 431 rows and 26 sections of
+  lost history recovered into C:/Claude alone.
+- **Every allowed subagent model probed live.** Eight answer; `glm-5.3-highspeed` is refused
+  by Z.ai for lack of entitlement and was removed from `allowedModels`.
+- `~/.dsh/AGENTS.md` now gives the memory tools their full `mcp__claude-memory-bridge__`
+  names (DeepSeek called the short name and failed three times).
+- Built and synced `dsh-fs-local` and `dsh-plan-mode` into `~/.dsh/profiles/desktop`; both
+  take effect on the next app relaunch.
+
 ## 2026-09-09 - Desktop hung on the boot screen: accountUsage was never mounted on the Client
 
 - ROOT CAUSE. `packages/api/remotes/src/client/index.ts` is a HAND-WRITTEN selection list, not a generated catalog. A `remote.<ns>` service exists only because that file `$mount`s the package's generated contribution (`packages/api/gateway/src/client/index.ts:660` builds the key `remote.<ns>`, `:348` constructs the service inside `createNamespace`). The account-usage commit d14e69cfa9 added the Host service and the browser consumer but never added the mount, so `remote.accountUsage` could not come into existence, the client entry parked on its `inject` forever, and `packages/client/web/src/boot.ts:150` reported `web boot: 1 entry did not activate` and never called `mountApp()`. The window sat on the loading screen.
