@@ -4,6 +4,44 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-09 - Both harness fixes CONFIRMED LIVE in the running app, and a state file lost and recovered in the same pass
+
+- **Installed and verified.** Steve installed at 08:35; the profile re-extracted
+  with 247 packages and the app relaunched at 08:36. Read back out of
+  `~/.dsh/profiles/desktop`: `dsh-fs-local/lib/index.js` carries
+  `PUBLISH_RETRY_DELAYS_MS`, `publishOverExisting` and
+  `readTextBytesConfirmingBinary`; `dsh-plan-mode/lib/index.js` carries
+  `describePlanFault` with ZERO occurrences of the old rejection message. One
+  install directory, no crash events in the Windows Application log.
+  OPEN_ISSUES item 0 is closed on that evidence.
+- **The "crash" the install reports is the install working.** Step 1 of
+  `finish-install.ps1` is `taskkill /F`, so Windows and any session inside the
+  app report a crash. The script now announces this before doing it, in both the
+  header and a yellow line at run time, because it read as a failure twice.
+- **The four doubted items were re-checked at the code level.** Every feature
+  package is present in the running profile (`dsh-workspace`,
+  `dsh-session-status`, `dsh-vision-routing`, `dsh-account-usage`,
+  `dsh-client-ui-sessions-panel`, `dsh-win32-process` with the CREATE_NO_WINDOW
+  flag, `dsh-goal`) and the accountUsage remote mount is in the running client
+  bundle. Only the ON-SCREEN behaviour of items 1, 2, 5 and 10 is still
+  unproven; that needs eyes, not another read.
+- **Tidy-up:** the stale duplicate Add/Remove Programs entry left by the old app
+  id was backed up to
+  `~\.claude\Exports\2026-09-09_dsh-stale-uninstall-key-backup.reg` and removed.
+  One entry remains, and it is the live one.
+- **STATE FILE LOST AGAIN, AND RECOVERED.** `CURRENT_STATE.md` was found at 38
+  lines: three stacked save-state marker blocks and NOT ONE dated section, where
+  git HEAD and origin/master both held 251. Recovered whole with
+  `git checkout HEAD -- CURRENT_STATE.md`; the damaged copy is kept at
+  `%TEMP%\CURRENT_STATE.damaged.md`. **The 2026-09-08 writer fix is NOT the
+  culprit and was not reopened**: that branch now skips rather than overwrites,
+  and the code was re-read this session to confirm it. The likely mechanism is
+  different, and is the sharpest form of item 16 yet: two per-session worktrees
+  under `.claude/worktrees/` hold their own `CURRENT_STATE.md` at 80 and 68
+  lines, built on the OLD checkout each was cut from, so anything that publishes
+  a worktree's copy over the primary deletes every section written since. The
+  other two repos were checked and are intact (C:/Claude 423 lines, jetway 507).
+
 ## 2026-09-09 - The two harness fixes ported to 0.1.5 and packaged into an installer
 
 The job in `NEXT_SESSION_PROMPT.md`, done up to the operator's install step.
