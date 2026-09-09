@@ -306,6 +306,34 @@ one command and is the regression check for everything below.
 
 <!-- claude-memory-actor:end -->
 
+## Last save-state (2026-09-09T00:08:42.118722+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
+
+<!-- claude-memory-actor:end -->
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=8f0a49c1-6187-4582-9bd1-d8700eea3158 at=2026-09-09T17:49:01.394307+00:00
+-->
+## Last save-state (2026-09-09T17:49:01.394307+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `8f0a49c1-6187-4582-9bd1-d8700eea3158`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-1c7a1a4a-b736-4790-9770-d82530ff0656
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-08 - Live Claude Max usage readout in the composer footer
 
 - New package `packages/llm/account-usage` (`@deepseek-ai/dsh-account-usage`), both faces: a Host `TypertRemoteService` (`ctx.accountUsage.read()`) and a browser dock entry seated on `conversation.composer.dock` beside the stats line.
@@ -478,3 +506,4 @@ lands on the fork (PRs #2 and #3 merged).
 - Open: `git push` denied (neotechnet has no access to the deepseek-ai org; no fork exists). Either fork to a chosen account and push, or keep the change local. Visual smoke test of the grouped sidebar still pending.
 
 <!-- claude-memory-actor:end -->
+
