@@ -144,6 +144,18 @@ await import(${JSON.stringify(pathToFileURL(delegate).href)})
   return path
 }
 
+function writeHangingFakePnpm(root: string, ready: string): string {
+  const path = join(root, 'hanging-pnpm.mjs')
+  writeFileSync(path, `
+import { writeFileSync } from 'node:fs'
+import { setTimeout as sleep } from 'node:timers/promises'
+writeFileSync(${JSON.stringify(ready)}, String(process.pid))
+console.log('offline install started')
+await sleep(600000)
+`)
+  return path
+}
+
 function hooks(overrides: Partial<DesktopProjectHooks> = {}): DesktopProjectHooks {
   return {
     healthCheck: async () => {},
@@ -406,5 +418,96 @@ describe('desktop project transactions', () => {
     expect(readFileSync(join(paths.pnpm.store, 'release-1'), 'utf8')).toBe('one')
     expect(readFileSync(join(paths.pnpm.store, 'release-2'), 'utf8')).toBe('two')
     await expect(manager.applyRelease(nextSeed, '1.1.0', hooks())).resolves.toBe(false)
+  })
+
+  it('writes a transcript of every provisioning step and of pnpm output', async () => {
+    const root = temporaryRoot()
+    const seed = join(root, 'seed')
+    createTestSeedMetadata(seed, release())
+    writeFileSync(join(seed, 'pnpm-lock.yaml'), 'lockfileVersion: 9\n')
+    archiveStore(seed)
+    writeIntegrity(seed)
+    const paths = resolveDesktopPaths(join(root, '.dsh'))
+    const manager = new DesktopProjectManager(paths, { node: process.execPath, pnpm: writeFakePnpm(root) })
+
+    await expect(manager.applyRelease(seed, '1.0.0', hooks())).resolves.toBe(true)
+
+    const transcripts = readdirSync(paths.logs)
+    expect(transcripts).toHaveLength(1)
+    const body = readFileSync(join(paths.logs, transcripts[0] as string), 'utf8')
+    expect(body.length).toBeGreaterThan(0)
+    expect(body).toMatch(/applyRelease started/u)
+    expect(body).toMatch(/seed integrity verified/u)
+    expect(body).toMatch(/seed pnpm store merged/u)
+    expect(body).toMatch(/staging profile created/u)
+    expect(body).toMatch(/pnpm install started as pid/u)
+    expect(body).toMatch(/pnpm install exited with 0/u)
+    expect(body).toMatch(/staged health check started/u)
+    expect(body).toMatch(/staged health check passed/u)
+    expect(body).toMatch(/staging profile activated/u)
+  })
+
+  it('gives up on a pnpm that never finishes and names the transcript', async () => {
+    const root = temporaryRoot()
+    const seed = join(root, 'seed')
+    createTestSeedMetadata(seed, release())
+    writeFileSync(join(seed, 'pnpm-lock.yaml'), 'lockfileVersion: 9\n')
+    archiveStore(seed)
+    writeIntegrity(seed)
+    const paths = resolveDesktopPaths(join(root, '.dsh'))
+    const started = join(root, 'hanging-started')
+    const manager = new DesktopProjectManager(
+      paths,
+      { node: process.execPath, pnpm: writeHangingFakePnpm(root, started) },
+      { pnpmTimeoutMs: 1_500, pnpmExitGraceMs: 200 },
+    )
+
+    await expect(manager.applyRelease(seed, '1.0.0', hooks()))
+      .rejects.toThrow(/did not finish within 1500ms/u)
+
+    expect(existsSync(started)).toBe(true)
+    expect(existsSync(paths.lock)).toBe(false)
+    expect(existsSync(paths.profile)).toBe(false)
+    const transcripts = readdirSync(paths.logs)
+    expect(transcripts).toHaveLength(1)
+    const body = readFileSync(join(paths.logs, transcripts[0] as string), 'utf8')
+    expect(body).toMatch(/exceeded its 1500ms deadline/u)
+    expect(body).toMatch(/offline install started/u)
+  })
+
+  it('sweeps abandoned staging directories and keeps the one a journal claims', async () => {
+    const root = temporaryRoot()
+    const seed = join(root, 'seed')
+    createTestSeedMetadata(seed, release())
+    writeFileSync(join(seed, 'pnpm-lock.yaml'), 'lockfileVersion: 9\n')
+    archiveStore(seed)
+    writeIntegrity(seed)
+    const paths = resolveDesktopPaths(join(root, '.dsh'))
+    const manager = new DesktopProjectManager(
+      paths,
+      { node: process.execPath, pnpm: writeFakePnpm(root) },
+      { stagingMaxAgeMs: 0 },
+    )
+    const claimedProfile = join(paths.staging, 'claimed', 'profile')
+    const orphan = join(paths.staging, 'orphan')
+    mkdirSync(claimedProfile, { recursive: true })
+    mkdirSync(orphan, { recursive: true })
+    writeFileSync(join(claimedProfile, 'marker'), 'staging')
+    writeFileSync(join(orphan, 'marker'), 'staging')
+    writeFileSync(paths.pending, `${JSON.stringify({
+      schemaVersion: 1,
+      id: 'claimed',
+      stagingProfile: claimedProfile,
+      step: 'prepared',
+    })}
+`)
+
+    await expect(manager.applyRelease(seed, '1.0.0', hooks())).resolves.toBe(true)
+
+    expect(existsSync(orphan)).toBe(false)
+    const transcripts = readdirSync(paths.logs)
+    const body = readFileSync(join(paths.logs, transcripts[0] as string), 'utf8')
+    expect(body).toMatch(/sweeping abandoned staging directory orphan/u)
+    expect(body).not.toMatch(/sweeping abandoned staging directory claimed/u)
   })
 })

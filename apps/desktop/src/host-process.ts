@@ -19,6 +19,9 @@ import {
   type DesktopHostResponseFrame,
 } from './host-protocol.ts'
 
+/** Deadline for one backend child to report its composition active. */
+const DESKTOP_HOST_READY_TIMEOUT_MS = 5 * 60 * 1000
+
 interface PendingResponse {
   readonly resolve: (response: Response) => void
   readonly reject: (error: Error) => void
@@ -83,16 +86,19 @@ export class DesktopHostProcess {
   })
   private exitPromise: Promise<void> | undefined
   private stderr = ''
+  private readyTimer: NodeJS.Timeout | undefined
 
   /**
    * @param node - absolute bundled upstream Node.js executable.
    * @param projectDir - active or staged desktop npm project.
    * @param inspectPort - optional loopback inspector port for workspace development.
+   * @param readyTimeoutMs - deadline for the child to report ready. Defaults to five minutes.
    */
   constructor(
     private readonly node: string,
     private readonly projectDir: string,
     private readonly inspectPort?: number,
+    private readonly readyTimeoutMs: number = DESKTOP_HOST_READY_TIMEOUT_MS,
   ) {}
 
   /** Start the child once and resolve only after its complete composition is active. */
@@ -151,6 +157,14 @@ export class DesktopHostProcess {
         resolve()
       })
     })
+    this.readyTimer = setTimeout(() => {
+      const suffix = this.stderr.trim() === '' ? '' : `: ${this.stderr.trim()}`
+      this.fail(new Error(
+        `dsh desktop host did not report ready within ${String(this.readyTimeoutMs)}ms${suffix}`,
+      ))
+      child.kill('SIGTERM')
+    }, this.readyTimeoutMs)
+    this.readyTimer.unref()
     return this.readyPromise
   }
 
@@ -388,6 +402,8 @@ export class DesktopHostProcess {
   private handleMessage(message: DesktopHostEvent): void {
     switch (message.type) {
       case 'ready':
+        if (this.readyTimer !== undefined) clearTimeout(this.readyTimer)
+        this.readyTimer = undefined
         this.readyResolve(message)
         return
       case 'fatal':
@@ -399,6 +415,8 @@ export class DesktopHostProcess {
   }
 
   private fail(error: Error): void {
+    if (this.readyTimer !== undefined) clearTimeout(this.readyTimer)
+    this.readyTimer = undefined
     this.readyReject(error)
     for (const pending of this.pending.values()) {
       void pending.requestReader?.cancel(error).catch(() => undefined)
