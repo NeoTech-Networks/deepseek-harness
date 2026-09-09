@@ -40,8 +40,12 @@ import css from './InputBar.module.css'
 
 /** Alt+S fills the composer with this operator command and submits it. */
 const SAVE_STATE_SHORTCUT = '/save-state'
-/** Alt+P fills the composer with this text and submits it. */
-const DEPLOY_SHORTCUT = 'Deploy To Production'
+/**
+ * Alt+P fills the composer with this text and submits it. Lowercase and exact:
+ * it is the operator's canonical production promote phrase, and downstream
+ * tooling matches it verbatim.
+ */
+const DEPLOY_SHORTCUT = 'deploy to production'
 
 export type InputBarProps = ComposerBarProps
 
@@ -322,19 +326,36 @@ export const InputBar = memo(function InputBar({
   // draft is replaced wholesale (setDraft), then submitted through the same
   // path as the primary send button; /save-state is not a slash command, so it
   // falls through to the default sink and resolves as a user-invocable skill.
+  //
+  // KEYUP, NOT KEYDOWN, AND THAT IS LOAD BEARING (measured 2026-09-09 on
+  // Windows, against the packaged Electron runtime with real scan-code input).
+  // Electron on Windows never delivers the keydown of an Alt+letter chord to
+  // the renderer: only `Alt` itself arrives as a keydown, the letter arrives
+  // solely as a keyup carrying altKey. The main process cannot see it either
+  // (before-input-event reports the same keyUp-only pair), and a hidden menu
+  // accelerator does not fire, so keyup is the ONLY place this chord is
+  // observable. A browser delivers both, so a keydown listener passes every
+  // offline test and then does nothing in the desktop app, which is exactly
+  // what happened to the first version of this shortcut. Binding keyup fires
+  // once on both surfaces.
   useEffect(() => {
     if (inputActions === undefined) return
-    const onShortcut = (event: WindowEventMap['keydown']): void => {
+    const onShortcut = (event: WindowEventMap['keyup']): void => {
       if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
       if (event.code !== 'KeyS' && event.code !== 'KeyP') return
-      if (locked || machineBusy) return
+      // Refusing in silence is indistinguishable from a broken shortcut, so a
+      // locked or mid-admission composer says so rather than swallowing it.
+      if (locked || machineBusy) {
+        showToast(t('input.shortcutUnavailable'))
+        return
+      }
       event.preventDefault()
       inputActions.setDraft(event.code === 'KeyS' ? SAVE_STATE_SHORTCUT : DEPLOY_SHORTCUT)
       inputActions.submit()
     }
-    window.addEventListener('keydown', onShortcut)
-    return () => { window.removeEventListener('keydown', onShortcut) }
-  }, [inputActions, locked, machineBusy])
+    window.addEventListener('keyup', onShortcut)
+    return () => { window.removeEventListener('keyup', onShortcut) }
+  }, [inputActions, locked, machineBusy, showToast, t])
 
   // Button presses steal focus from the editor; suppress at mousedown so
   // typing continues seamlessly. Lexical's focus() carries preventScroll and
