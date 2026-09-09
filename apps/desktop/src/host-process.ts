@@ -164,7 +164,6 @@ export class DesktopHostProcess {
       ))
       child.kill('SIGTERM')
     }, this.readyTimeoutMs)
-    this.readyTimer.unref()
     return this.readyPromise
   }
 
