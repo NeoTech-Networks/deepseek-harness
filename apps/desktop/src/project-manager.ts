@@ -705,6 +705,9 @@ export class DesktopProjectManager {
           XDG_STATE_HOME: this.paths.pnpm.state,
         },
         stdio: ['ignore', 'pipe', 'pipe'],
+        // Provisioning runs from the windowless desktop app; without this the
+        // package manager gets a visible console window for the whole install.
+        windowsHide: true,
       })
       const childPid = child.pid
       if (childPid === undefined) {
