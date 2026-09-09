@@ -40,6 +40,14 @@ export function isNullPtr(value: NativePtr | null | undefined): value is null | 
 export interface StartupInfoInput {
   cb: number
   dwFlags: number
+  /**
+   * Show-window request, honoured only when `dwFlags` carries
+   * `STARTF_USESHOWWINDOW`. `SW_HIDE` keeps a console a child allocates off
+   * screen, which is the only console suppression available to a
+   * restricted-token launch (`CREATE_NO_WINDOW` kills such a child at DLL
+   * initialization — see the package README).
+   */
+  wShowWindow: number
   hStdInput: NativePtr
   hStdOutput: NativePtr
   hStdError: NativePtr

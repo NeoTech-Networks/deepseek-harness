@@ -10,8 +10,12 @@ import {
   Win32Error,
 } from '../src/index.ts'
 import {
+  CREATE_NO_WINDOW,
   CREATE_SUSPENDED,
   CREATE_UNICODE_ENVIRONMENT,
+  STARTF_USESHOWWINDOW,
+  STARTF_USESTDHANDLES,
+  SW_HIDE,
   JOBOBJECT_BASIC_ACCOUNTING_ACTIVE_PROCESSES_OFFSET,
   JOBOBJECT_BASIC_ACCOUNTING_SIZE,
   JobObjectBasicAccountingInformation,
@@ -116,7 +120,7 @@ describe('ordinary Job process operations', () => {
       null,
       null,
       1,
-      CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
+      CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW,
       environment,
       'C:\\work',
       expect.anything(),
@@ -162,7 +166,15 @@ describe('ordinary Job process operations', () => {
       }),
     })
     expect(spawnCurrentTokenJobProcess(bindings, options())).toEqual({ pid: 1234, process: 60n, job: 50n })
-    expect(startup).toMatchObject({ hStdInput: 104n, hStdOutput: 105n, hStdError: 106n })
+    expect(startup).toMatchObject({
+      hStdInput: 104n,
+      hStdOutput: 105n,
+      hStdError: 106n,
+      // No console window may reach the screen when the host that launched this
+      // process has no console of its own (the desktop app).
+      dwFlags: STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW,
+      wShowWindow: SW_HIDE,
+    })
     expect(uvGetOsfhandle).toHaveBeenNthCalledWith(1, 4)
     expect(uvGetOsfhandle).toHaveBeenNthCalledWith(2, 5)
     expect(uvGetOsfhandle).toHaveBeenNthCalledWith(3, 6)
