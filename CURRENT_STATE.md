@@ -4,16 +4,55 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
-## Last save-state (2026-09-09T00:08:42.118722+00:00)
+## 2026-09-09 - The two harness fixes ported to 0.1.5 and packaged into an installer
 
-- Trigger: `save_state`
-- Actor: `claude-code:steve`
-- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
-- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
-- Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
+The job in `NEXT_SESSION_PROMPT.md`, done up to the operator's install step.
 
-<!-- claude-memory-actor:end -->
+- **The port was a cherry-pick, not a rewrite.** Diffing the four touched files
+  between the fix's parent and the 0.1.5 head showed exactly ONE line of
+  divergence, in `plan-mode.spec.ts` (`tool/code-dispatch` renamed to
+  `tool/ptc-dispatch`), and it does not overlap the fix. `git cherry-pick
+  92e043bf4d` onto `update/v0.1.5-alpha.1` applied clean as `7c577fb6fe`.
+- **Proven at source:** fs-local 142 passed with the 13 pre-existing
+  POSIX-on-Windows failures unchanged and all 6 new cases named and green;
+  plan-mode 94/94; repo typecheck exit 0; `pnpm run build` exit 0.
+- **Proven in the artifact, which is the step every previous attempt skipped.**
+  The packaged seed archives were extracted and read:
+  `deepseek-ai-dsh-fs-local-0.1.5-alpha.1.tgz` contains `PUBLISH_RETRY_DELAYS_MS`,
+  `publishOverExisting` and `readTextBytesConfirmingBinary`;
+  `deepseek-ai-dsh-plan-mode-0.1.5-alpha.1.tgz` contains `describePlanFault` and
+  zero occurrences of the old `requires a non-empty markdown plan` message.
+  Installer `deepseek-harness-0.1.5-alpha.1-win-x64.exe`, 190,730,194 bytes.
+- **The plan-mode defect was reproduced live on the way in.** This session's own
+  plan, in the operator's house format with the metadata blockquote above the
+  title, was rejected once by the running build with
+  `exit_plan_mode requires a non-empty markdown plan starting with a # heading`.
+- **`DSH_DESKTOP_APP_ID` was recorded wrongly and is now settled by derivation.**
+  OPEN_ISSUES item 13 and the playbook both said
+  `com.neotechnetworks.deepseek-harness`. The installed 0.1.5 build was made with
+  `com.deepseek.harness`: electron-builder derives the NSIS uninstall key as
+  `uuid5(appId)` in namespace `50e065bc-3134-11e6-9bab-38c9862bdaf3`, and the
+  running app's key `7808434f-469e-5eba-848e-edf64d3b94ce` is that of
+  `com.deepseek.harness`, while the other value produces the stale 0.1.3 entry.
+  A wrong id does not fail the build; it installs a second parallel copy.
+- **Also committed:** `finish-install.ps1` and `check-seed-integrity.py`
+  (`5124a7e3ee`), which were sitting uncommitted. They clear the old seed before
+  the silent install, assert seed integrity before relaunching, and keep
+  `rollback` rather than deleting it.
+- **NOT LIVE YET.** The install force-closes the app that hosts this session, so
+  it is the operator's step. Nothing changes in the running harness until
+  `finish-install.ps1` is run from a separate PowerShell window.
+- Playbook updated in the same session: `05-neotech-fork.md` app id corrected
+  with its derivation, install sequence rewritten, version history row added,
+  error ledger rows 11-13.
+
+## 2026-09-09 - Sessions panel shipped (right-sidebar session overview)
+
+Built the ui-sessions-panel feature package: a right-sidebar Sessions tab that lists every open session regardless of workspace, Active-only by default (running, subagent, awaiting-input and planning first) with an All toggle for idle history. About 20 files under packages/client/ui-sessions-panel, 39 tests at 100% coverage, and an independent phase classifier re-implemented so the plugin never imports another feature plugin at runtime. Wired into the web-app bundle, the cordis patch, the tsconfig client references and the web-app package deps; added the sessions-panel tsconfig path alias, closing the sessions-panel half of OPEN_ISSUES item 9. Also fixed apps/desktop/scripts/prepare-runtime.ts to extract the node runtime with system tar (extract-zip produced an empty extraction on this host) and bumped finish-install.ps1 to 0.1.5-alpha.1. The feature shipped and installed in the 0.1.5-alpha.1 update; Steve confirmed everything runs successfully.
+
+## 2026-09-09 - DSH v0.1.5-alpha.1 update shipped and installed
+
+Updated the desktop harness from 0.1.3-alpha.2 to 0.1.5-alpha.1 in worktree C:/Projects/worktrees/dsh-update-v015 (branch update/v0.1.5-alpha.1). Rebased the local feature stack (workspace grouping, session status, vision routing, windows packaging, account-usage, sessions-panel) onto upstream v0.1.5-alpha.1 as one squashed commit plus three fix commits. Fixed two build breaks: missing path aliases (account-usage, session-status) and a sessions-panel e2e test that needed excluding from the web client typecheck. Bumped 8 local packages to 0.1.5-alpha.1. Full build exit 0. Packaged the unsigned installer (181.9 MB) and Steve installed it. Pushed branch update/v0.1.5-alpha.1 and tag dsh-v0.1.5-alpha.1 to NeoTech-Networks/deepseek-harness.
 
 ## 2026-09-09 - DSH daily review: state-file loss fixed at source, corruption attributed, model gaps closed
 
@@ -95,7 +134,6 @@ one command and is the regression check for everything below.
 - CONCURRENCY HAZARD, confirmed live. Sessions restored inside the desktop app resumed autonomous builds in the SAME primary checkout, stomping the packed tarball directory mid-run (count observed climbing 100 to 126 with no build of this session's running) and breaking two packaging attempts. One of those sessions also committed this session's staged files into an unrelated wip commit on this session's branch. The app had to be closed to finish. This is the One Worktree Per Session rule failing in practice.
 - Git left tidy: `fix/account-usage-remote-mount-only` = the isolated fix; `fix/account-usage-remote-mount` = the wip rebased on top of it (78d5d95934, tree identical to the pre-rebase commit so no file moved); `backup/wip-pre-rebase-87607362` = the pre-rebase copy. Nothing merged to master, nothing pushed.
 
-
 ## 2026-09-08 - Live Claude Max usage readout in the composer footer
 
 - New package `packages/llm/account-usage` (`@deepseek-ai/dsh-account-usage`), both faces: a Host `TypertRemoteService` (`ctx.accountUsage.read()`) and a browser dock entry seated on `conversation.composer.dock` beside the stats line.
@@ -139,8 +177,6 @@ one command and is the regression check for everything below.
 
 ## 2026-09-08 - Animated plan-mode icon and finished icon after save-state
 
-
-
 - Animated the plan-mode sidebar icon while the session runs: `SessionStatusDots` (packages/client/ui-workspace/src/client/rows/Rows.tsx) now takes a `running` flag and sets `data-active="true"` on the planning glyph only when `phase === 'planning' && running`; `Rows.module.css` adds a 1.6s opacity pulse keyframe, disabled under `prefers-reduced-motion`. New test in rows.client.spec.tsx.
 
 - Added a "Finished" icon after /save-state: the session-status domain already renders the `finished` status (green check) via `declaredStatusOf` plus the `session/status` event; the missing trigger was that /save-state never declared it. Appended a "Declare the session finished" delta to `C:\Claude\skills\dsh_command_bridge.json` (deltas.save-state) and regenerated `~/.dsh/skills/save-state.md` so save-state calls `set_session_status(status: "finished")`, fallback `/status finished`.
@@ -151,11 +187,7 @@ one command and is the regression check for everything below.
 
 - No deploy (local desktop app, not a Railway repo). Changes are uncommitted in the checkout.
 
-
-
 ## 2026-09-08 - Workspace group headers: darker blue + alphabetical sort
-
-
 
 - Recolored the workspace group section headers from gray (`--dsw-alias-label-tertiary`) to the DeepSeek brand darker blue (`--dsw-static-deepseek-600`, with `--dsw-static-deepseek-400` for dark theme) in `packages/client/ui-workspace/src/client/rows/WorkspaceBrowser.module.css`.
 
@@ -165,11 +197,7 @@ one command and is the regression check for everything below.
 
 - Committed `f562c0a27f` (feat: sort) and `1116f9b306` (style: color) on `feat/open-session-in-subfolder`; pushed both to the `neotech` fork (NeoTech-Networks/deepseek-harness).
 
-
-
 ## 2026-09-08 - Composer shortcuts and right sidebar hidden by default
-
-
 
 - Added Alt+S (fills the composer with /save-state and submits) and Alt+P (fills with the deploy phrase and submits) as a renderer-level window keydown listener in `packages/client/ui-conversation/src/client/skeleton/InputBar.tsx`, plus 4 tests in input-bar.client.spec.tsx.
 
@@ -181,11 +209,7 @@ one command and is the regression check for everything below.
 
 - Verified: host + client typecheck exit 0; 79/79 input-bar tests; full `pnpm build` exit 0 (236 client artifacts). Live desktop smoke test of both changes is still user-gated (user last reported the sidebar still auto-opening).
 
-
-
 ## 2026-09-08 - Vision-routing auto image description, plus four pre-existing gate fixes
-
-
 
 - New `@deepseek-ai/dsh-vision-routing` package (`packages/vision/vision-routing/`): a text-only model session (DeepSeek Pro or Flash) with an attached image now admits the image and appends the vision model's description as a text block instead of rejecting with "Model does not support image input". Gated by the existing `subagent-model-selection` setting; a failed describe call appends a "description unavailable" note. Admission changed in `packages/api/session-controller/src/commands.ts`; plugin wired into the `web-app` bundle.
 
@@ -193,11 +217,7 @@ one command and is the regression check for everything below.
 
 - Live desktop smoke test of the auto-vision path is still pending (user-gated GUI).
 
-
-
 ## 2026-09-08 - Windows installer built, installed, session creation fixed
-
-
 
 - Built an unsigned Windows installer (182 MB) via an opt-in `DSH_DESKTOP_ALLOW_UNSIGNED=1` flag (commit fdb44376aa), plus two build fixes: build under PowerShell (GNU tar in Git Bash chokes on `C:` paths) and skip the POSIX-only `fs-ext` native compile on win32 (`project-manager.ts` platform-conditional + `lease.ts` lazy-load).
 
@@ -207,13 +227,7 @@ one command and is the regression check for everything below.
 
 - Commits: 1340b92f40 (feature work) + fdb44376aa (unsigned + fs-ext) on `feat/open-session-in-subfolder`, 2 ahead of `neotech`, push held.
 
-
-
-
-
 ## 2026-09-08 - Dependency gate fix and full renderer rebuild
-
-
 
 - Fixed the two `verify-package-dependencies` violations left by the uncommitted session-status work: added `@deepseek-ai/dsh-session-status` (workspace:^) to `packages/client/connection/package.json` devDependencies and `@deepseek-ai/dsh-goal` (workspace:^) to `packages/client/ui-workspace/package.json` devDependencies, and refreshed `pnpm-lock.yaml`. The gate now exits 0 (61 packages match policy).
 
@@ -223,13 +237,7 @@ one command and is the regression check for everything below.
 
 - Uncommitted (no push; origin is upstream deepseek-ai with no write access). Nothing deployed.
 
-
-
-
-
 ## 2026-09-08 - Quit confirmation on the desktop shell
-
-
 
 - Added a native close confirmation to the Electron main window in `apps/desktop/src/main.ts`: the window `close` event is intercepted, a "Quit DeepSeek Harness?" dialog is shown (Quit / Cancel, Cancel default), and the app only quits on confirm. Menu Quit and the updater restart path are not double-prompted; the Desktop Plugins window is unaffected.
 
@@ -239,11 +247,7 @@ one command and is the regression check for everything below.
 
 - Not smoke-tested live: the change activates on next launch (a relaunch would end the running session).
 
-
-
 ## 2026-09-08 - Open a session directly in a sub-directory from the Files tab
-
-
 
 - Added two gestures to the right-sidebar Files tree: right-click a folder for "New session here" (adopts the folder as its own workspace and opens or reuses its session, filed under the parent's group label), and "New session in each sub-folder..." (registers every immediate sub-directory under one group, opening a session only in the first).
 
@@ -253,11 +257,7 @@ one command and is the regression check for everything below.
 
 - Committed `9a30a554e8` on branch `feat/open-session-in-subfolder`; pushed that branch and local `master` (`67ceb5406a`) to a new org fork `NeoTech-Networks/deepseek-harness` (`neotech` remote).
 
-
-
 ## 2026-09-07 - Session status icons in the sidebar
-
-
 
 - Added a durable, model-independent declared session status. New `packages/session-status/` group: domain (`session/status` event, `sessionStatus` projection, validated vocabulary, `ctx.sessionStatus`), `tool-session-status` (`set_session_status`), `command-session-status` (`/status`).
 
@@ -273,11 +273,7 @@ one command and is the regression check for everything below.
 
 - Open: uncommitted on the repo (no upstream push access to deepseek-ai); live desktop smoke test pending (user-gated).
 
-
-
 ## 2026-09-07 - Workspace grouping implemented and committed
-
-
 
 - Implemented workspace grouping end-to-end: `group` field on the workspace domain record, `setGroup` in the API controller + typert wire codec, two-level group/workspace/sessions tree in the sidebar, and a "Set group…" dialog on the workspace row menu.
 
@@ -286,8 +282,6 @@ one command and is the regression check for everything below.
 - Committed: `67ceb5406a` on local `master`, rebased cleanly onto `c389f96bf3`.
 
 - Open: `git push` denied (neotechnet has no access to the deepseek-ai org; no fork exists). Either fork to a chosen account and push, or keep the change local. Visual smoke test of the grouped sidebar still pending.
-
-
 
 ## 2026-09-08 - Plan mode defaults on for every new session (model-agnostic)
 
@@ -309,8 +303,30 @@ lands on the fork (PRs #2 and #3 merged).
   Auto-managed by the claude-memory save-state hook.
   Anything between :begin and :end is overwritten on every save-state.
   Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=1af9c4e8-f7ce-40d6-8170-dd9119e4caf2 at=2026-09-08T17:47:04.847381+00:00
+  Last write: actor=claude-code:steve session=321e7af0-b0ab-4a0b-9a4c-de8eea784e39 at=2026-09-09T03:50:14.915068+00:00
 -->
+## Last save-state (2026-09-09T03:50:14.915068+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `321e7af0-b0ab-4a0b-9a4c-de8eea784e39`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-6d11ab26-811b-4500-899f-621252ea2c9a
+
+<!-- claude-memory-actor:end -->
+
+## Last save-state (2026-09-09T00:08:42.118722+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
+
+<!-- claude-memory-actor:end -->
+
 ## Last save-state (2026-09-08T17:47:04.847381+00:00)
 
 - Trigger: `save_state`

@@ -1,5 +1,37 @@
-## 2026-09-09 - accountUsage remote mount, desktop boot restored
+## 2026-09-09 - Two harness fixes ported to the 0.1.5 line and packaged
 
+Worktree `C:/Projects/worktrees/dsh-update-v015`, branch `update/v0.1.5-alpha.1`,
+cherry-pick `7c577fb6fe` (was `92e043bf4d` on the 0.1.3 line).
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Divergence between the fix's parent and the 0.1.5 head, 4 touched files | small | ONE line, `plan-mode.spec.ts:1025` (`tool/code-dispatch` renamed `tool/ptc-dispatch`), non-overlapping | VERIFIED |
+| Cherry-pick | clean | exit 0, auto-merged, 4 files, 343 insertions | VERIFIED |
+| fs-local suite | 6 new cases green, failures still exactly 13 | 142 passed, 13 failed (the pre-existing POSIX symlink/chmod EPERM set), 1 skipped; all 6 new cases named and passing | VERIFIED |
+| plan-mode suite | 94/94 | 94/94 | VERIFIED |
+| Repo typecheck | exit 0 | exit 0 | VERIFIED |
+| Full build | exit 0 | exit 0, 240 client artifacts | VERIFIED |
+| Packaging | installer emitted | exit 0, `deepseek-harness-0.1.5-alpha.1-win-x64.exe`, 190,730,194 bytes | VERIFIED |
+| **fs-local fix inside the packaged seed** | `publishOverExisting` present | `PUBLISH_RETRY_DELAYS_MS` L137, `publishOverExisting` L181 + L652, `readTextBytesConfirmingBinary` L449/463/471 in `package/lib/index.js` of the seed `.tgz` | VERIFIED |
+| **plan-mode fix inside the packaged seed** | `describePlanFault` present, old gate gone | `describePlanFault` at 5 sites; zero matches for `requires a non-empty markdown plan` | VERIFIED |
+| App id used for packaging | matches the running install | `com.deepseek.harness`, proven by the NSIS uninstall key `7808434f-469e-5eba-848e-edf64d3b94ce` = `uuid5(50e065bc-3134-11e6-9bab-38c9862bdaf3, "com.deepseek.harness")` | VERIFIED |
+| The defect being fixed, reproduced live | plan-mode rejects a blockquote-first plan | this session's own plan was rejected once by the running build: `exit_plan_mode requires a non-empty markdown plan starting with a # heading` | VERIFIED |
+| Fixes running in the app | new code in `~/.dsh/profiles/desktop` | NOT YET - installer built and proven, install is the operator's step | UNVERIFIED |
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| ui-sessions-panel tests | 39 tests, 100% coverage | 39/39 pass, 100% | VERIFIED |
+| bundle wiring | package in web-app seed | cordis patch, package.json and tsconfig reference all present | VERIFIED |
+| tsconfig path alias | no alias gap | alias added, closes the sessions-panel half of OPEN_ISSUES item 9 | VERIFIED |
+| prepare-runtime extraction | full node runtime extraction | system tar extracts correctly; extract-zip was empty | VERIFIED |
+| live install | sessions-panel in installed profile | present in the 0.1.5-alpha.1 installed profile | VERIFIED |
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Rebase onto v0.1.5-alpha.1 | 14 commits onto 5dda764 | squashed + 3 fix commits | VERIFIED |
+| Full build | exit 0 | exit 0 (240 client artifacts) | VERIFIED |
+| Client typecheck | exit 0 | exit 0 after alias + exclude fixes | VERIFIED |
+| Installer packaged | 0.1.5-alpha.1-win-x64.exe | 181.9 MB, unsigned | VERIFIED |
+| Installed app version | 0.1.5-alpha.1 | desktop-release.json reads 0.1.5-alpha.1 | VERIFIED |
+| Fork synced | branch + tag | both pushed | VERIFIED |
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | named the failing entry | one entry, named, with its missing service | renderer console: `web boot: 1 entry did not activate / @deepseek-ai/dsh-account-usage: pending (waiting for service: remote.accountUsage)` | VERIFIED |
@@ -151,6 +183,14 @@
 | live behavior | new session starts in plan mode | user restarted and confirmed "Appears to work" | VERIFIED |
 | remote origin | NeoTech fork | read back correct | VERIFIED |
 | state worker | exit 0 | PR #2/#3 merged | VERIFIED |
+
+## 2026-09-09 - Sessions panel
+
+## 2026-09-09 - DSH v0.1.5-alpha.1 update
+
+
+## 2026-09-09 - accountUsage remote mount, desktop boot restored
+
 
 ## 2026-09-08 - Claude Max usage readout in the composer footer
 
