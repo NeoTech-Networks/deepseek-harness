@@ -1,3 +1,22 @@
+## 2026-09-09 - Post-install: both fixes confirmed LIVE in the running profile
+
+Installed 08:35, app relaunched 08:36, read back from
+`~/.dsh/profiles/desktop/node_modules/@deepseek-ai/`.
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| fs-local retry fix running | `publishOverExisting` present | `PUBLISH_RETRY_DELAYS_MS` L137, `publishOverExisting` L181 + L652 | VERIFIED |
+| fs-local torn-read fix running | confirming re-read present | `readTextBytesConfirmingBinary` L449, L463, L471 | VERIFIED |
+| plan-mode fix running | `describePlanFault` present | L59, L305, L474 | VERIFIED |
+| Old plan gate gone from running code | zero matches | zero matches for `requires a non-empty markdown plan` | VERIFIED |
+| Profile re-extracted | fresh, post-install | mtime 08:35, 247 packages (same count as the previous build) | VERIFIED |
+| App booted | processes up after install | 4 processes, all started 08:36 | VERIFIED |
+| No second parallel install | one app directory | one directory under `AppData\Local\Programs` | VERIFIED |
+| No crash events | none for this app | Windows Application log empty for it | VERIFIED |
+| The reported "crash" | explained, not a fault | `finish-install.ps1` step 1 is `taskkill /F`; forced close, script now announces it | VERIFIED |
+| Items 1/2/5/10 re-check (code half) | feature packages really in the running profile | all 7 present; accountUsage mount in the running client bundle; `dsh-win32-process` carries CREATE_NO_WINDOW | VERIFIED |
+| Items 1/2/5/10 (on-screen half) | visual behaviour | not checked, needs eyes on the GUI | UNVERIFIED |
+
 ## 2026-09-09 - Two harness fixes ported to the 0.1.5 line and packaged
 
 Worktree `C:/Projects/worktrees/dsh-update-v015`, branch `update/v0.1.5-alpha.1`,
