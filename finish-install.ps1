@@ -19,7 +19,7 @@ Start-Sleep -Seconds 3
 
 # 2. Reinstall (silent). The installer is unsigned (built with
 #    DSH_DESKTOP_ALLOW_UNSIGNED=1), so SmartScreen may prompt: choose "Run anyway".
-$installer = 'C:\Projects\repos\deepseek-harness\apps\desktop\.desktop-build\targets\win-x64\artifacts\deepseek-harness-0.1.3-alpha.2-win-x64.exe'
+$installer = 'C:\Projects\worktrees\dsh-update-v015\apps\desktop\.desktop-build\targets\win-x64\artifacts\deepseek-harness-0.1.5-alpha.1-win-x64.exe'
 if (-not (Test-Path $installer)) {
   Write-Host "installer not found: $installer" -ForegroundColor Red
   exit 1
