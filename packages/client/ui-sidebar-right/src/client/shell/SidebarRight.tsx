@@ -73,9 +73,9 @@ export interface SidebarRightInjected {
    *
    * The frame sizes the track and places the resize handle; this only tells it
    * the composition of the facts this package owns, and is called whenever that
-   * composition changes.
+   * composition changes. The session id keys the saved width in the frame.
    */
-  readonly syncPresentation: (presentation: SidebarRightPresentation) => void
+  readonly syncPresentation: (sessionId: SessionId, presentation: SidebarRightPresentation) => void
   /**
    * Publish this seat's session, actions, and the store's surfaces to `ctx.sidebarRight`.
    *
@@ -391,7 +391,7 @@ export function RightbarSeat({
           && animation.playState !== 'finished' && animation.playState !== 'idle')
         : []
       if (entering.length === 0) {
-        syncPresentation({ shown, track, fullscreen })
+        syncPresentation(sessionId, { shown, track, fullscreen })
         return
       }
       // Cancellation can replace the transition or remove it for reduced motion.
@@ -402,7 +402,9 @@ export function RightbarSeat({
   }, [sessionId, shown, track, fullscreen, syncPresentation])
   // Leaving is part of that report: a seat that unmounts with its session must
   // hand the track back rather than leave one sized for a surface nobody draws.
-  useLayoutEffect(() => () => { syncPresentation({ shown: false, track: false, fullscreen: false }) }, [syncPresentation])
+  useLayoutEffect(() => () => {
+    syncPresentation(sessionId, { shown: false, track: false, fullscreen: false })
+  }, [syncPresentation, sessionId])
 
   // Republished on every committed change: the service's readers answer from the
   // last commit, and its commands act on the session actually on screen.

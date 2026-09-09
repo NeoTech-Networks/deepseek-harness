@@ -127,6 +127,9 @@ export function AppFrame({
   t,
 }: AppFrameProps) {
   const layoutInfo = useStore(state => state.layoutInfo)
+  // The current session keys the right panel's saved width; the drag handle and
+  // the width preference below read it, so the width stays per-session.
+  const currentSessionId = useSessions(s => s.current)
   const frameRef = useRef<HTMLDivElement | null>(null)
   const viewport = layoutInfo.viewportWidth
 
@@ -162,7 +165,8 @@ export function AppFrame({
   const sidebarPreference = sidebarCollapsed
     ? 0
     : layoutInfo.sidebar === 0 ? SIDEBAR_DEFAULT : layoutInfo.sidebar
-  const rightbarPreference = layoutInfo.rightbar ?? viewport * RIGHTBAR_DEFAULT_RATIO
+  const rightbarPreference = (currentSessionId === undefined ? undefined : layoutInfo.rightbarBySession[currentSessionId])
+    ?? viewport * RIGHTBAR_DEFAULT_RATIO
   // Opening on a narrow frame collapses the left sidebar. Eligibility must
   // include that space before the occupant's first shown report arrives.
   const normal = computeColumns(viewport, !layoutInfo.rightbarShown && narrow ? 0 : sidebarPreference, rightbarPreference)
@@ -187,8 +191,8 @@ export function AppFrame({
   }, [actions])
   const onRightbarStart = useCallback(() => { rightbarBase.current = rightbarWidth.current; setDragging(true) }, [])
   const onRightbarDrag = useCallback((dx: number) => {
-    actions.setRightbar(rightbarBase.current - dx)
-  }, [actions])
+    if (currentSessionId !== undefined) actions.setRightbar(currentSessionId, rightbarBase.current - dx)
+  }, [actions, currentSessionId])
   const productTitle = process.env.DSH_CLIENT_TITLE ?? t('brand.localBuild')
   const sidebar = useMemo(() => renderSlot('sidebar', {
     collapsed: sidebarCollapsed,

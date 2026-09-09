@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { LayoutController } from '../src/client/service.ts'
 import type { MainPanelId, PanelActions } from '../src/client/service.ts'
 
@@ -20,14 +21,15 @@ describe('LayoutController', () => {
     const panels = fakePanels()
     const service = new LayoutController(panels, () => true)
 
-    service.openRightbar(true, false)
-    service.openRightbar(true, true)
-    service.openRightbar(false, true)
+    const sessionId = 's-test' as SessionId
+    service.openRightbar(sessionId, true, false)
+    service.openRightbar(sessionId, true, true)
+    service.openRightbar(sessionId, false, true)
     service.closeRightbar()
 
-    expect(panels.openRightbar).toHaveBeenNthCalledWith(1, true, false)
-    expect(panels.openRightbar).toHaveBeenNthCalledWith(2, true, true)
-    expect(panels.openRightbar).toHaveBeenNthCalledWith(3, false, true)
+    expect(panels.openRightbar).toHaveBeenNthCalledWith(1, sessionId, true, false)
+    expect(panels.openRightbar).toHaveBeenNthCalledWith(2, sessionId, true, true)
+    expect(panels.openRightbar).toHaveBeenNthCalledWith(3, sessionId, false, true)
     expect(panels.closeRightbar).toHaveBeenCalledTimes(1)
     // The drag width stays the frame's own business, never the caller's.
     expect(panels.setRightbar).not.toHaveBeenCalled()

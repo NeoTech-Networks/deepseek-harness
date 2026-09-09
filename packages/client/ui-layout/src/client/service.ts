@@ -10,6 +10,7 @@
  */
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
 import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { createLayoutStore } from './stores.ts'
 
 /** Identity shared by a sidebar panel entry and its main-slot occupant. */
@@ -41,12 +42,14 @@ export interface ILayout {
   toggleSidebar(): void
   /**
    * Report the right panel's presentation without changing its expanded state.
+   * @param sessionId - the session whose panel is reporting; the frame keys the
+   *   saved width by it.
    * @param track - whether the normal panel width reserves a grid track,
    *   including beneath a fullscreen overlay.
    * @param fullscreen - whether the panel covers the frame and hides its outer
    *   resize handle; independent of the underlying grid track.
    */
-  openRightbar(track: boolean, fullscreen: boolean): void
+  openRightbar(sessionId: SessionId, track: boolean, fullscreen: boolean): void
   /** Report the right panel as hidden: no track, no handle. */
   closeRightbar(): void
 }
@@ -91,8 +94,8 @@ export class LayoutController implements ILayout {
   }
 
   /** Report the right panel's track and fullscreen presentation. */
-  openRightbar(track: boolean, fullscreen: boolean): void {
-    this.panels.openRightbar(track, fullscreen)
+  openRightbar(sessionId: SessionId, track: boolean, fullscreen: boolean): void {
+    this.panels.openRightbar(sessionId, track, fullscreen)
   }
 
   /** Report the right panel as hidden: no track, no handle. */
