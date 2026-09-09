@@ -1,3 +1,34 @@
+## 2026-09-09 - Alt+S / Alt+P root cause, fix, and the two update-survival guards
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Shortcut code in the running 0.1.5-alpha.1 build | present or absent | PRESENT, `SAVE_STATE_SHORTCUT` at line 15794 of the profile's `dsh-client-ui-conversation/lib/client.js`; not a lost commit | VERIFIED |
+| Same code in a real browser | fires or not | FIRES; headless Chromium against `dsh web` submitted `/save-state`, turn admitted | VERIFIED |
+| Real Alt+S into a real Electron window | keydown delivered | NOT DELIVERED; only `AltLeft` keydown plus a `KeyS` KEYUP with altKey | VERIFIED |
+| Application menu as the cause | ruled in or out | RULED OUT; identical with `setApplicationMenu(null)` | VERIFIED |
+| `before-input-event` in the main process | sees the keydown | NO; same keyUp-only pair | VERIFIED |
+| Hidden menu accelerator `Alt+S` | fires | NO, never fired | VERIFIED |
+| `SendKeys` as a probe | valid | INVALID; no scan code, so every event arrives with an empty `code`. `SendInput` with `KEYEVENTF_SCANCODE` is the correct instrument | VERIFIED |
+| Fix: bind to keyup | tests | 93/93 input-bar, 400/400 across ui-conversation and plan-mode | VERIFIED |
+| Typecheck and build | exit 0 | both exit 0 | VERIFIED |
+| Rebuilt bundle in a real browser | still submits | YES, `/save-state` admitted with the keyup binding | VERIFIED |
+| Fix inside the packaged installer | present | `shortcutUnavailable` and `deploy to production` found in the seed `.tgz` for `dsh-client-ui-conversation` | VERIFIED |
+| Installer artifact | exists | `deepseek-harness-0.1.5-alpha.2-win-x64.exe`, 194,655,398 bytes, packaged exit 0 | VERIFIED |
+| Config vault round trip | byte identical | sha256 match after corrupt-restore and after delete-restore of `skills/dtp.md` | VERIFIED |
+| Vault secret guard | no secret in history | 4 live credential values searched across `git log -p --all`, 0 hits; 0 credential paths ever added | VERIFIED |
+| Vault drift detection | exit 3 and names the file | yes, and prints the restore command | VERIFIED |
+| Daily snapshot task | exists and runs | `DSH Config Vault Snapshot`, next 2026-09-10 09:00, manual run LastTaskResult 0 | VERIFIED |
+| Local-feature marker check | catches a missing feature | yes; reports exactly the two shortcut markers as absent from the build not yet installed | VERIFIED |
+| Fixed build under a REAL Electron window, REAL OS keystroke | Alt+S submits | SUBMITTED `/save-state`; turn ran and failed only on the scratch home's missing API key, which is the admission proof | VERIFIED |
+| Same, Alt+P | submits the promote phrase | SUBMITTED `deploy to production`, lowercase and exact | VERIFIED |
+| The keyup-only behaviour in that same run | reconfirmed | main process logged `keyDown AltLeft`, then `keyUp KeyS` / `keyUp KeyP`, no letter keydown | VERIFIED |
+| Install performed | 0.1.5-alpha.2 running | installed 14:29, profile re-extracted 14:34, four processes from the new install | VERIFIED |
+| Fix in the RUNNING profile | keyup binding present | `addEventListener("keyup", onShortcut)` L16029, `DEPLOY_SHORTCUT = "deploy to production"` L15815, `shortcutUnavailable` toast L16022 | VERIFIED |
+| Local features after the update | none dropped | `dsh_local_features_check.py` 10 of 10 ok, exit 0 | VERIFIED |
+| Settings after the update | untouched | `dsh_config_vault.py verify` 18 files all same exit 0; post-install snapshot 0 changed | VERIFIED |
+| Alt+S in the INSTALLED app | works | WORKS; confirmed by the operator after the install | VERIFIED |
+
+
 ## 2026-09-09 - Why no state-sync PR can merge on this fork
 
 | Check | Expected | Result | Status |

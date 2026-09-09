@@ -1,3 +1,51 @@
+## 2026-09-09 - Alt+S / Alt+P: DONE, installed and confirmed working in the app
+
+0.1.5-alpha.2 installed at 14:29, profile re-extracted at 14:34. The keyup
+binding was read back out of the RUNNING profile, `dsh_local_features_check.py`
+reported 10 of 10 present (exit 0), `dsh_config_vault.py verify` reported 18
+files all same (exit 0) with a post-install snapshot of 0 changed, and Steve
+pressed Alt+S in the installed app and reported it worked. The section below is
+the record of how it was found and fixed.
+
+## 2026-09-09 - The Alt+S / Alt+P shortcuts: root cause found, fixed, packaged, install pending
+
+The shortcuts never worked in the desktop app, and the update did not break
+them. The code was in the installed 0.1.5-alpha.1 build the whole time.
+
+**Root cause: Electron on Windows never delivers the KEYDOWN of an Alt+letter
+chord to the renderer.** Only `Alt` arrives as a keydown; the letter arrives
+solely as a `keyup` carrying `altKey`. Measured with a stripped-down Electron
+window built from the packaged runtime and real `SendInput` scan-code
+keystrokes. `before-input-event` in the main process sees the same keyUp-only
+pair, a hidden `Alt+S` menu accelerator never fires, and removing the
+application menu changes nothing. A browser delivers both events, which is why
+93 unit tests and a real headless Chromium run both passed against the broken
+binding.
+
+**Fix** (commit `aca41e5f7b` on `update/v0.1.5-alpha.2`): bind to `keyup`, toast
+instead of refusing in silence when the composer is locked or mid-admission, and
+send the canonical lowercase `deploy to production`. Rebuilt and repackaged as
+`deepseek-harness-0.1.5-alpha.2-win-x64.exe` (194,655,398 bytes); the fix is
+confirmed inside the packaged seed archive. **Install is operator gated and has
+not happened yet**, so the running app is still 0.1.5-alpha.1.
+
+**Two survival guards now exist**, and they cover different halves:
+
+- `C:\Claude\bin\dsh_config_vault.py` with the vault at
+  `C:\Projects\repos\dsh-config` (local git, no remote) protects the operator's
+  `~/.dsh` configuration: `settings.yaml`, the `.agent-presets` preset that
+  mounts the desktop MCP servers, `cordis.patch.yml`, `AGENTS.md` and the 13
+  slash-command skill wrappers. 18 files. `.credentials.yaml` is denied by the
+  manifest and proven never to have entered the history. A hidden daily task
+  snapshots at 09:00.
+- `C:\Claude\bin\dsh_local_features_check.py` covers what a settings backup
+  cannot: it reads the EXTRACTED profile and reports any of the 10 local fork
+  features an update dropped. A dropped feature leaves a perfectly healthy app.
+
+`finish-install.ps1` now snapshots before it installs, verifies after, and
+prints the feature-check command.
+
+
 
 
 ## Last save-state (2026-09-09T00:08:42.118722+00:00)
