@@ -114,6 +114,20 @@ export function apply(ctx: Context): void {
       const result = await session.rename(title)
       if (!result.ok) throw new Error(result.error.message)
     },
+    setSessionStatus: async (sessionId, statusId) => {
+      const session = sessions.binding(sessionId)?.session
+      if (session === undefined) throw new Error(`unknown session "${sessionId}"`)
+      const result = await session.setStatus(statusId)
+      if (!result.ok) throw new Error(result.error.message)
+    },
+    listSessionStatuses: async () => {
+      const current = sessions.list.getSnapshot().current
+      const session = current === undefined ? undefined : sessions.binding(current)?.session
+      if (session === undefined) throw new Error('no session selected')
+      const result = await session.listStatuses()
+      if (!result.ok) throw new Error(result.error.message)
+      return result.value.statuses
+    },
     forkSession: (sessionId) => {
       uiWorkspace.forkSession(sessionId)
         .catch(() => {
@@ -121,6 +135,7 @@ export function apply(ctx: Context): void {
         })
     },
     renameWorkspace: async (workspaceId, title) => { await workspaces.rename(workspaceId, title) },
+    setGroupWorkspace: async (workspaceId, group) => { await workspaces.setGroup(workspaceId, group) },
     deleteWorkspace: async (workspaceId) => { await workspaces.delete(workspaceId) },
     insertWorkspaceBefore: async (workspaceId, beforeWorkspaceId) => {
       await workspaces.insertBefore(workspaceId, beforeWorkspaceId)

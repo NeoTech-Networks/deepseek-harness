@@ -32,6 +32,17 @@ export const zh = {
   'error.outsideWorkspace': '这个目录在工作区之外，侧栏不会读取它。',
   'error.notDirectory': '这不是一个目录。',
   'error.unavailable': '读取失败：{message}',
+  'menu.newSessionHere': '在这里新建会话',
+  'menu.newSessionEach': '在每个子文件夹里新建会话…',
+  'bulk.title': '在每个子文件夹里新建会话',
+  'bulk.description': '把这个目录下的每个子文件夹都注册成一个工作区，并在第一个里打开一个会话。',
+  'bulk.group': '分组标签',
+  'bulk.none': '这个目录没有子文件夹。',
+  'bulk.all': '全选',
+  'bulk.cancel': '取消',
+  'bulk.close': '关闭',
+  'bulk.open': '新建会话',
+  'bulk.done': '已就绪 {count} 个工作区。',
 } satisfies Record<string, string>
 
 /** Files dictionary key union. */
@@ -51,4 +62,15 @@ export const en = {
   'error.outsideWorkspace': 'That directory is outside the workspace, so the sidebar will not read it.',
   'error.notDirectory': 'That is not a directory.',
   'error.unavailable': 'Read failed: {message}',
+  'menu.newSessionHere': 'New session here',
+  'menu.newSessionEach': 'New session in each sub-folder…',
+  'bulk.title': 'New session in each sub-folder',
+  'bulk.description': 'Register every sub-folder of this directory as its own workspace, and open a session in the first one.',
+  'bulk.group': 'Group label',
+  'bulk.none': 'This directory has no sub-folders.',
+  'bulk.all': 'Select all',
+  'bulk.cancel': 'Cancel',
+  'bulk.close': 'Close',
+  'bulk.open': 'Open sessions',
+  'bulk.done': '{count} workspaces ready.',
 } satisfies Record<SidebarFilesKey, string>

@@ -15,7 +15,7 @@ import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SidebarRightTabActions } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import { filesFace } from '../src/client/face.ts'
-import type { FilesInjected } from '../src/client/face.ts'
+import type { FilesInjected, FilesOpenCapability } from '../src/client/face.ts'
 import { FilesBody } from '../src/client/FilesBody.tsx'
 import type { FilesBodyProps } from '../src/client/FilesBody.tsx'
 import { zh } from '../src/client/locales.ts'
@@ -45,6 +45,12 @@ interface MockedTabActions {
   readonly close: Mock<SidebarRightTabActions['close']>
 }
 
+/** The workspace-open capability as recording mocks. */
+export type MockedCapability = FilesOpenCapability & {
+  openDirectory: Mock<FilesOpenCapability['openDirectory']>
+  openSubDirectories: Mock<FilesOpenCapability['openSubDirectories']>
+}
+
 /** What a spec holds after mounting: the rendered view and every hand on the tree. */
 export interface Mounted {
   readonly view: RenderResult
@@ -53,13 +59,24 @@ export interface Mounted {
   readonly face: FilesInjected
   readonly controller: AbortController
   readonly tabActions: MockedTabActions
+  readonly cap: MockedCapability
+}
+
+/** A capability whose workspace-open calls are recording mocks. */
+function capability(): MockedCapability {
+  return {
+    openDirectory: vi.fn<FilesOpenCapability['openDirectory']>(async () => {}),
+    openSubDirectories: vi.fn<FilesOpenCapability['openSubDirectories']>(async () => 1),
+    groupFor: () => 'sig-railway-services',
+  }
 }
 
 /** One store instance, one face, one owner share. */
 function harness(cwd: string | null) {
   const instance = createFilesStore().create()
   const script = scriptedList()
-  const face = filesFace(script.list)(SESSION, instance.actions)
+  const cap = capability()
+  const face = filesFace(script.list, cap)(SESSION, instance.actions)
   const controller = new AbortController()
   const tabActions: MockedTabActions = {
     openResource: vi.fn<SidebarRightTabActions['openResource']>(),
@@ -86,7 +103,7 @@ function harness(cwd: string | null) {
     ...face,
     t: makeTranslate(zh),
   }
-  return { instance, script, face, controller, tabActions, shared }
+  return { instance, script, face, controller, tabActions, cap, shared }
 }
 
 /**

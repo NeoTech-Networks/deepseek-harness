@@ -200,6 +200,27 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Serves stat, paged text, byte windows, directory listings, and the change feed for files inside a Session\'s workspace root, confined by lstat, containment, and a stat re-check.',
   },
   {
+    key: 'accountUsage',
+    pkg: 'account-usage',
+    title: 'Subscription account usage Remote service',
+    mode: 'core',
+    note: 'Reads the stored subscription grant Host-side and reports the account\'s own rolling and weekly limit occupancy as percentages; every fault degrades to a status carrying the last figures read.',
+  },
+  {
+    key: 'pinnedFiles',
+    pkg: 'api-pinned-files',
+    title: 'Operator pinned-directory Remote service',
+    mode: 'core',
+    note: 'Serves the operator\'s own roots anywhere on the Host, stored in the pinned-files settings namespace, deliberately outside the Session workspace fence.',
+  },
+  {
+    key: 'visionRouting',
+    pkg: 'vision-routing',
+    title: 'Automatic image description for text-only sessions',
+    mode: 'core',
+    note: 'Describes attached images with an image-capable route so a text-only model receives text instead of a rejected message.',
+  },
+  {
     key: 'workspaceController',
     pkg: 'api-workspace-controller',
     title: 'Host Workspace Remote controller',
@@ -360,6 +381,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     mode: 'seam',
     implementations: ['session-title-first-prompt-llm', 'session-title-all-prompts-llm'],
     note: 'Owns the deterministic fallback, latest-title fold, and sole optional asynchronous provider registration.',
+  },
+  {
+    key: 'sessionStatus',
+    pkg: 'session-status',
+    title: 'Declared session statuses',
+    mode: 'seam',
+    consumers: ['tool-session-status', 'command-session-status'],
+    note: 'Owns the status vocabulary, the whole-value session/status event, and the sessionStatus projection; a human prompt clears the status.',
   },
   {
     key: 'systemPrompt',

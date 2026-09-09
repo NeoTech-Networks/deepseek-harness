@@ -298,9 +298,16 @@
     - id: command-goal
       name: '@deepseek-ai/dsh-command-goal'
 
+    - id: session-status
+      name: '@deepseek-ai/dsh-session-status'
+
+    - id: command-session-status
+      name: '@deepseek-ai/dsh-command-session-status'
+
     - id: plan-mode
       name: '@deepseek-ai/dsh-plan-mode'
       config:
+        defaultActive: true
         section: |
               You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
 
@@ -402,6 +409,9 @@
       name: '@deepseek-ai/dsh-tool-todo'
       config:
         allowParallelInProgress: true
+
+    - id: tool-session-status
+      name: '@deepseek-ai/dsh-tool-session-status'
 
     # Persisted same-session goals reach the model and the slash menu here; the
     # domain, driver, and `/goal` command are above.

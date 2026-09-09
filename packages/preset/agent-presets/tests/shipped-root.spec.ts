@@ -151,4 +151,15 @@ describe('the shipped preset root', () => {
       expect(findEntry(await shippedEntries(id), 'tool-workflow')?.disabled, id).not.toBe(true)
     }
   })
+
+  it('composes the session-status command and tool in each tool-bearing preset', async () => {
+    for (const id of ['cordis', 'ptc', 'standard']) {
+      const entries = await shippedEntries(id)
+      for (const row of ['command-session-status', 'tool-session-status']) {
+        const found = findEntry(entries, row)
+        if (found === undefined) throw new TypeError(`${id} preset must compose ${row}`)
+        expect(found.disabled, `${id} ${row}`).not.toBe(true)
+      }
+    }
+  })
 })

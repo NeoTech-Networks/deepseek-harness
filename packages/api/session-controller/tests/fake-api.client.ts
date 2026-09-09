@@ -22,6 +22,7 @@ import type {
 } from '@deepseek-ai/dsh-api-session-controller/types'
 import type { WorkspaceRemote } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { WorkspaceFollowFrame } from '@deepseek-ai/dsh-api-workspace-controller/types'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { RemoteFailure, RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import {
   RemoteStream,
@@ -44,6 +45,7 @@ function fakeWorkspace(id: string, over: Partial<WorkspaceView> = {}): Workspace
     workspaceId: id as WorkspaceId,
     path: '/f/ws',
     title: 'ws',
+    group: '',
     sessionIds: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -137,6 +139,10 @@ export class FakeApiClient {
       },
     }))
   onRename: (payload: unknown) => Promise<RemoteResult<{ title: string; seq: number }>> = () => Promise.resolve(ok({ title: 'fk-renamed', seq: 0 }))
+  onSetStatus: (payload: unknown) => Promise<RemoteResult<{ status: SessionStatusValue | null; seq: number }>> =
+    () => Promise.resolve(ok({ status: { id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error' }, seq: 0 }))
+  onListStatuses: () => Promise<RemoteResult<{ statuses: readonly SessionStatusValue[] }>> =
+    () => Promise.resolve(ok({ statuses: [] }))
   onFork: (payload: unknown) => Promise<RemoteResult<{ sessionId: SessionId }>> = () => Promise.resolve(ok({ sessionId: 'fk-fork' as SessionId }))
   onHistory: (payload: { sessionId: SessionId; throughSeq?: number; beforeSeq?: number; maxMessages?: number })
   => Promise<RemoteResult<SessionPage & { readonly projections?: SessionProjectionBaseline }>> =
@@ -183,6 +189,9 @@ export class FakeApiClient {
   onWorkspaceRename: (payload: unknown) => Promise<RemoteResult<{ workspace: WorkspaceView }>> =
     () => Promise.resolve(ok({ workspace: fakeWorkspace('fk-ws') }))
 
+  onWorkspaceSetGroup: (payload: unknown) => Promise<RemoteResult<{ workspace: WorkspaceView }>> =
+    () => Promise.resolve(ok({ workspace: fakeWorkspace('fk-ws') }))
+
   onWorkspaceDelete: (payload: unknown) => Promise<RemoteResult<{ deleted: true }>> =
     () => Promise.resolve(ok({ deleted: true }))
 
@@ -227,6 +236,8 @@ export class FakeApiClient {
           this.onSelectModel(payload),
         ),
         rename: payload => this.record('session.rename', payload, this.onRename(payload)),
+        setStatus: payload => this.record('session.setStatus', payload, this.onSetStatus(payload)),
+        listStatuses: () => this.record('session.listStatuses', {}, this.onListStatuses()),
         fork: payload => this.record('session.fork', payload, this.onFork(payload)),
         prompt: payload => this.record('session.prompt', payload, this.onPrompt(payload)),
         attachment: payload => this.record('session.attachment', payload, this.onAttachment(payload)),
@@ -257,6 +268,7 @@ export class FakeApiClient {
       workspace: {
         create: payload => this.record('workspace.create', payload, this.onWorkspaceCreate(payload)),
         rename: payload => this.record('workspace.rename', payload, this.onWorkspaceRename(payload)),
+        setGroup: payload => this.record('workspace.setGroup', payload, this.onWorkspaceSetGroup(payload)),
         delete: payload => this.record('workspace.delete', payload, this.onWorkspaceDelete(payload)),
         insertBefore: payload => this.record(
           'workspace.insertBefore',

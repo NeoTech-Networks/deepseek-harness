@@ -21,6 +21,7 @@ import type {
   WorkspaceInsertSessionBeforeRequest,
   WorkspaceOrderValue,
   WorkspaceRenameRequest,
+  WorkspaceSetGroupRequest,
   WorkspaceValue,
 } from './types.ts'
 
@@ -80,6 +81,19 @@ export class WorkspaceCommands {
         }
         await workspace.setTitle(title)
       }
+      return { workspace: workspaceView(workspace) }
+    })
+  }
+
+  /**
+   * Assign or clear a Workspace grouping label.
+   * @param request - Workspace identity and proposed group.
+   * @returns the updated Workspace projection.
+   */
+  setGroup(request: WorkspaceSetGroupRequest): Promise<WorkspaceValue> {
+    return this.enqueue(async () => {
+      const workspace = this.requireWorkspace(request.workspaceId)
+      await workspace.setGroup(request.group)
       return { workspace: workspaceView(workspace) }
     })
   }

@@ -8,6 +8,7 @@ import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts
 import type { RowDragProps } from '../src/client/rows/Rows.tsx'
 import { ProjectRowItem, SearchResultItem, SessionNodeItem } from '../src/client/rows/Rows.tsx'
 import type { GroupNode, SearchResultNode, SessionNode } from '../src/client/tree.ts'
+import { derivePhase } from '../src/client/tree.ts'
 import { zh } from '../src/client/locales.ts'
 
 afterEach(cleanup)
@@ -16,6 +17,30 @@ const t = makeTranslate(zh, commonZh) as never
 
 const sid = (id: string) => id as SessionId
 const wid = (id: string) => id as WorkspaceId
+
+/**
+ * Build a row the way the derivation does: quiet defaults for every live fact
+ * plus the phase `derivePhase` resolves, so a fixture can never present a
+ * phase the real derivation would not produce.
+ */
+function sessionRow(over: Partial<SessionNode> & Pick<SessionNode, 'id' | 'title'>): SessionNode {
+  const facts = {
+    blank: false, running: false, runningSubagentCount: 0, completed: false,
+    planActive: false, hasActiveSchedule: false, updatedAt: 0, ...over,
+  }
+  return { ...facts, phase: derivePhase(facts) }
+}
+
+/** {@link sessionRow} for the flat search-result row. */
+function searchRow(
+  over: Partial<SearchResultNode> & Pick<SearchResultNode, 'id' | 'title' | 'workspace'>,
+): SearchResultNode {
+  const facts = {
+    running: false, runningSubagentCount: 0, completed: false,
+    planActive: false, hasActiveSchedule: false, ...over,
+  }
+  return { ...facts, phase: derivePhase(facts) }
+}
 
 /** Half detection reads the row rect; jsdom rects are all-zero by default. */
 function stubRect(row: HTMLElement): void {
@@ -58,32 +83,26 @@ function fireDrag(row: HTMLElement, kind: 'dragOver' | 'drop', clientY: number):
 
 describe('workspace browser rows', () => {
   it('omits only an empty leading status slot in the hierarchy-free flat list', () => {
-    const idle: SessionNode = {
-      id: sid('flat'), title: 'Flat Session', blank: false, running: false,
-      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
-    }
+    const idle = sessionRow({ id: sid('flat'), title: 'Flat Session' })
     const view = render(<SessionNodeItem node={idle} currentId={undefined} now={0} onOpen={vi.fn()}
       onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} flat t={t} />)
     const title = screen.getByText('Flat Session')
     expect(title.previousElementSibling).toBeNull()
 
-    view.rerender(<SessionNodeItem node={{ ...idle, running: true }} currentId={undefined} now={0}
+    view.rerender(<SessionNodeItem node={sessionRow({ ...idle, running: true })} currentId={undefined} now={0}
       onOpen={vi.fn()} onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} flat t={t} />)
     expect(screen.getByText('Flat Session').previousElementSibling?.querySelector('[data-state="ongoing"]')).toBeTruthy()
   })
 
   it('renders a selected content-search row and opens only its session', () => {
     const onOpen = vi.fn()
-    const result: SearchResultNode = {
+    const result = searchRow({
       id: sid('result'),
       title: 'Result title',
       workspace: 'Workspace context',
       running: true,
-      runningSubagentCount: 0,
-      completed: false,
-      hasActiveSchedule: false,
       snippet: 'matching message excerpt',
-    }
+    })
     render(<SearchResultItem result={result} currentId={result.id} onOpen={onOpen} t={t} />)
     const row = screen.getByRole('treeitem')
     expect(row.getAttribute('aria-selected')).toBe('true')
@@ -98,10 +117,10 @@ describe('workspace browser rows', () => {
 
   it('keeps the active-Schedule marker after a search title and inside the row action', () => {
     const onOpen = vi.fn()
-    const result: SearchResultNode = {
+    const result = searchRow({
       id: sid('scheduled-result'), title: 'Scheduled result', workspace: 'Project',
-      running: false, runningSubagentCount: 0, completed: false, hasActiveSchedule: true,
-    }
+      hasActiveSchedule: true,
+    })
     render(<SearchResultItem result={result} currentId={undefined} onOpen={onOpen} t={t} />)
 
     const row = screen.getByRole('treeitem')
@@ -121,14 +140,13 @@ describe('workspace browser rows', () => {
     ['plan-review', '计划待审'],
     ['question', '等待回答'],
   ] as const)('shows %s ahead of running in search results', (pendingInteraction, label) => {
-    const result: SearchResultNode = {
+    const result = searchRow({
       id: sid(pendingInteraction), title: 'Needs input', workspace: 'Project',
-      pendingInteraction, running: true, runningSubagentCount: 0, completed: false,
-      hasActiveSchedule: false,
-    }
+      pendingInteraction, running: true,
+    })
     render(<SearchResultItem result={result} currentId={undefined} onOpen={vi.fn()} t={t} />)
     const row = screen.getByRole('treeitem')
-    expect(row.querySelector('[data-state="warning"]')).toBeTruthy()
+    expect(row.querySelector('[data-phase]')).toBeTruthy()
     expect(row.querySelector('[data-state="ongoing"]')).toBeNull()
     expect(screen.getByText(label)).toBeTruthy()
   })
@@ -137,7 +155,7 @@ describe('workspace browser rows', () => {
     const onToggle = vi.fn()
     const onCreate = vi.fn()
     const group: GroupNode = {
-      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project',
+      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project', group: '',
       sessionCount: 1, expanded: true, containsCurrent: true, sessions: [],
     }
     render(<ProjectRowItem group={group} onToggle={onToggle} onCreate={onCreate} t={t} />)
@@ -151,10 +169,7 @@ describe('workspace browser rows', () => {
   })
 
   it('renders and opens a selected running Session row', () => {
-    const node: SessionNode = {
-      id: sid('session'), title: 'Session', blank: false, running: true,
-      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
-    }
+    const node = sessionRow({ id: sid('session'), title: 'Session', running: true })
     const onOpen = vi.fn()
     render(
       <SessionNodeItem node={node} currentId={node.id} now={0} onOpen={onOpen}
@@ -171,10 +186,9 @@ describe('workspace browser rows', () => {
 
   it('keeps the active-Schedule marker between the title and time in grouped and flat rows', () => {
     const onOpen = vi.fn()
-    const node: SessionNode = {
-      id: sid('scheduled-session'), title: 'Scheduled Session', blank: false, running: false,
-      runningSubagentCount: 0, completed: false, hasActiveSchedule: true, updatedAt: 0,
-    }
+    const node = sessionRow({
+      id: sid('scheduled-session'), title: 'Scheduled Session', hasActiveSchedule: true,
+    })
     const view = render(
       <SessionNodeItem node={node} currentId={undefined} now={0} onOpen={onOpen}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />,
@@ -204,10 +218,7 @@ describe('workspace browser rows', () => {
   it('shows the green done dot only on a finished, unviewed session (live activity wins the slot)', () => {
     const renderRow = (over: Partial<SessionNode>) => render(
       <SessionNodeItem
-        node={{
-          id: sid('s1'), title: 'One', blank: false, running: false,
-          runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0, ...over,
-        }}
+        node={sessionRow({ id: sid('s1'), title: 'One', ...over })}
         currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t}
       />,
@@ -229,21 +240,18 @@ describe('workspace browser rows', () => {
     running.unmount()
     // Descendant activity also wins until the last running descendant stops.
     const delegated = renderRow({ completed: true, runningSubagentCount: 1 })
-    expect(delegated.container.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    expect(delegated.container.querySelector('[data-phase="subagents"]')).not.toBeNull()
     expect(delegated.container.querySelector('[data-state="done"]')).toBeNull()
   })
 
   it('shows descendant activity without describing an idle parent as running', () => {
     vi.useFakeTimers()
     try {
-      const node: SessionNode = {
-        id: sid('owner'), title: 'Delegating', blank: false, running: false,
-        runningSubagentCount: 2, completed: false, hasActiveSchedule: false, updatedAt: 0,
-      }
+      const node = sessionRow({ id: sid('owner'), title: 'Delegating', runningSubagentCount: 2 })
       render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
       const row = screen.getByRole('treeitem')
-      expect(row.querySelector('[data-state="ongoing"]')).not.toBeNull()
+      expect(row.querySelector('[data-phase="subagents"]')).not.toBeNull()
       expect(screen.getByText('2 个子代理运行中')).toBeTruthy()
       expect(screen.queryByText('进行中')).toBeNull()
 
@@ -255,13 +263,39 @@ describe('workspace browser rows', () => {
     }
   })
 
+  it.each([
+    ['attention', 'right-up'],
+    ['error', 'stop'],
+    ['success', 'check'],
+    ['neutral', 'pause'],
+  ] as const)('names a declared %s status with its glyph and tone', (tone, icon) => {
+    const declared = sessionRow({
+      id: sid(`declared-${tone}`), title: 'Declared',
+      declaredStatus: { id: tone, label: tone, icon, tone },
+    })
+    render(<SessionNodeItem node={declared} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    const row = screen.getByRole('treeitem')
+    expect(row.querySelector(`[data-tone="${tone}"]`)).not.toBeNull()
+    expect(screen.getByText(tone)).toBeTruthy()
+  })
+
+  it('falls back to a neutral glyph for an icon id this client does not know', () => {
+    const declared = sessionRow({
+      id: sid('declared-unknown'), title: 'Unknown',
+      declaredStatus: { id: 'weird', label: 'Weird', icon: 'banana' as never, tone: 'neutral' },
+    })
+    render(<SessionNodeItem node={declared} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    expect(screen.getByRole('treeitem').querySelector('[data-tone="neutral"]')).not.toBeNull()
+  })
+
   it('keeps descendant activity secondary while the parent is running', () => {
     vi.useFakeTimers()
     try {
-      const node: SessionNode = {
-        id: sid('owner'), title: 'Delegating', blank: false, running: true,
-        runningSubagentCount: 1, completed: false, hasActiveSchedule: false, updatedAt: 0,
-      }
+      const node = sessionRow({
+        id: sid('owner'), title: 'Delegating', running: true, runningSubagentCount: 1,
+      })
       render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
       const row = screen.getByRole('treeitem')
@@ -279,14 +313,13 @@ describe('workspace browser rows', () => {
   })
 
   it('keeps child activity as a secondary status while user attention is primary', () => {
-    const node: SessionNode = {
-      id: sid('owner'), title: 'Needs input', blank: false, pendingInteraction: 'question',
-      running: false, runningSubagentCount: 1, completed: false, hasActiveSchedule: false, updatedAt: 0,
-    }
+    const node = sessionRow({
+      id: sid('owner'), title: 'Needs input', pendingInteraction: 'question', runningSubagentCount: 1,
+    })
     render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
       onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
     const row = screen.getByRole('treeitem')
-    expect(row.querySelector('[data-state="warning"]')).not.toBeNull()
+    expect(row.querySelector('[data-phase="awaiting-answer"]')).not.toBeNull()
     expect(row.querySelector('[data-state="ongoing"]')).toBeNull()
     expect(screen.getByText('等待回答')).toBeTruthy()
     expect(screen.getByText('1 个子代理运行中')).toBeTruthy()
@@ -294,10 +327,7 @@ describe('workspace browser rows', () => {
 
   it('shows the green done dot on a finished search result row', () => {
     render(<SearchResultItem
-      result={{
-        id: sid('result'), title: 'Done', workspace: 'Workspace', running: false,
-        runningSubagentCount: 0, completed: true, hasActiveSchedule: false,
-      }}
+      result={searchRow({ id: sid('result'), title: 'Done', workspace: 'Workspace', completed: true })}
       currentId={undefined} onOpen={vi.fn()} t={t}
     />)
     expect(screen.getByRole('treeitem').querySelector('[data-state="done"]')).not.toBeNull()
@@ -308,12 +338,12 @@ describe('workspace browser rows', () => {
     const onDelete = vi.fn()
     const onToggle = vi.fn()
     const group: GroupNode = {
-      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project',
+      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project', group: '',
       sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
     }
     render(<ProjectRowItem
       group={group} onToggle={onToggle} onCreate={vi.fn()}
-      actions={{ rename: onRename, delete: onDelete }} t={t}
+      actions={{ rename: onRename, setGroup: vi.fn(), delete: onDelete }} t={t}
     />)
     fireEvent.click(screen.getByRole('button', { name: '工作区“Project”的操作' }))
     // Opening the menu neither toggles the group nor renames yet.
@@ -339,7 +369,7 @@ describe('workspace browser rows', () => {
     const restoreClipboard = installClipboard(writeText)
     try {
       const group: GroupNode = {
-        key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project',
+        key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project', group: '',
         sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
       }
       render(<ProjectRowItem group={group} onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
@@ -364,7 +394,7 @@ describe('workspace browser rows', () => {
     const restoreClipboard = installClipboard(writeText)
     try {
       const group: GroupNode = {
-        key: 'project', workspaceId: wid('project'), cwd: '/home/u/Documents/project', createdAt: 0, label: 'Project',
+        key: 'project', workspaceId: wid('project'), cwd: '/home/u/Documents/project', createdAt: 0, label: 'Project', group: '',
         sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
       }
       render(<ProjectRowItem group={group} home="/home/u" onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
@@ -384,7 +414,7 @@ describe('workspace browser rows', () => {
     vi.useFakeTimers()
     try {
       const group: GroupNode = {
-        key: 'project', workspaceId: wid('project'), cwd: undefined, createdAt: 0, label: 'Project',
+        key: 'project', workspaceId: wid('project'), cwd: undefined, createdAt: 0, label: 'Project', group: '',
         sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
       }
       render(<ProjectRowItem group={group} home="/home/u" onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
@@ -402,7 +432,7 @@ describe('workspace browser rows', () => {
     vi.useFakeTimers()
     try {
       const group: GroupNode = {
-        key: 'project', workspaceId: wid('project'), cwd: 'C:\\Users\\u\\project', createdAt: 0, label: 'Project',
+        key: 'project', workspaceId: wid('project'), cwd: 'C:\\Users\\u\\project', createdAt: 0, label: 'Project', group: '',
         sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
       }
       render(<ProjectRowItem group={group} home="C:\\Users\\u" onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
@@ -416,7 +446,7 @@ describe('workspace browser rows', () => {
 
   it('ungrouped bucket renders no workspace menu', () => {
     const group: GroupNode = {
-      key: '', workspaceId: undefined, cwd: undefined, createdAt: undefined, label: 'Ungrouped',
+      key: '', workspaceId: undefined, cwd: undefined, createdAt: undefined, label: 'Ungrouped', group: '',
       sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
     }
     render(<ProjectRowItem group={group} onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
@@ -426,10 +456,7 @@ describe('workspace browser rows', () => {
   it('blank New Session rows carry no menu, no time label, and no hover-card time', () => {
     vi.useFakeTimers()
     try {
-      const node: SessionNode = {
-        id: sid('s-blank'), title: 'ignored', blank: true, running: false,
-        runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
-      }
+      const node = sessionRow({ id: sid('s-blank'), title: 'ignored', blank: true })
       render(<SessionNodeItem node={node} currentId={node.id} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
       // The placeholder has no content yet: no row verbs, no "now" stamp.
@@ -453,10 +480,7 @@ describe('workspace browser rows', () => {
     const onRename = vi.fn()
     const onFork = vi.fn()
     const onArchive = vi.fn()
-    const node: SessionNode = {
-      id: sid('s1'), title: 'One', blank: false, running: false,
-      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
-    }
+    const node = sessionRow({ id: sid('s1'), title: 'One' })
     render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={onOpen}
       onRename={onRename} onFork={onFork} onArchive={onArchive} t={t} />)
     fireEvent.click(screen.getByRole('button', { name: '会话“One”的操作' }))
@@ -487,10 +511,7 @@ describe('workspace browser rows', () => {
   it('shows the hover card after the dwell and suppresses it while the row menu is open', () => {
     vi.useFakeTimers()
     try {
-      const node: SessionNode = {
-        id: sid('s1'), title: 'Hovered', blank: false, running: true,
-        runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
-      }
+      const node = sessionRow({ id: sid('s1'), title: 'Hovered', running: true })
       render(<SessionNodeItem node={node} currentId={undefined} now={60_000} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
       const wrapper = screen.getByRole('treeitem').parentElement as HTMLElement
@@ -512,44 +533,78 @@ describe('workspace browser rows', () => {
   })
 
   it.each([
-    ['approval', '等待审批'],
-    ['plan-review', '计划待审'],
-    ['question', '等待回答'],
-  ] as const)('shows %s as warning ahead of the running state', (pendingInteraction, label) => {
+    ['approval', '等待审批', 'awaiting-approval'],
+    ['plan-review', '计划待审', 'awaiting-plan-review'],
+    ['question', '等待回答', 'awaiting-answer'],
+  ] as const)('shows %s as a phase glyph ahead of the running state', (pendingInteraction, label, phase) => {
     vi.useFakeTimers()
     try {
-      const node: SessionNode = {
-        id: sid(pendingInteraction), title: 'Needs input', blank: false,
-        pendingInteraction, running: true, runningSubagentCount: 0, completed: false,
-        hasActiveSchedule: false, updatedAt: 0,
-      }
+      const node = sessionRow({
+        id: sid(pendingInteraction), title: 'Needs input', pendingInteraction, running: true,
+      })
       const view = render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
       const row = screen.getByRole('treeitem')
-      expect(row.querySelector('[data-state="warning"]')).toBeTruthy()
+      // The row names the phase with a glyph; the dot stays with the hover card.
+      expect(row.querySelector(`[data-phase="${phase}"]`)).toBeTruthy()
       expect(row.querySelector('[data-state="ongoing"]')).toBeNull()
       expect(screen.getByText(label)).toBeTruthy()
 
-      view.rerender(<SessionNodeItem node={{ ...node, running: false }} currentId={undefined} now={0}
+      view.rerender(<SessionNodeItem node={sessionRow({ ...node, running: false })} currentId={undefined} now={0}
         onOpen={vi.fn()} onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
-      expect(screen.getByRole('treeitem').querySelector('[data-state="warning"]')).toBeTruthy()
+      expect(screen.getByRole('treeitem').querySelector(`[data-phase="${phase}"]`)).toBeTruthy()
 
       fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
       act(() => { vi.advanceTimersByTime(500) })
       expect(screen.getAllByText(label)).toHaveLength(2)
-      expect(document.querySelectorAll('[data-state="warning"]')).toHaveLength(2)
+      expect(document.querySelectorAll('[data-state="warning"]')).toHaveLength(1)
     } finally {
       vi.useRealTimers()
     }
   })
 
+  it('names plan mode with its own glyph and keeps running as a secondary status', () => {
+    vi.useFakeTimers()
+    try {
+      const node = sessionRow({ id: sid('planner'), title: 'Planning', planActive: true, running: true })
+      render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+        onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+      const row = screen.getByRole('treeitem')
+      // Plan mode owns the slot; the running dot is not drawn on the row.
+      expect(row.querySelector('[data-phase="planning"]')).toBeTruthy()
+      expect(row.querySelector('[data-state]')).toBeNull()
+      expect(screen.getByText('plan mode 已开启')).toBeTruthy()
+      expect(screen.getByText('进行中')).toBeTruthy()
+
+      // The hover card still lists both, each with its own dot.
+      fireEvent.pointerEnter(row.parentElement as HTMLElement)
+      act(() => { vi.advanceTimersByTime(500) })
+      expect(screen.getAllByText('plan mode 已开启')).toHaveLength(2)
+      expect(document.querySelectorAll('[data-state="warning"]')).toHaveLength(1)
+      expect(document.querySelectorAll('[data-state="ongoing"]')).toHaveLength(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('pulses the plan-mode glyph only while the session is working', () => {
+    const active = sessionRow({ id: sid('planner-active'), title: 'Planning', planActive: true, running: true })
+    const view = render(<SessionNodeItem node={active} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    // Working in plan mode: the glyph carries the active flag that drives the pulse.
+    expect(view.container.querySelector('[data-phase="planning"][data-active="true"]')).not.toBeNull()
+
+    view.rerender(<SessionNodeItem node={sessionRow({ ...active, running: false })} currentId={undefined} now={0}
+      onOpen={vi.fn()} onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    // Idle plan mode keeps the glyph but drops the active flag.
+    expect(view.container.querySelector('[data-phase="planning"]')).not.toBeNull()
+    expect(view.container.querySelector('[data-phase="planning"][data-active]')).toBeNull()
+  })
+
   it('idle hover card shows the Idle status line', () => {
     vi.useFakeTimers()
     try {
-      const node: SessionNode = {
-        id: sid('s1'), title: 'Quiet', blank: false, running: false,
-        runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
-      }
+      const node = sessionRow({ id: sid('s1'), title: 'Quiet' })
       render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
       fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
@@ -564,10 +619,7 @@ describe('workspace browser rows', () => {
   it('completed hover card shows the Completed status line', () => {
     vi.useFakeTimers()
     try {
-      const node: SessionNode = {
-        id: sid('s1'), title: 'Done', blank: false, running: false,
-        runningSubagentCount: 0, completed: true, hasActiveSchedule: false, updatedAt: 0,
-      }
+      const node = sessionRow({ id: sid('s1'), title: 'Done', completed: true })
       render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
       fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
@@ -580,10 +632,7 @@ describe('workspace browser rows', () => {
   })
 
   it('draggable row wires start/end and gates hover/drop on an active same-group drag', () => {
-    const node: SessionNode = {
-      id: sid('s1'), title: 'Drag me', blank: false, running: false,
-      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0,
-    }
+    const node = sessionRow({ id: sid('s1'), title: 'Drag me' })
     const inactive = dragProps()
     const { rerender } = render(
       <SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}

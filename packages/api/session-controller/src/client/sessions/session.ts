@@ -6,6 +6,7 @@ import type { AttachmentIdType, FileAttachmentRef, ImageAttachmentRef } from '@d
 import type { SubagentAddress } from '@deepseek-ai/dsh-subagent/client'
 import type { MessageId } from '@deepseek-ai/dsh-llm/brand'
 import { SessionLogOffset, SessionSeq, type SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import { SessionEventStream } from '../transport.ts'
 import type { SessionJournalChange } from '../transport.ts'
 import type {
@@ -360,6 +361,32 @@ export class Session implements SessionFace {
     const seq = SessionSeq(result.value.seq)
     this.projections.apply('title', result.value.title, seq)
     return { ok: true, value: { title: result.value.title, seq } }
+  }
+
+  /**
+   * Set or clear the declared status: contract session.setStatus 1:1. On
+   * success settle the `sessionStatus` projection cell from the response's
+   * `{status, seq}` under the store's higher-seq-wins rule, so the list row
+   * and any useProjection('sessionStatus') reader update without waiting for
+   * the control-stream projection update.
+   * @param statusId - vocabulary id to set, or null to clear.
+   * @returns the resolved status and its event seq, or the business error.
+   */
+  async setStatus(statusId: string | null): Promise<RemoteResult<{ status: SessionStatusValue | null; seq: SessionSeq }>> {
+    const result = await this.remote.session.setStatus({ sessionId: this.sessionId, statusId })
+    if (!result.ok) return result
+    const seq = SessionSeq(result.value.seq)
+    this.projections.apply('sessionStatus', result.value.status, seq)
+    return { ok: true, value: { status: result.value.status, seq } }
+  }
+
+  /**
+   * Read the deployment's declared status vocabulary. Session-addressed only
+   * through the remote namespace; the vocabulary itself is global.
+   * @returns the vocabulary in declaration order, or the business error.
+   */
+  async listStatuses(): Promise<RemoteResult<{ statuses: readonly SessionStatusValue[] }>> {
+    return this.remote.session.listStatuses()
   }
 
   /**
