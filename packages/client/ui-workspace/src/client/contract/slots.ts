@@ -30,6 +30,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { SessionSearchResultItem } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { RemoteHostFacts } from '@deepseek-ai/dsh-api-remotes/client'
 import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { createWorkspaceViewStore } from '../stores.ts'
 
@@ -117,10 +118,16 @@ export type WorkspaceBrowserInjected = {
   searchResultLimit: number
   /** Rename a Session (explicit user title; resolves on host acceptance). */
   renameSession: (sessionId: SessionId, title: string) => Promise<void>
+  /** Set (vocabulary id) or clear (null) a Session's declared status. */
+  setSessionStatus: (sessionId: SessionId, statusId: string | null) => Promise<void>
+  /** Read the deployment's declared status vocabulary, in declaration order. */
+  listSessionStatuses: () => Promise<readonly SessionStatusValue[]>
   /** Fork a Session at its last completed turn and open the child. */
   forkSession: (sessionId: SessionId) => void
   /** Rename a Host Workspace (rejects on name conflict; resolves on durability). */
   renameWorkspace: (workspaceId: WorkspaceId, title: string) => Promise<void>
+  /** Assign or clear a Host Workspace grouping label (empty clears). */
+  setGroupWorkspace: (workspaceId: WorkspaceId, group: string) => Promise<void>
   /** Delete only a Host Workspace registration; directory and Session logs remain. */
   deleteWorkspace: (workspaceId: WorkspaceId) => Promise<void>
   /**

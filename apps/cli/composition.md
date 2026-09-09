@@ -114,6 +114,10 @@ flowchart LR
   cfg --> plugin_dsh_base_goal_round_driver
   plugin_dsh_base_command_goal["command-goal<br/>@deepseek-ai/dsh-command-goal"]
   cfg --> plugin_dsh_base_command_goal
+  plugin_dsh_base_session_status["session-status<br/>@deepseek-ai/dsh-session-status"]
+  cfg --> plugin_dsh_base_session_status
+  plugin_dsh_base_command_session_status["command-session-status<br/>@deepseek-ai/dsh-command-session-status"]
+  cfg --> plugin_dsh_base_command_session_status
   plugin_dsh_base_plan_mode["plan-mode<br/>@deepseek-ai/dsh-plan-mode"]
   cfg --> plugin_dsh_base_plan_mode
   plugin_dsh_base_token_meter["token-meter<br/>@deepseek-ai/dsh-token-meter"]
@@ -152,6 +156,8 @@ flowchart LR
   cfg --> plugin_dsh_base_tool_result_pruner
   plugin_dsh_base_tool_todo["tool-todo<br/>@deepseek-ai/dsh-tool-todo"]
   cfg --> plugin_dsh_base_tool_todo
+  plugin_dsh_base_tool_session_status["tool-session-status<br/>@deepseek-ai/dsh-tool-session-status"]
+  cfg --> plugin_dsh_base_tool_session_status
   plugin_dsh_base_tool_goal["tool-goal<br/>@deepseek-ai/dsh-tool-goal"]
   cfg --> plugin_dsh_base_tool_goal
   plugin_dsh_base_tool_ralph["tool-ralph<br/>@deepseek-ai/dsh-tool-ralph"]
@@ -233,6 +239,8 @@ flowchart LR
 | `goal` | `@deepseek-ai/dsh-goal` |
 | `goal-round-driver` | `@deepseek-ai/dsh-goal-round-driver` |
 | `command-goal` | `@deepseek-ai/dsh-command-goal` |
+| `session-status` | `@deepseek-ai/dsh-session-status` |
+| `command-session-status` | `@deepseek-ai/dsh-command-session-status` |
 | `plan-mode` | `@deepseek-ai/dsh-plan-mode` |
 | `token-meter` | `@deepseek-ai/dsh-token-meter` |
 | `compaction-basic` | `@deepseek-ai/dsh-compaction-basic` |
@@ -252,6 +260,7 @@ flowchart LR
 | `session-checkpoint-policy` | `@deepseek-ai/dsh-session-checkpoint-policy` |
 | `tool-result-pruner` | `@deepseek-ai/dsh-compaction-tool-result-pruner` |
 | `tool-todo` | `@deepseek-ai/dsh-tool-todo` |
+| `tool-session-status` | `@deepseek-ai/dsh-tool-session-status` |
 | `tool-goal` | `@deepseek-ai/dsh-tool-goal` |
 | `tool-ralph` | `@deepseek-ai/dsh-tool-ralph` |
 | `repeat-tool-reminder` | `@deepseek-ai/dsh-repeat-tool-reminder` |

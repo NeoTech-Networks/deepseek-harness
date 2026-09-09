@@ -206,3 +206,69 @@
 .titleIcon {
   flex: none;
 }
+
+/* The right-click menu's zero-size anchor: placement comes from getAnchorRect. */
+.menuAnchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Bulk "open each sub-folder" dialog. */
+.bulkBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 260px;
+}
+
+.bulkField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bulkLabel {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.bulkToggle {
+  margin-bottom: 2px;
+}
+
+.bulkRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 3px 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.bulkRow:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.bulkRow input {
+  flex: 0 0 auto;
+}
+
+.bulkFooter {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.bulkError {
+  padding: 8px 10px;
+  color: var(--dsw-alias-state-error-primary, var(--dsw-alias-label-primary));
+  font-size: 12px;
+}

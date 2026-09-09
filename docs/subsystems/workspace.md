@@ -43,6 +43,12 @@ interface Workspace {
   /** Display title. Defaults to the final path segment, or a filesystem root's own spelling; duplicates are allowed. */
   readonly title: string
 
+  /**
+   * Optional grouping label. Workspaces sharing a non-empty value render under
+   * one group header; an undefined or empty value leaves the workspace ungrouped.
+   */
+  readonly group: string | undefined
+
   /** ISO-8601 creation instant, stamped at create and never rewritten. */
   readonly createdAt: string
 
@@ -65,6 +71,14 @@ interface Workspace {
    * @returns resolution after durability.
    */
   setTitle(title: string): Promise<void>
+
+  /**
+   * Replace the grouping label durably. An empty or omitted value clears the
+   * group; a non-empty value is stored trimmed.
+   * @param group - New group label, or undefined to clear.
+   * @returns resolution after durability.
+   */
+  setGroup(group: string | undefined): Promise<void>
 
   /**
    * Prepend a session to this workspace's candidate account. An already
@@ -203,6 +217,13 @@ Host service backing the generated `ctx.remote.workspace` namespace.
  * @returns the updated Workspace projection.
  */
 @Remote('rename') rename(request: WorkspaceRenameRequest): Promise<WorkspaceValue>
+
+/**
+ * Assign or clear one Workspace grouping label.
+ * @param request - Workspace identity and proposed group.
+ * @returns the updated Workspace projection.
+ */
+@Remote('setGroup') setGroup(request: WorkspaceSetGroupRequest): Promise<WorkspaceValue>
 
 /**
  * Remove one Workspace registration while retaining files and Sessions.

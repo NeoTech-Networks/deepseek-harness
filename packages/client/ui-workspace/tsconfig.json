@@ -39,6 +39,9 @@
       "path": "../../core/session"
     },
     {
+      "path": "../../session-status/session-status"
+    },
+    {
       "path": "../../schedule/schedule"
     },
     {

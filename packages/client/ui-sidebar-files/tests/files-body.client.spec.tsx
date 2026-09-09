@@ -10,7 +10,7 @@
  * only. The two pure helpers the rows are built from are checked on their own.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent } from '@testing-library/react'
+import { act, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { makeTranslate, RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
 import type { RemoteFailure } from '@deepseek-ai/dsh-api-remotes/client'
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
@@ -191,6 +191,128 @@ describe('FilesBody', () => {
     expect(instance.getSnapshot().byTab[TAB]).toBeUndefined()
     expect(view.container.querySelector('[data-files-state="tree"]')).toBeNull()
     expect(script.list).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('open-in-session gestures', () => {
+  it('right-clicking a directory opens a menu whose "New session here" adopts that directory', async () => {
+    const { view, script, cap } = mountBody()
+    await act(() => script.settle({ ok: true, value: ROOT_LEVEL }))
+    const dir = view.container.querySelector(`[data-files-path="${ROOT}/src"] > button`)!
+    act(() => { fireEvent.contextMenu(dir, { clientX: 40, clientY: 20 }) })
+
+    const entry = await waitFor(() => view.getByRole('menuitem', { name: zh['menu.newSessionHere'] }))
+    act(() => { fireEvent.click(entry) })
+    expect(cap.openDirectory).toHaveBeenCalledWith(`${ROOT}/src`)
+    expect(cap.openSubDirectories).not.toHaveBeenCalled()
+  })
+
+  it('bulk flow reports an empty folder, a failed listing, and a failed open', async () => {
+    const { view, script } = mountBody()
+    await act(() => script.settle({ ok: true, value: ROOT_LEVEL }))
+    const dir = view.container.querySelector(`[data-files-path="${ROOT}/src"] > button`)!
+    act(() => { fireEvent.contextMenu(dir, { clientX: 40, clientY: 20 }) })
+    const entry = await waitFor(() => view.getByRole('menuitem', { name: zh['menu.newSessionEach'] }))
+    act(() => { fireEvent.click(entry) })
+
+    // Empty folder: no rows, no enabled Open.
+    await act(() => script.settle({ ok: true, value: { entries: [], truncated: false } }))
+    let dialog = await waitFor(() => view.getByRole('dialog'))
+    expect(dialog.textContent).toContain(zh['bulk.none'])
+    expect((view.getByRole('button', { name: zh['bulk.open'] }) as HTMLButtonElement).disabled).toBe(true)
+    act(() => { fireEvent.click(view.getByRole('button', { name: zh['bulk.cancel'] })) })
+
+    // A failed listing surfaces its message.
+    act(() => { fireEvent.contextMenu(dir, { clientX: 40, clientY: 20 }) })
+    const entry2 = await waitFor(() => view.getByRole('menuitem', { name: zh['menu.newSessionEach'] }))
+    act(() => { fireEvent.click(entry2) })
+    await act(() => script.settle({ ok: false, error: new RemoteError('workspace-file/not-found', 'gone', { path: `${ROOT}/src` }) }))
+    await waitFor(() => {
+      expect(view.container.querySelector('[data-files-bulk-error]')?.textContent).toBe('gone')
+    })
+
+    // A failed bulk open surfaces its message too.
+    const { view: view2, script: script2, cap } = mountBody()
+    await act(() => script2.settle({ ok: true, value: ROOT_LEVEL }))
+    const dir2 = view2.container.querySelector(`[data-files-path="${ROOT}/src"] > button`)!
+    act(() => { fireEvent.contextMenu(dir2, { clientX: 40, clientY: 20 }) })
+    const entry3 = await waitFor(() => view2.getByRole('menuitem', { name: zh['menu.newSessionEach'] }))
+    act(() => { fireEvent.click(entry3) })
+    await act(() => script2.settle({ ok: true, value: { entries: [{ name: 'overlord', type: 'directory' }], truncated: false } }))
+    dialog = await waitFor(() => view2.getByRole('dialog'))
+    cap.openSubDirectories.mockRejectedValueOnce(new Error('open blew up'))
+    act(() => { fireEvent.click(view2.getByRole('button', { name: zh['bulk.open'] })) })
+    await waitFor(() => {
+      expect(view2.container.querySelector('[data-files-bulk-error]')?.textContent).toBe('open blew up')
+    })
+  })
+
+  it('deselecting a sub-folder narrows the bulk open to the remaining paths', async () => {
+    const { view, script, cap } = mountBody()
+    await act(() => script.settle({ ok: true, value: ROOT_LEVEL }))
+    const dir = view.container.querySelector(`[data-files-path="${ROOT}/src"] > button`)!
+    act(() => { fireEvent.contextMenu(dir, { clientX: 40, clientY: 20 }) })
+    const entry = await waitFor(() => view.getByRole('menuitem', { name: zh['menu.newSessionEach'] }))
+    act(() => { fireEvent.click(entry) })
+    await act(() => script.settle({
+      ok: true,
+      value: {
+        entries: [
+          { name: 'overlord', type: 'directory' },
+          { name: 'service-pages', type: 'directory' },
+        ],
+        truncated: false,
+      },
+    }))
+    const dialog = await waitFor(() => view.getByRole('dialog'))
+    // Deselect the second candidate by clicking its row.
+    const rows = [...dialog.querySelectorAll<HTMLButtonElement>('button')]
+      .filter(button => button.querySelector('input[type="checkbox"]'))
+    act(() => { fireEvent.click(rows[2]!) })
+    act(() => { fireEvent.click(view.getByRole('button', { name: zh['bulk.open'] })) })
+    await waitFor(() => {
+      expect(cap.openSubDirectories).toHaveBeenCalledWith(SESSION, [`${ROOT}/src/overlord`], 'sig-railway-services')
+    })
+  })
+
+  it('bulk flow lists directories only, excludes dot-directories, and opens each selected path under the inherited group', async () => {
+    const { view, script, cap } = mountBody()
+    await act(() => script.settle({ ok: true, value: ROOT_LEVEL }))
+    const dir = view.container.querySelector(`[data-files-path="${ROOT}/src"] > button`)!
+    act(() => { fireEvent.contextMenu(dir, { clientX: 40, clientY: 20 }) })
+    const entry = await waitFor(() => view.getByRole('menuitem', { name: zh['menu.newSessionEach'] }))
+    act(() => { fireEvent.click(entry) })
+
+    // The bulk dialog lists the directory's own children, so the tree's root
+    // listing settled first and this call is the second outstanding listing.
+    await act(() => script.settle({
+      ok: true,
+      value: {
+        entries: [
+          { name: 'overlord', type: 'directory' },
+          { name: 'service-pages', type: 'directory' },
+          { name: '.git', type: 'directory' },
+          { name: 'README.md', type: 'file' },
+        ],
+        truncated: false,
+      },
+    }))
+
+    const dialog = await waitFor(() => view.getByRole('dialog'))
+    const checkboxes = dialog.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+    // Select-all checkbox plus the two directories; the dot-directory and the file are absent.
+    expect(checkboxes).toHaveLength(3)
+    const labels = [...dialog.querySelectorAll('[data-files-path], button')].map(node => node.textContent ?? '')
+    expect(labels.some(label => label.includes('.git'))).toBe(false)
+
+    act(() => { fireEvent.click(view.getByRole('button', { name: zh['bulk.open'] })) })
+    await waitFor(() => {
+      expect(cap.openSubDirectories).toHaveBeenCalledWith(
+        SESSION,
+        [`${ROOT}/src/overlord`, `${ROOT}/src/service-pages`],
+        'sig-railway-services',
+      )
+    })
   })
 })
 

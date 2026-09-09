@@ -30,6 +30,7 @@ import type {
   WorkspaceInsertSessionBeforeRequest,
   WorkspaceOrderValue,
   WorkspaceRenameRequest,
+  WorkspaceSetGroupRequest,
   WorkspaceId,
   WorkspaceValue,
   WorkspaceView,
@@ -67,6 +68,7 @@ const baseline = (id?: string): Extract<WorkspaceFollowFrame, { type: 'baseline'
       workspaceId: id as never,
       path: `/work/${id}`,
       title: id,
+      group: '',
       sessionIds: [],
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
@@ -83,6 +85,7 @@ function workspace(id: string, overrides: Partial<WorkspaceView> = {}): Workspac
     workspaceId: wid(id),
     path: `/work/${id}`,
     title: id,
+    group: '',
     sessionIds: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -121,6 +124,10 @@ class ScriptedWorkspaceRemote implements WorkspaceRemote {
   }
 
   rename(_request: WorkspaceRenameRequest): Promise<RemoteResult<WorkspaceValue>> {
+    throw new Error('unused')
+  }
+
+  setGroup(_request: WorkspaceSetGroupRequest): Promise<RemoteResult<WorkspaceValue>> {
     throw new Error('unused')
   }
 
@@ -164,6 +171,10 @@ class CommandWorkspaceRemote implements WorkspaceRemote {
 
   readonly rename = vi.fn<WorkspaceRemote['rename']>(request => Promise.resolve(remoteOk({
     workspace: workspace(String(request.workspaceId), { title: request.title }),
+  })))
+
+  readonly setGroup = vi.fn<WorkspaceRemote['setGroup']>(request => Promise.resolve(remoteOk({
+    workspace: workspace(String(request.workspaceId), { group: request.group }),
   })))
 
   readonly delete = vi.fn<WorkspaceRemote['delete']>(() => Promise.resolve(remoteOk({ deleted: true })))

@@ -33,11 +33,12 @@ kind: "package-reference"
 
 ### 最小配置
 
-唯一必需的配置是 agent 规划期间遵循的引导文本；添加任何其他内容都会在加载时失败。
+唯一必需的配置是 agent 规划期间遵循的引导文本；添加任何其他内容都会在加载时失败。设置 `defaultActive: true` 可在每个新建会话上固定激活计划模式。
 
 ```yaml
 - name: '@deepseek-ai/dsh-plan-mode'
   config:
+    defaultActive: true
     section: |
       You are in plan mode. Explore and design before presenting the complete
       plan through exit_plan_mode.
@@ -46,6 +47,7 @@ kind: "package-reference"
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `section` | 必填 | 计划模式激活时作为 `plan:policy` 提示词段落渲染的引导 |
+| `defaultActive` | `false` | 为每个没有已记录计划状态的新建会话固定激活计划模式；fork 与恢复保留其已记录状态，且子 agent 永不固定 |
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-plan-mode)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
@@ -182,7 +184,7 @@ You are in plan mode. Explore and design before presenting the complete plan thr
 
 - **引导而非强制**——计划模式只通过文本约束；需要强制限制的部署要分别配置沙箱模式与审批策略。
 - **待生效选择只存在于进程内**——某轮最后一个被接受的 pre-step 之后作出的选择，若进程在另一个被接受的轮内 pre-step 之前退出就会丢失；UI 必须重新应用它。
-- **没有创建时 plan 选项**——fork 的 agent 继承已记录的计划状态，新 spawn 的 agent 则从未激活开始。
+- **创建时默认值是可选加入的。** `defaultActive: true` 会在新会话（从不是子 agent）上固定激活计划模式；fork 和恢复的 agent 仍继承其已记录的计划状态，且 `/plan off` 仍可覆盖它。
 - **存活的子级无法打开评审**——由另一个存活 agent 所有的子级调用 `exit_plan_mode` 会失败，并被要求把尚未解决的决策包含进最终结果；仅有持久化 fork 谱系并不能阻止恢复为运行时根的会话打开该评审。
 - **只有一个专用评审渲染器**——只有 Web UI 具备 `plan-review` 呈现；其他交互提供方通过其通用选项流程呈现同一请求。
 

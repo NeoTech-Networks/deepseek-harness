@@ -15,7 +15,7 @@ import { RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceDirectoryListing } from '@deepseek-ai/dsh-api-workspace-files/types'
 import { childPath, createList, filesFace } from '../src/client/face.ts'
-import type { WorkspaceFilesListRemote } from '../src/client/face.ts'
+import type { FilesOpenCapability, WorkspaceFilesListRemote } from '../src/client/face.ts'
 import { createFilesStore } from '../src/client/store.ts'
 import type { DirLevel } from '../src/client/store.ts'
 import { scriptedList } from './scripted-list.client.ts'
@@ -30,8 +30,13 @@ const LEVEL: DirLevel = { entries: [{ name: 'src', type: 'directory' }], truncat
 function mount() {
   const instance = createFilesStore().create()
   const script = scriptedList()
-  const face = filesFace(script.list)(SESSION, instance.actions)
-  return { ...script, face, snapshot: () => instance.getSnapshot().byTab[TAB] }
+  const capability = {
+    openDirectory: vi.fn<FilesOpenCapability['openDirectory']>(async () => {}),
+    openSubDirectories: vi.fn<FilesOpenCapability['openSubDirectories']>(async () => 1),
+    groupFor: () => 'sig',
+  }
+  const face = filesFace(script.list, capability)(SESSION, instance.actions)
+  return { ...script, face, capability, snapshot: () => instance.getSnapshot().byTab[TAB] }
 }
 
 describe('filesFace', () => {
@@ -106,6 +111,45 @@ describe('filesFace', () => {
     await settleLatest({ ok: true, value: LEVEL })
     await settle({ ok: false, error: new RemoteError('workspace-file/not-found', 'gone', { path: ROOT }) })
     expect(snapshot()!.levels[ROOT]).toEqual({ kind: 'ready', level: LEVEL })
+  })
+})
+
+describe('filesFace open-in-session helpers', () => {
+  it('listDirectories returns only non-dot directories and rejects a failed listing', async () => {
+    const { face, settle } = mount()
+    const controller = new AbortController()
+    face.start(TAB, ROOT, controller.signal)
+    await settle({ ok: true, value: LEVEL })
+    const listing = face.listDirectories(ROOT)
+    await settle({
+      ok: true,
+      value: {
+        entries: [
+          { name: 'a', type: 'directory' },
+          { name: '.git', type: 'directory' },
+          { name: 'b.txt', type: 'file' },
+        ],
+        truncated: false,
+      },
+    })
+    await expect(listing).resolves.toEqual([
+      { name: 'a', path: `${ROOT}/a` },
+    ])
+
+    const failed = face.listDirectories(ROOT)
+    await settle({ ok: false, error: new RemoteError('workspace-file/not-found', 'gone', { path: ROOT }) })
+    await expect(failed).rejects.toThrow('gone')
+  })
+
+  it('openDirectory swallows a rejected open with a warning', async () => {
+    const { face, capability } = mount()
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    capability.openDirectory.mockRejectedValueOnce(new Error('boom'))
+    face.openDirectory(ROOT)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(warning).toHaveBeenCalledWith('open session in directory failed:', expect.any(Error))
+    warning.mockRestore()
   })
 })
 

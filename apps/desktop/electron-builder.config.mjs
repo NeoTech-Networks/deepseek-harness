@@ -30,9 +30,10 @@ export function createElectronBuilderConfig(
   const resolvedArch = env.DSH_DESKTOP_TARGET_ARCH ?? hostArch
   const packagesMacOS = targetPlatform === 'darwin' || (targetPlatform === undefined && hostPlatform === 'darwin')
   const packagesWindows = targetPlatform === 'win32'
+  const allowUnsigned = env.DSH_DESKTOP_ALLOW_UNSIGNED === '1' || env.DSH_DESKTOP_ALLOW_UNSIGNED === 'true'
   const macOSSigning = packagesMacOS ? resolveMacOSSigningEnvironment(env) : undefined
   if (packagesMacOS) resolveMacOSNotarizationEnvironment(env)
-  const windowsSigner = packagesWindows
+  const windowsSigner = packagesWindows && !allowUnsigned
     ? createWindowsTokenSigner({
         certificateFile: env.DSH_DESKTOP_WINDOWS_CER_FILE,
         signTool: env.DSH_DESKTOP_WINDOWS_SIGNTOOL,
@@ -86,11 +87,13 @@ export function createElectronBuilderConfig(
       )
     },
     win: {
-      forceCodeSigning: true,
-      signtoolOptions: {
-        sign: windowsSigner,
-        signingHashAlgorithms: ['sha256'],
-      },
+      forceCodeSigning: !allowUnsigned,
+      signtoolOptions: allowUnsigned
+        ? undefined
+        : {
+            sign: windowsSigner,
+            signingHashAlgorithms: ['sha256'],
+          },
       target: ['nsis'],
     },
     linux: {

@@ -46,6 +46,12 @@ flowchart LR
   svc_settingsController["ctx.settingsController<br/>Host settings-surface Remote controller"]
   pkg_api_workspace_files["api-workspace-files"]
   svc_workspaceFiles["ctx.workspaceFiles<br/>Host workspace file Remote service"]
+  pkg_account_usage["account-usage"]
+  svc_accountUsage["ctx.accountUsage<br/>Subscription account usage Remote service"]
+  pkg_api_pinned_files["api-pinned-files"]
+  svc_pinnedFiles["ctx.pinnedFiles<br/>Operator pinned-directory Remote service"]
+  pkg_vision_routing["vision-routing"]
+  svc_visionRouting["ctx.visionRouting<br/>Automatic image description for text-only sessions"]
   pkg_api_workspace_controller["api-workspace-controller"]
   svc_workspaceController["ctx.workspaceController<br/>Host Workspace Remote controller"]
   svc_directoryPickerController["ctx.directoryPickerController<br/>Host directory-picking Remote controller"]
@@ -96,6 +102,10 @@ flowchart LR
   svc_sessionTitle["ctx.sessionTitle<br/>Log-backed session titles"]
   pkg_session_title_first_prompt_llm["session-title-first-prompt-llm"]
   pkg_session_title_all_prompts_llm["session-title-all-prompts-llm"]
+  pkg_session_status["session-status"]
+  svc_sessionStatus["ctx.sessionStatus<br/>Declared session statuses"]
+  pkg_tool_session_status["tool-session-status"]
+  pkg_command_session_status["command-session-status"]
   pkg_system_prompt["system-prompt"]
   svc_systemPrompt["ctx.systemPrompt<br/>System prompt assembly registry"]
   pkg_tools["tools"]
@@ -224,11 +234,13 @@ flowchart LR
   pkg_cordis_host_runner["cordis-host-runner"]
   svc_dynamicCordisRunner["ctx.dynamicCordisRunner<br/>Dynamic Cordis package host runner"]
   svc_cordisInspect["ctx.cordisInspect<br/>Dynamic Cordis inspect registry"]
+  pkg_account_usage --> svc_accountUsage
   pkg_agent --> svc_agents
   pkg_agent_default_model --> svc_agentDefaultModel
   pkg_agent_loop --> svc_agentLoop
   pkg_agent_presets --> svc_agentPresets
   pkg_api_gateway --> svc_typertGateway
+  pkg_api_pinned_files --> svc_pinnedFiles
   pkg_api_session_controller --> svc_sessionController
   pkg_api_session_controller --> svc_sessionFileReferences
   pkg_api_session_controller --> svc_sessionSkillCatalog
@@ -297,6 +309,7 @@ flowchart LR
   pkg_session_query --> svc_sessionQuery
   pkg_session_query_sqlite --> svc_sessionQuery
   pkg_session_reference --> svc_sessionReferenceResolver
+  pkg_session_status --> svc_sessionStatus
   pkg_session_telemetry --> svc_sessionTelemetry
   pkg_session_telemetry_otel --> svc_sessionTelemetry
   pkg_session_title --> svc_sessionTitle
@@ -334,6 +347,7 @@ flowchart LR
   pkg_typert_registry --> svc_typert
   pkg_user_approval --> svc_approval
   pkg_user_questions --> svc_userQuestions
+  pkg_vision_routing --> svc_visionRouting
   pkg_web --> svc_web
   pkg_web_fetch_http --> svc_web
   pkg_web_search_deepseek --> svc_web
@@ -407,6 +421,8 @@ flowchart LR
   svc_sessionProjections --> pkg_tool_todo
   svc_sessionQuery --> pkg_session_reference
   svc_sessionQuery --> pkg_tool_session_query
+  svc_sessionStatus --> pkg_command_session_status
+  svc_sessionStatus --> pkg_tool_session_status
   svc_sessions --> pkg_agent
   svc_sessions --> pkg_agent_loop
   svc_sessions --> pkg_invariants
@@ -487,6 +503,9 @@ flowchart LR
 | `ctx.credentialsController` | `core` | [`api-settings-controller`](../packages/api/settings-controller) | - | - | - | Projects the credential-reference seam onto the generated Remote namespace: batch fan-out, view projection, and refusal mapping live here, not on the seam Definition. |
 | `ctx.settingsController` | `core` | [`api-settings-controller`](../packages/api/settings-controller) | - | - | - | Projects the user-settings seam onto the generated Remote namespace: the read is always redacted and every refusal is classified here, not on the seam Definition. |
 | `ctx.workspaceFiles` | `core` | [`api-workspace-files`](../packages/api/workspace-files) | - | - | - | Serves stat, paged text, byte windows, directory listings, and the change feed for files inside a Session's workspace root, confined by lstat, containment, and a stat re-check. |
+| `ctx.accountUsage` | `core` | [`account-usage`](../packages/llm/account-usage) | - | - | - | Reads the stored subscription grant Host-side and reports the account's own rolling and weekly limit occupancy as percentages; every fault degrades to a status carrying the last figures read. |
+| `ctx.pinnedFiles` | `core` | [`api-pinned-files`](../packages/api/pinned-files) | - | - | - | Serves the operator's own roots anywhere on the Host, stored in the pinned-files settings namespace, deliberately outside the Session workspace fence. |
+| `ctx.visionRouting` | `core` | [`vision-routing`](../packages/vision/vision-routing) | - | - | - | Describes attached images with an image-capable route so a text-only model receives text instead of a rejected message. |
 | `ctx.workspaceController` | `core` | [`api-workspace-controller`](../packages/api/workspace-controller) | - | - | - | Owns Workspace commands and reconnect-safe Workspace state delivery through the generated Remote namespace. |
 | `ctx.directoryPickerController` | `core` | [`api-workspace-controller`](../packages/api/workspace-controller) | - | - | - | Carries the picking seam onto the wire: capability gating, cancellation, and the seam-coded failures a browser directory flow discriminates on. |
 | `ctx.invariants` | `core` | [`invariants`](../packages/runtime-diagnostics/invariants) | - | [`session`](../packages/core/session), [`agent`](../packages/core/agent), [`scope`](../packages/core/scope), [`agent-loop`](../packages/core/agent-loop) | - | Companion subpaths register owner-local checks; the service owns selection, uniqueness, child fibers, and package-attributed failures. |
@@ -507,6 +526,7 @@ flowchart LR
 | `ctx.fileReferences` | `seam` | [`file-reference`](../packages/context/file-reference) | [`file-reference-local`](../packages/context/file-reference-local) | [`api-session-controller`](../packages/api/session-controller) | - | The interface returns path-only completion candidates within an Agent cwd; providers own namespace access and ranking without reading file contents. |
 | `ctx.sessionReferenceResolver` | `core` | [`session-reference`](../packages/context/session-reference) | - | - | - | Projects bounded current-surface conversation snapshots into durable untrusted message context; host adapters own mention syntax. |
 | `ctx.sessionTitle` | `seam` | [`session-title`](../packages/session/session-title) | [`session-title-first-prompt-llm`](../packages/session/session-title-first-prompt-llm), [`session-title-all-prompts-llm`](../packages/session/session-title-all-prompts-llm) | - | - | Owns the deterministic fallback, latest-title fold, and sole optional asynchronous provider registration. |
+| `ctx.sessionStatus` | `seam` | [`session-status`](../packages/session-status/session-status) | - | [`tool-session-status`](../packages/session-status/tool-session-status), [`command-session-status`](../packages/session-status/command-session-status) | - | Owns the status vocabulary, the whole-value session/status event, and the sessionStatus projection; a human prompt clears the status. |
 | `ctx.systemPrompt` | `core` | [`system-prompt`](../packages/core/system-prompt) | - | [`agent-loop`](../packages/core/agent-loop), [`tools`](../packages/core/tools), [`tool-fs`](../packages/fs/tool-fs), [`tool-terminal`](../packages/terminal/tool-terminal), [`tool-web`](../packages/web/tool-web) | - | Collects prompt sections and model-facing tool schemas for each step. |
 | `ctx.tools` | `core` | [`tools`](../packages/core/tools) | - | [`agent-loop`](../packages/core/agent-loop), [`tool-ask-user`](../packages/interaction/tool-ask-user), [`tool-bash`](../packages/shell/tool-bash), [`tool-cordis`](../packages/extensions/tool-cordis), [`tool-fs`](../packages/fs/tool-fs), [`tool-terminal`](../packages/terminal/tool-terminal), [`tool-skill`](../packages/skill/tool-skill), [`tool-subagent`](../packages/subagent/tool-subagent), [`tool-todo`](../packages/todo/tool-todo), [`tool-web`](../packages/web/tool-web) | - | Registers capabilities, owns PTC mode transport, and routes calls through pre-policy, monotonic guards, around dispatch, post-policy, and final-result observation. |
 | `ctx.userQuestions` | `seam` | [`user-questions`](../packages/interaction/user-questions) | - | [`tool-ask-user`](../packages/interaction/tool-ask-user) | - | UI front ends provide the active human-answer provider; tool-ask-user pauses a tool call on the provider-neutral ask() promise. |

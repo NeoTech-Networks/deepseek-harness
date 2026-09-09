@@ -98,6 +98,17 @@
 - id: tool-goal
   name: '@deepseek-ai/dsh-tool-goal'
 
+# ── session status ─────────────────────────────────────────────────────────
+
+# The session-status service and projection stay on the host plane; the human
+# command and model-facing tool register into this preset's scoped layers,
+# mirroring command-goal / tool-goal above.
+- id: command-session-status
+  name: '@deepseek-ai/dsh-command-session-status'
+
+- id: tool-session-status
+  name: '@deepseek-ai/dsh-tool-session-status'
+
 # ── plan mode ───────────────────────────────────────────────────────────────
 
 # Plan state is per-agent by nature, so an entry-local realm is not a
@@ -111,6 +122,7 @@
     - id: plan-mode
       name: '@deepseek-ai/dsh-plan-mode'
       config:
+        defaultActive: true
         section: |
               You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
 

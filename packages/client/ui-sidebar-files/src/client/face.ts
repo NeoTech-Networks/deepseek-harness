@@ -71,6 +71,14 @@ export function childPath(parent: string, name: string): string {
   return `${parent.replace(/[/\\]+$/, '')}/${name}`
 }
 
+/** One sub-directory offered by the bulk "open each sub-folder" flow. */
+export interface SubDirectoryCandidate {
+  /** Basename inside the listed directory. */
+  readonly name: string
+  /** Absolute path of the child directory. */
+  readonly path: string
+}
+
 /** The tree's injected business face, as the body receives it. */
 export interface FilesInjected {
   /**
@@ -95,15 +103,64 @@ export interface FilesInjected {
    * @param signal - the tab record's lifetime.
    */
   readonly toggle: (tabId: TabId, path: string, loaded: boolean, signal: AbortSignal) => void
+  /**
+   * Open (or reuse) a Session whose workspace root is the given directory.
+   * @param path - absolute directory inside the tree's root.
+   */
+  readonly openDirectory: (path: string) => void
+  /**
+   * List the immediate sub-directories of one directory, for the bulk flow.
+   * @param path - absolute directory inside the tree's root.
+   * @returns directories only, dot-directories excluded.
+   */
+  readonly listDirectories: (path: string) => Promise<readonly SubDirectoryCandidate[]>
+  /**
+   * Register each selected sub-directory as its own Workspace under one group,
+   * opening a Session only in the first one.
+   * @param paths - absolute directories to register.
+   * @param group - grouping label applied to every newly grouped Workspace.
+   * @returns how many Workspaces were registered.
+   */
+  readonly openSubDirectories: (paths: readonly string[], group: string) => Promise<number>
+  /**
+   * The grouping label this Session's Workspace already carries (its group, or
+   * its title when ungrouped); the bulk dialog prefills its group field from it.
+   */
+  readonly inheritedGroup: string
+}
+
+/** The workspace-open capability the tree's "open in a session" actions call. */
+export interface FilesOpenCapability {
+  /**
+   * Open or reuse a Session rooted at an absolute directory.
+   * @param path - absolute directory to own as a Workspace.
+   */
+  readonly openDirectory: (path: string) => Promise<void>
+  /**
+   * Register each selected sub-directory as its own Workspace under `group`,
+   * opening a Session only in the first one.
+   * @param sessionId - the Session whose workspace root scopes the listing.
+   * @param paths - absolute directories to register.
+   * @param group - grouping label applied to every newly grouped Workspace.
+   * @returns how many Workspaces were registered.
+   */
+  readonly openSubDirectories: (sessionId: SessionId, paths: readonly string[], group: string) => Promise<number>
+  /**
+   * The grouping label this Session's Workspace already carries.
+   * @param sessionId - the Session whose owning Workspace supplies the label.
+   */
+  readonly groupFor: (sessionId: SessionId) => string
 }
 
 /**
- * Bind the tree's face to one directory listing.
+ * Bind the tree's face to one directory listing and the open capability.
  * @param list - the bound `workspaceFiles.list` call.
+ * @param capability - the workspace-open actions behind the two menu gestures.
  * @returns the Slot `inject` factory: session and bound actions in, face out.
  */
 export function filesFace(
   list: ListWorkspaceDirectory,
+  capability: FilesOpenCapability,
 ): (sessionId: SessionId, actions: BoundActions<ReturnType<typeof createFilesStore>>) => FilesInjected {
   return (
     sessionId: SessionId,
@@ -144,6 +201,20 @@ export function filesFace(
         actions.toggled(tabId, path)
         if (!loaded) load(tabId, path, signal)
       },
+      openDirectory: (path) => {
+        void capability.openDirectory(path).catch((reason: unknown) => {
+          console.warn('open session in directory failed:', reason)
+        })
+      },
+      listDirectories: async (path) => {
+        const result = await list(sessionId, path, new AbortController().signal)
+        if (!result.ok) throw new Error(result.error.message)
+        return result.value.entries
+          .filter(entry => entry.type === 'directory' && !entry.name.startsWith('.'))
+          .map(entry => ({ name: entry.name, path: childPath(path, entry.name) }))
+      },
+      openSubDirectories: (paths, group) => capability.openSubDirectories(sessionId, paths, group),
+      inheritedGroup: capability.groupFor(sessionId),
     }
   }
 }
