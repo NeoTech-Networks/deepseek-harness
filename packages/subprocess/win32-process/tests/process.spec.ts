@@ -6,8 +6,14 @@ import {
   spawnInheritedJobProcess,
   spawnPipedProcess,
 } from '../src/index.ts'
-import { CREATE_SUSPENDED } from '../src/abi.ts'
-import { PROCESS_INFORMATION } from '../src/ffi.ts'
+import {
+  CREATE_NO_WINDOW,
+  CREATE_SUSPENDED,
+  STARTF_USESHOWWINDOW,
+  STARTF_USESTDHANDLES,
+  SW_HIDE,
+} from '../src/abi.ts'
+import { PROCESS_INFORMATION, STARTUPINFOW } from '../src/ffi.ts'
 import type { NativePtr, Win32ProcessBindings } from '../src/index.ts'
 
 const PVOID = koffi.pointer('void')
@@ -186,6 +192,28 @@ describe('spawnInheritedJobProcess', () => {
     expect(closeHandle).toHaveBeenCalledWith(60n)
   })
 
+  it('hides the console it allocates without asking for console isolation', () => {
+    let startup: Record<string, unknown> | undefined
+    let creationFlags: number | undefined
+    const { api } = inheritedApi({
+      createProcessAsUserW: (_token, _app, _line, _pa, _ta, _inherit, flags, _env, _cwd, startupPtr, info) => {
+        creationFlags = flags
+        startup = koffi.decode(startupPtr, STARTUPINFOW) as Record<string, unknown>
+        koffi.encode(info, PROCESS_INFORMATION, { hProcess: 60n, hThread: 61n, dwProcessId: 1234, dwThreadId: 5678 })
+        return 1
+      },
+    })
+    spawnInheritedJobProcess(api, { command: 'cmd.exe', args: [], cwd: 'C:\\work', token })
+    expect(startup).toMatchObject({
+      dwFlags: STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW,
+      wShowWindow: SW_HIDE,
+    })
+    // CREATE_NO_WINDOW and CREATE_NEW_CONSOLE kill a restricted-token child at
+    // DLL initialization (STATUS_DLL_INIT_FAILED); SW_HIDE is the only console
+    // suppression this path may use.
+    expect((creationFlags as number) & CREATE_NO_WINDOW).toBe(0)
+  })
+
 })
 
 describe('wait and pipe cleanup', () => {
@@ -240,5 +268,35 @@ describe('wait and pipe cleanup', () => {
       token,
     })).toThrow('null process/thread handles')
     expect(terminateProcess).toHaveBeenCalledWith(60n, 1)
+  })
+
+  it('hides the console a piped restricted child allocates', () => {
+    let nextPipe = 10n
+    let startup: Record<string, unknown> | undefined
+    let creationFlags: number | undefined
+    const api = {
+      createPipe: vi.fn((readSlot, writeSlot) => {
+        koffi.encode(readSlot, PVOID, nextPipe++)
+        koffi.encode(writeSlot, PVOID, nextPipe++)
+        return 1
+      }),
+      setHandleInformation: vi.fn(() => 1),
+      createProcessAsUserW: vi.fn((_token, _app, _line, _pa, _ta, _inherit, flags, _env, _cwd, startupPtr, info) => {
+        creationFlags = flags as number
+        startup = koffi.decode(startupPtr as NativePtr, STARTUPINFOW) as Record<string, unknown>
+        koffi.encode(info, PROCESS_INFORMATION, { hProcess: 60n, hThread: 61n, dwProcessId: 1234, dwThreadId: 5678 })
+        return 1
+      }),
+      terminateProcess: vi.fn(() => 1),
+      closeHandle: vi.fn(() => 1),
+      getLastError: vi.fn(() => 5),
+      formatMessageW: vi.fn(() => 0),
+    } as unknown as Win32ProcessBindings
+    expect(spawnPipedProcess(api, { command: 'cmd.exe', args: [], cwd: 'C:\\work', token }).pid).toBe(1234)
+    expect(startup).toMatchObject({
+      dwFlags: STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW,
+      wShowWindow: SW_HIDE,
+    })
+    expect((creationFlags as number) & CREATE_NO_WINDOW).toBe(0)
   })
 })

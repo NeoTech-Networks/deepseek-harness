@@ -223,7 +223,13 @@ export function spawnPipedProcess(
     startupInfo = allocStartupInfo()
     encodeStartupInfo(startupInfo, {
       cb: abi.STARTUPINFOW_SIZE,
-      dwFlags: abi.STARTF_USESTDHANDLES,
+      // SW_HIDE, not CREATE_NO_WINDOW: a restricted-token child created with
+      // CREATE_NO_WINDOW / CREATE_NEW_CONSOLE dies at DLL initialization with
+      // STATUS_DLL_INIT_FAILED (README, Known boundaries). The show-window
+      // request is the supported way to keep the console this child allocates
+      // off screen when the launching host has no console of its own.
+      dwFlags: abi.STARTF_USESTDHANDLES | abi.STARTF_USESHOWWINDOW,
+      wShowWindow: abi.SW_HIDE,
       hStdInput: stdIn.read,
       hStdOutput: stdOut.write,
       hStdError: stdErr.write,
@@ -425,7 +431,12 @@ function spawnJobProcess(
     startupInfo = allocStartupInfo()
     encodeStartupInfo(startupInfo, {
       cb: abi.STARTUPINFOW_SIZE,
-      dwFlags: abi.STARTF_USESTDHANDLES,
+      // Shared by the restricted-token Job launch and the ordinary one. The
+      // ordinary launch also passes CREATE_NO_WINDOW; the restricted launch
+      // cannot (it would die at DLL initialization), so SW_HIDE is what keeps
+      // its console off screen. Harmless on the path that already has no window.
+      dwFlags: abi.STARTF_USESTDHANDLES | abi.STARTF_USESHOWWINDOW,
+      wShowWindow: abi.SW_HIDE,
       hStdInput: stdio.stdin,
       hStdOutput: stdio.stdout,
       hStdError: stdio.stderr,
