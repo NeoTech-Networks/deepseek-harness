@@ -40,6 +40,26 @@ $seedDir  = Join-Path $appDir 'resources\seed'
 $dshHome  = 'C:\Users\SteveDempsey\.dsh'
 $checker  = Join-Path $PSScriptRoot 'check-seed-integrity.py'
 
+# 0. Snapshot the operator's own customisations BEFORE anything is removed.
+#    settings.yaml, the agent preset that mounts the MCP servers, AGENTS.md and
+#    the slash-command skill wrappers all live under .dsh and have been lost to
+#    an update before. This must run while they are still on disk.
+#    It can never fail the install: a lost snapshot is bad, a half install worse.
+$VaultTool = 'C:\Claude\bin\dsh_config_vault.py'
+if (Test-Path $VaultTool) {
+  Write-Host "[dsh-config-vault] snapshotting your custom settings before install..."
+  try {
+    & py $VaultTool snapshot --reason "pre-install" 2>&1 | ForEach-Object { Write-Host "  $_" }
+    if ($LASTEXITCODE -ne 0) {
+      Write-Warning "[dsh-config-vault] pre-install snapshot exited $LASTEXITCODE; install continues, check with: py $VaultTool list"
+    }
+  } catch {
+    Write-Warning "[dsh-config-vault] pre-install snapshot could not run: $($_.Exception.Message). Install continues."
+  }
+} else {
+  Write-Warning "[dsh-config-vault] vault tool not found at $VaultTool; your custom settings are NOT backed up for this install."
+}
+
 # 1. Close the app.
 #
 # EXPECTED, NOT A FAULT: this is a forced termination, so Windows (and any
@@ -106,5 +126,32 @@ if (Test-Path $exe) {
 } else {
   Write-Host "app exe not found after install: $exe" -ForegroundColor Red
 }
+
+# 7. Say whether the install touched any of the operator's own settings, and
+#    hand back the exact command to undo it if it did.
+if (Test-Path $VaultTool) {
+  Write-Host ""
+  Write-Host "[dsh-config-vault] checking whether the install changed any of your settings..."
+  $VaultVerify = & py $VaultTool verify 2>&1
+  $VaultCode = $LASTEXITCODE
+  $VaultVerify | ForEach-Object { Write-Host "  $_" }
+  if ($VaultCode -eq 3) {
+    Write-Host ""
+    Write-Warning "DRIFT: this install changed or removed some of your custom settings."
+    Write-Host "  CHANGED means the installer overwrote it. MISSING FROM LIVE means it deleted it."
+    Write-Host "  Your originals are safe in C:\Projects\repos\dsh-config. Nothing is lost."
+    Write-Host "  To put everything back, close DeepSeek Harness and run:"
+    Write-Host "    py C:\Claude\bin\dsh_config_vault.py restore --all"
+  } elseif ($VaultCode -eq 0) {
+    Write-Host "[dsh-config-vault] all of your custom settings survived the install."
+  } else {
+    Write-Warning "[dsh-config-vault] could not check (exit $VaultCode). Run: py $VaultTool verify"
+  }
+}
+
+Write-Host ""
+Write-Host "Once the window is up (first launch takes minutes), check that every one of"
+Write-Host "your own features made it into this build:"
+Write-Host "    py C:\Claude\bin\dsh_local_features_check.py"
 
 Write-Host "done"
