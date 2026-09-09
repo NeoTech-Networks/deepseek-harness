@@ -10,6 +10,22 @@
 | live read-back vs raw endpoint | service figures equal the account's own | 5h 20 / week 20 / credits 11094 both sides at 2026-09-08T21:45:08Z | VERIFIED |
 | desktop footer on screen | two percentages beside the stats line | needs install + relaunch (user-gated) | UNVERIFIED |
 
+## 2026-09-09 - No console window reaches the screen, proven live after install
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| symptom reproduced | a windowless parent's console child shows a window | node with no windowsHide visible at 10:19:33; restricted pwsh visible 10:22:09 and 10:22:12 | VERIFIED |
+| hide flag works | same launch with CREATE_NO_WINDOW shows nothing | probe B, no window in the same watch | VERIFIED |
+| restricted paths still run | confined pwsh exits 0 under SW_HIDE | sandbox-windows-acl 122/122, real confined spawns | VERIFIED |
+| win32-process suite | new startup-info assertions pass | 57/57 | VERIFIED |
+| repo typecheck | exit 0 | `pnpm run typecheck` exit 0 | VERIFIED |
+| lint on touched files | 0 errors | oxlint 0 warnings 0 errors over 96 files | VERIFIED |
+| fix inside the installer | packaged tarballs carry it | subprocess-local index.js:507 windowsHide, win32-process index.js:393/538 wShowWindow 0 | VERIFIED |
+| fix in the RUNNING profile | same lines in ~/.dsh/profiles/desktop | both present after finish-install | VERIFIED |
+| live: no windows | 4 minutes, sessions running commands | 12:00:36 to 12:04:36, zero visible console windows | VERIFIED |
+| watcher still detects | positive control shows a window | node with no hide flag caught 11:53:06 | VERIFIED |
+| second source (keeper watch) | PowerShell sampler stops flashing | CREATE_NO_WINDOW added, task restarted 12:00:25, none in the 12:00 watch | VERIFIED |
+
 ## 2026-09-08 - Console window hidden on subprocess spawn
 
 | Check | Expected | Result | Status |
