@@ -12,8 +12,13 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { StateDot, relativeTime } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
+import {
+  IconAgentPresetOutline16, IconCheckOutline16, IconClockOutline16, IconEllipsisOutline16,
+  IconListPenOutline16, IconPauseOutline16, IconRightUpOutline16, IconStopFill16,
+  StateDot, relativeTime,
+} from '@deepseek-ai/dsh-client-ui-primitives'
+import type { IconProps, StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { SessionStatusIconId, SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 // Type-only: the global `useSessions` / `useSessionPendingInteraction` hook merge.
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 // Type-only: the global `useWorkspaces` hook merge.
@@ -32,20 +37,72 @@ export type SessionsPanelProps =
 /** The Active/All filter, component-local (only this component reads it). */
 type Filter = 'active' | 'all'
 
-/** The state-dot semantic for each phase; idle rows carry no dot. */
+/**
+ * The state-dot semantic for each phase; idle rows carry no dot, and the two
+ * glyph phases below carry no dot either.
+ */
 function phaseDot(phase: SessionPanelPhase): StateDotState | undefined {
   switch (phase) {
     case 'awaiting':
-    case 'planning':
       return 'warning'
     case 'running':
-    case 'subagents':
       return 'ongoing'
     case 'done':
       return 'done'
+    case 'planning':
+    case 'subagents':
+    case 'declared':
     case 'idle':
       return undefined
   }
+}
+
+/**
+ * Phases this panel names with a glyph instead of a dot, matching the
+ * workspace sidebar. Plan mode is a session MODE, not an outcome, and running
+ * descendants are not the same thing as this session running: an amber dot for
+ * the first and the plain ongoing dot for the second (what this panel used to
+ * draw) told the operator neither fact.
+ */
+const PHASE_GLYPHS: Partial<Record<SessionPanelPhase, (props: IconProps) => ReactNode>> = {
+  planning: IconListPenOutline16,
+  subagents: IconAgentPresetOutline16,
+}
+
+/** Status icon id to glyph, matching the workspace sidebar's table. */
+const STATUS_ICONS: Record<SessionStatusIconId, (props: IconProps) => ReactNode> = {
+  'right-up': IconRightUpOutline16,
+  stop: IconStopFill16,
+  check: IconCheckOutline16,
+  clock: IconClockOutline16,
+  pause: IconPauseOutline16,
+}
+
+/** Neutral fallback for an icon id this client does not know (never throws). */
+const UNKNOWN_STATUS_ICON = IconEllipsisOutline16
+
+/** The mark one row draws: a declared glyph, a phase glyph, or a state dot. */
+function RowMark({ phase, declared }: {
+  phase: SessionPanelPhase
+  declared: SessionStatusValue | undefined
+}): ReactNode {
+  if (phase === 'declared' && declared !== undefined) {
+    const Glyph = STATUS_ICONS[declared.icon] ?? UNKNOWN_STATUS_ICON
+    return <span className={css.glyph} data-tone={declared.tone}><Glyph size={12} /></span>
+  }
+  const Glyph = PHASE_GLYPHS[phase]
+  if (Glyph !== undefined) {
+    // `subagents` is running by definition; plan mode is live only while the
+    // session's own turn runs, which this coarser phase cannot see (plan mode
+    // outranks running here too), so it stays still rather than lying.
+    return (
+      <span className={css.glyph} data-phase={phase} data-active={phase === 'subagents' ? 'true' : undefined}>
+        <Glyph size={12} />
+      </span>
+    )
+  }
+  const dot = phaseDot(phase)
+  return dot === undefined ? null : <StateDot state={dot} />
 }
 
 /** Localized compact relative time, the same bucket words the workspace browser uses. */
@@ -85,7 +142,6 @@ export function SessionsPanel({
   const now = Date.now()
 
   const renderRow = (row: SessionPanelRow): ReactNode => {
-    const dot = phaseDot(row.phase)
     const workspace = workspaceBySession.get(row.id)
     return (
       <button
@@ -97,7 +153,7 @@ export function SessionsPanel({
         onClick={() => { open(row.id) }}
       >
         <span className={css.status}>
-          {dot !== undefined && <StateDot state={dot} />}
+          <RowMark phase={row.phase} declared={row.declaredStatus} />
         </span>
         <span className={css.body}>
           <span className={css.title}>{row.blank ? t('session.new') : row.title}</span>

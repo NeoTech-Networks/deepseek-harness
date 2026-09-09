@@ -249,9 +249,6 @@ function sessionStatuses(node: SessionRowFacts, t: RowTranslate): readonly [Sess
   if (node.pendingInteraction === 'approval') active.push({ state: 'warning', label: t('status.waitingApproval') })
   if (node.pendingInteraction === 'plan-review') active.push({ state: 'warning', label: t('status.planReview') })
   if (node.pendingInteraction === 'question') active.push({ state: 'warning', label: t('status.waitingAnswer') })
-  if (node.declaredStatus !== undefined) {
-    active.push({ state: toneState(node.declaredStatus.tone), label: node.declaredStatus.label })
-  }
   if (node.planActive) active.push({ state: 'warning', label: t('status.planning') })
   if (node.running) active.push({ state: 'ongoing', label: t('status.running') })
   if (node.runningSubagentCount > 0) {
@@ -264,6 +261,13 @@ function sessionStatuses(node: SessionRowFacts, t: RowTranslate): readonly [Sess
         { n: node.runningSubagentCount },
       ),
     })
+  }
+  // Last of the active facts, matching `derivePhase`: a declared status is
+  // what an idle session says about why it is idle, so anything the session is
+  // actually doing describes the row ahead of it. The status is never dropped
+  // from this list, so the hover card still reports it while work is running.
+  if (node.declaredStatus !== undefined) {
+    active.push({ state: toneState(node.declaredStatus.tone), label: node.declaredStatus.label })
   }
   const settled: SessionStatus = {
     state: 'done',
@@ -300,6 +304,28 @@ const STATUS_ICONS: Record<SessionStatusIconId, (props: IconProps) => ReturnType
 const UNKNOWN_STATUS_ICON = IconEllipsisOutline16
 
 /**
+ * Whether a glyph phase should carry the live treatment (pulse plus the
+ * ongoing colour).
+ *
+ * Only the two phases whose glyph replaces a running indicator qualify. Plan
+ * mode outranks `running`, so a working plan-mode session would otherwise show
+ * the same still grey pen as an idle one, and that is the whole liveness
+ * signal for the majority of sessions here. `subagents` is running by
+ * definition, and used to render completely static.
+ *
+ * The awaiting-* phases deliberately stay still even though the agent is
+ * technically running behind an open approval: they mean "you are blocking
+ * me", and a blinking version of that is noise, not information.
+ * @param phase - the row's winning phase.
+ * @param running - whether this session's own agent is running.
+ * @returns whether to mark the glyph live.
+ */
+function liveGlyph(phase: SessionPhase, running: boolean): boolean {
+  if (phase === 'subagents') return true
+  return phase === 'planning' && running
+}
+
+/**
  * The row's phase mark plus every status's screen-reader label, shared by the
  * search and session rows. The mark itself stays `aria-hidden` in both
  * branches: the labels below it are the accessible text. The declared phase
@@ -334,7 +360,7 @@ function SessionStatusDots({ phase, statuses, declared, running }: {
           <span
             className={css.phaseIcon}
             data-phase={phase}
-            data-active={phase === 'planning' && running ? 'true' : undefined}
+            data-active={liveGlyph(phase, running) ? 'true' : undefined}
             aria-hidden="true"
           >
             <Glyph size={14} />

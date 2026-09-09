@@ -50,6 +50,29 @@ export interface SessionStatusValue {
 /** One vocabulary entry the deployment declares; the folded value is the entry. */
 export interface SessionStatusVocabularyEntry extends SessionStatusValue {}
 
+/**
+ * Resolves a shipped status id against the deployment's own vocabulary. The
+ * fold uses it so a status declared on the session's behalf (the goal-phase
+ * drive) is always a value that deployment actually declared; an id the
+ * deployment dropped resolves to undefined and declares nothing.
+ */
+export type SessionStatusVocabularyResolver = (id: string) => SessionStatusValue | undefined
+
+/**
+ * Fold state of the `sessionStatus` projection.
+ *
+ * `goalPhase` is internal bookkeeping and is never published: it is the last
+ * durable goal phase seen in the log, so the fold acts on a goal TRANSITION
+ * only and leaves a deliberately declared status alone across repeated goal
+ * writes at the same phase.
+ */
+export interface SessionStatusProjectionState {
+  /** Current declared status, or null while none is in force. */
+  readonly status: SessionStatusValue | null
+  /** Last durable goal phase observed, or null before the first goal event. */
+  readonly goalPhase: string | null
+}
+
 /** Deployment-owned status vocabulary, validated at plugin load. */
 export interface SessionStatusConfig {
   /**
@@ -66,7 +89,9 @@ declare module '@deepseek-ai/dsh-session/types' {
      * Whole-value session status. `status: null` clears the status; otherwise
      * the event carries the complete post-change value plus an optional note.
      * Last write wins on replay, and any human-authored `user/message` clears
-     * the status, so a prompt answers the hold the status described.
+     * the status, so a prompt answers the hold the status described. A durable
+     * goal phase transition declares the matching status through the same
+     * fold and is cleared by the same rule.
      */
     'session/status': { status: SessionStatusValue | null; note?: string }
   }
@@ -74,8 +99,8 @@ declare module '@deepseek-ai/dsh-session/types' {
 
 declare module '@deepseek-ai/dsh-session-projection/types' {
   interface SessionProjectionStateMap {
-    /** Current declared status, or null before the first set and after a clear. */
-    sessionStatus: SessionStatusValue | null
+    /** Declared status plus the goal-transition bookkeeping behind it. */
+    sessionStatus: SessionStatusProjectionState
   }
   interface SessionProjectionMap {
     /** The current declared session status; see the state map for the fold. */
