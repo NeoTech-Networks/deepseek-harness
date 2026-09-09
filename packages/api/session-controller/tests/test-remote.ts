@@ -44,6 +44,7 @@ import type {
   SessionFollowFrame,
   SessionFollowRequest,
   SessionListRequest,
+  SessionListStatusesValue,
   SessionListValue,
   SessionOpenWorkspacePathRequest,
   SessionOpenWorkspacePathValue,
@@ -57,6 +58,8 @@ import type {
   SessionSearchValue,
   SessionSelectModelRequest,
   SessionSelectModelValue,
+  SessionSetStatusRequest,
+  SessionSetStatusValue,
   SessionUpdateQueueRequest,
   SessionUpdateQueueValue,
 } from '../src/types.ts'
@@ -70,6 +73,8 @@ export interface TestSessionRemote {
   selectModel(request: SessionSelectModelRequest): Promise<RemoteResult<SessionSelectModelValue>>
   modelCatalog(): Promise<RemoteResult<ModelCatalog>>
   rename(request: SessionRenameRequest): Promise<RemoteResult<SessionRenameValue>>
+  setStatus(request: SessionSetStatusRequest): Promise<RemoteResult<SessionSetStatusValue>>
+  listStatuses(): Promise<RemoteResult<SessionListStatusesValue>>
   fork(request: SessionForkRequest): Promise<RemoteResult<SessionForkValue>>
   prompt(request: SessionPromptRequest, signal?: AbortSignal): Promise<RemoteResult<SessionPromptValue>>
   attachment(request: SessionAttachmentRequest): Promise<RemoteResult<SessionAttachmentValue>>
@@ -342,6 +347,8 @@ export function createSessionTestRemote(
     selectModel: request => remoteResult(() => direct.selectModel(request)),
     modelCatalog: () => remoteResult(() => direct.modelCatalog()),
     rename: request => remoteResult(() => direct.rename(request)),
+    setStatus: request => remoteResult(() => direct.setStatus(request)),
+    listStatuses: () => remoteResult(() => direct.listStatuses()),
     fork: request => remoteResult(() => direct.fork(request)),
     prompt: (request, signal = new AbortController().signal) => remoteResult(
       () => direct.prompt(request, signal),

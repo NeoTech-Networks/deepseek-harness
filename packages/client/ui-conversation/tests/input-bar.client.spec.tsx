@@ -478,6 +478,34 @@ describe('image draft rail', () => {
   })
 })
 
+describe('operator shortcuts', () => {
+  it('Alt+S fills the composer with the save-state command and submits it', () => {
+    const { sink } = bench({})
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', altKey: true, bubbles: true, cancelable: true }))
+    expect(sink).toHaveBeenCalledWith('/save-state', [], 'queue', expect.any(AbortSignal))
+  })
+
+  it('Alt+P fills the composer with the production promote phrase and submits it', () => {
+    const { sink } = bench({})
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyP', altKey: true, bubbles: true, cancelable: true }))
+    expect(sink).toHaveBeenCalledWith('Deploy To Production', [], 'queue', expect.any(AbortSignal))
+  })
+
+  it('ignores the chord without Alt, with an extra modifier, or for another key', () => {
+    const { sink } = bench({})
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', bubbles: true, cancelable: true }))
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', altKey: true, ctrlKey: true, bubbles: true, cancelable: true }))
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyA', altKey: true, bubbles: true, cancelable: true }))
+    expect(sink).not.toHaveBeenCalled()
+  })
+
+  it('ignores the chord while the composer is inert (no live session)', () => {
+    const { sink } = bench({ inert: true })
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', altKey: true, bubbles: true, cancelable: true }))
+    expect(sink).not.toHaveBeenCalled()
+  })
+})
+
 describe('Enter semantics', () => {
   it('advertises the empty-draft whole-queue steering gesture when it is available', () => {
     const { placeholder } = bench({ running: true, queue: [row('q-1')], steerQueue: vi.fn() })

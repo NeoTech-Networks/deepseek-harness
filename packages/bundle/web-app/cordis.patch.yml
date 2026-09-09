@@ -47,6 +47,13 @@
     - id: subagent-model-selection-settings
       name: '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
 
+    # Automatic image description for text-only model sessions. Inert unless
+    # the subagent-model-selection preference above is enabled with an
+    # image-capable route; prompt admission then describes attached images
+    # through the vision model instead of rejecting them.
+    - id: vision-routing
+      name: '@deepseek-ai/dsh-vision-routing'
+
     - id: code-runtime
       name: '@deepseek-ai/dsh-code-runtime-worker-thread'
 
@@ -109,6 +116,19 @@
     # agent-write change feed inside the session workspace root.
     - id: workspace-files
       name: '@deepseek-ai/dsh-api-workspace-files'
+
+    # Subscription-account usage: the signed-in account's rolling and weekly
+    # limit occupancy, read Host-side from the stored grant and seated on the
+    # composer dock strip. Renders nothing where no subscription grant exists.
+    - id: account-usage
+      name: '@deepseek-ai/dsh-account-usage'
+
+    # Pinned-directory service: the operator's own roots anywhere on the Host,
+    # stored in the `pinned-files` settings namespace, plus unconfined
+    # directory listings and text reads for them. Deliberately outside the
+    # workspace fence; read the package README before widening it further.
+    - id: pinned-files
+      name: '@deepseek-ai/dsh-api-pinned-files'
 
     # Configuration-surface reads and writes over Typert Remote. Each method
     # reports an actionable error when its settings-domain provider is absent.
@@ -233,6 +253,18 @@
     # The right Sidebar's workspace file tree tab type.
     - id: ui-sidebar-files
       name: '@deepseek-ai/dsh-client-ui-sidebar-files'
+
+    # The right Sidebar's pinned-directory explorer: roots the operator keeps
+    # in the settings document, identical in every Session and Workspace, plus
+    # its own file preview. It opens itself once per Session; set
+    # `autoOpen: false` under `pinned-files` in that document to stop it.
+    - id: ui-sidebar-explorer
+      name: '@deepseek-ai/dsh-client-ui-sidebar-explorer'
+
+    # The right Sidebar's cross-workspace sessions tab: a session list with
+    # active sessions first, opened by kind through the guide.
+    - id: ui-sessions-panel
+      name: '@deepseek-ai/dsh-client-ui-sessions-panel'
 
     - id: ui-settings
       name: '@deepseek-ai/dsh-client-ui-settings'
@@ -411,6 +443,12 @@
   disabled: true
 
 - id: tool-goal
+  disabled: true
+
+- id: command-session-status
+  disabled: true
+
+- id: tool-session-status
   disabled: true
 
 - id: plan-mode

@@ -101,6 +101,18 @@ export class ClientWorkspaceModel implements WorkspaceFollowSink {
   }
 
   /**
+   * Assign or clear a Workspace grouping label and merge the unary result immediately.
+   * @param workspaceId - target Workspace.
+   * @param group - new group label; empty string clears.
+   * @returns generated Remote result.
+   */
+  async setGroup(workspaceId: WorkspaceId, group: string): Promise<RemoteResult<WorkspaceValue>> {
+    const result = await this.remote.setGroup({ workspaceId, group })
+    if (result.ok) this.upsert(result.value.workspace)
+    return result
+  }
+
+  /**
    * Delete a Workspace and remove it from the local projection immediately.
    * @param workspaceId - target Workspace.
    * @returns generated Remote result.

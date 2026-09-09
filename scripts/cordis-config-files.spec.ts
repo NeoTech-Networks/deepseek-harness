@@ -33,4 +33,20 @@ describe('cordisConfigFiles', () => {
       join('apps', 'cli', 'config', 'examples', 'headless.cordis.yml'),
     ])
   })
+
+  it('collapses a git symlink pointer to its target config', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dsh-cordis-config-files-'))
+    roots.push(root)
+    mkdirSync(join(root, 'snapshots', 'acp', 'real'), { recursive: true })
+    mkdirSync(join(root, 'apps', 'cli', 'tests', 'profiles', 'acp'), { recursive: true })
+    writeFileSync(join(root, 'snapshots', 'acp', 'real', 'cordis.yml'), '- id: x\n')
+    writeFileSync(
+      join(root, 'apps', 'cli', 'tests', 'profiles', 'acp', 'cordis.yml'),
+      '../../../../../snapshots/acp/real/cordis.yml',
+    )
+
+    expect(cordisConfigFiles(root)).toEqual([
+      join('snapshots', 'acp', 'real', 'cordis.yml'),
+    ])
+  })
 })

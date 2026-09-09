@@ -377,6 +377,22 @@
   margin-top: 4px;
 }
 
+/* One named group header, above its Workspace sections. */
+.groupHeader {
+  margin-top: 8px;
+  padding: 2px 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dsw-static-deepseek-600);
+}
+
+:global(body[data-ds-dark-theme]) .groupHeader {
+  color: var(--dsw-static-deepseek-400);
+}
+
 .listTopDropIndicator,
 .workspaceDropBefore::before,
 .workspaceDropAfter::after {
@@ -478,6 +494,35 @@
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-state-error-primary);
+}
+
+.statusList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statusOption {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.statusOption:hover:not(:disabled) {
+  background: var(--dsw-alias-surface-hover);
+}
+
+.statusOption:disabled {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .deleteAction:not(:disabled) {

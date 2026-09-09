@@ -72,6 +72,9 @@
       "path": "../workspace-files/tsconfig.client.json"
     },
     {
+      "path": "../pinned-files"
+    },
+    {
       "path": "../settings-controller"
     },
     {

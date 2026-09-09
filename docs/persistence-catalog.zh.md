@@ -688,6 +688,22 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 来源：[`packages/core/session/src/types.ts:400`](../packages/core/session/src/types.ts)
 
+<a id="sessionstatus--log-only"></a>
+
+#### `session/status` — log-only
+
+```ts persistence-catalog
+/**
+ * Whole-value session status. `status: null` clears the status; otherwise
+ * the event carries the complete post-change value plus an optional note.
+ * Last write wins on replay, and any human-authored `user/message` clears
+ * the status, so a prompt answers the hold the status described.
+ */
+'session/status': { status: SessionStatusValue | null; note?: string }
+```
+
+来源：[`packages/session-status/session-status/src/types.ts:71`](../packages/session-status/session-status/src/types.ts)
+
 <a id="sessiontitle--log-only"></a>
 
 #### `session/title` — log-only

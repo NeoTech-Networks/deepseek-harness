@@ -47,6 +47,13 @@ export interface IWorkspaces {
    */
   rename(workspaceId: WorkspaceId, title: string): Promise<WorkspaceView>
   /**
+   * Assign or clear a Workspace grouping label.
+   * @param workspaceId - target Workspace.
+   * @param group - new group label; empty string clears.
+   * @returns the updated Workspace.
+   */
+  setGroup(workspaceId: WorkspaceId, group: string): Promise<WorkspaceView>
+  /**
    * Delete a Workspace registration without deleting Sessions or files.
    * @param workspaceId - target Workspace.
    */
@@ -98,6 +105,12 @@ export class WorkspaceController extends Service implements IWorkspaces {
   async rename(workspaceId: WorkspaceId, title: string): Promise<WorkspaceView> {
     const result = await this.model.rename(workspaceId, title)
     if (!result.ok) throw commandError('rename', result.error)
+    return result.value.workspace
+  }
+
+  async setGroup(workspaceId: WorkspaceId, group: string): Promise<WorkspaceView> {
+    const result = await this.model.setGroup(workspaceId, group)
+    if (!result.ok) throw commandError('set group', result.error)
     return result.value.workspace
   }
 

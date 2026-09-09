@@ -28,6 +28,7 @@ function workspace(
     workspaceId: wid(id),
     path: `/w/${id}`,
     title: id,
+    group: '',
     sessionIds,
     createdAt,
     updatedAt: createdAt,
@@ -132,14 +133,39 @@ class FakeWorkspaces implements IWorkspaces {
     }))
   }
 
-  declare readonly create: IWorkspaces['create']
   declare readonly rename: IWorkspaces['rename']
   declare readonly delete: IWorkspaces['delete']
   declare readonly insertBefore: IWorkspaces['insertBefore']
   declare readonly insertSessionBefore: IWorkspaces['insertSessionBefore']
+  readonly create: ReturnType<typeof vi.fn<IWorkspaces['create']>>
+  readonly setGroup: ReturnType<typeof vi.fn<IWorkspaces['setGroup']>>
 
   constructor(initial: WorkspaceSnapshot) {
     this.list = new MutableSource(initial)
+    this.create = vi.fn<IWorkspaces['create']>(async ({ path }) => {
+      const existing = this.list.getSnapshot().items.find(item => item.path === path)
+      if (existing !== undefined) return existing
+      const view: WorkspaceView = {
+        workspaceId: wid(path.split('/').pop() ?? 'created'),
+        path,
+        title: path.split('/').pop() ?? 'created',
+        group: '',
+        sessionIds: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      }
+      this.list.update(state => ({ ...state, items: [...state.items, view] }))
+      return view
+    })
+    this.setGroup = vi.fn<IWorkspaces['setGroup']>(async (workspaceId, group) => {
+      this.list.update(state => ({
+        ...state,
+        items: state.items.map(item => item.workspaceId === workspaceId ? { ...item, group } : item),
+      }))
+      const updated = this.list.getSnapshot().items.find(item => item.workspaceId === workspaceId)
+      if (updated === undefined) throw new Error(`unknown workspace ${workspaceId}`)
+      return updated
+    })
   }
 
   archiveSession(sessionId: SessionId): Promise<void> {
@@ -420,6 +446,37 @@ describe('UiWorkspaceService', () => {
     b.workspaces.onArchive = () => Promise.reject(new Error('archive rejected'))
     await expect(b.uiWorkspace.archiveSession(idle)).rejects.toThrow('archive rejected')
     expect(b.workspaces.archiveCalls).toEqual([idle, idle])
+  })
+
+  it('openDirectory registers a folder, groups it, and opens its session', async () => {
+    const b = bench()
+    b.sessions.create.mockImplementation(async options => sid(`opened-${String(options?.workspaceId)}`))
+    await b.uiWorkspace.openDirectory('/w/overlord', 'sig')
+
+    const registered = b.workspaces.list.getSnapshot().items.find(item => item.path === '/w/overlord')
+    expect(registered).toBeDefined()
+    expect(b.workspaces.create).toHaveBeenCalledWith({ path: '/w/overlord' })
+    expect(b.workspaces.setGroup).toHaveBeenCalledWith(registered!.workspaceId, 'sig')
+    expect(b.sessions.open).toHaveBeenCalledWith(sid('opened-overlord'))
+  })
+
+  it('openDirectory leaves a non-empty group untouched and skips grouping when none is given', async () => {
+    const b = bench()
+    b.sessions.create.mockImplementation(async options => sid(`opened-${String(options?.workspaceId)}`))
+
+    // An existing Workspace with a group already set: adopt without re-grouping.
+    b.workspaces.list.set(workspaceState([
+      { ...workspace('overlord'), path: '/w/overlord', group: 'sig' },
+    ]))
+    await b.uiWorkspace.openDirectory('/w/overlord', 'sig')
+    expect(b.workspaces.setGroup).not.toHaveBeenCalled()
+    expect(b.sessions.open).toHaveBeenLastCalledWith(sid('opened-overlord'))
+
+    // A fresh folder without a requested group: register, open, never group.
+    b.workspaces.setGroup.mockClear()
+    await b.uiWorkspace.openDirectory('/w/alpha')
+    expect(b.workspaces.setGroup).not.toHaveBeenCalled()
+    expect(b.sessions.open).toHaveBeenLastCalledWith(sid('opened-alpha'))
   })
 
   it('passes directory operations to the Host and preserves structured browse failures', async () => {

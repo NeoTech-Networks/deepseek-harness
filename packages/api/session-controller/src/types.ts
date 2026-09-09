@@ -8,6 +8,7 @@ import type { LlmAttemptId, MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { ContentBlock } from '@deepseek-ai/dsh-llm'
 import type { SessionId, SessionSeqCursor } from '@deepseek-ai/dsh-session/types'
 import type { SessionProjectionMap } from '@deepseek-ai/dsh-session-projection/types'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/types'
 import type { JobId } from '@deepseek-ai/dsh-jobs/brand'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
@@ -203,6 +204,7 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'session/queue-item-not-found': { readonly itemId: MessageId }
     'session/steer-unavailable': { readonly itemId: MessageId }
     'session/title-invalid': { readonly sessionId: SessionId }
+    'session/status-unknown': { readonly statusId: string }
     'session/fork-unavailable': { readonly sessionId: SessionId }
     'subagent/not-found': {
       readonly parentSessionId: SessionId
@@ -287,6 +289,26 @@ export interface SessionSelectModelValue {
 export interface SessionRenameRequest {
   readonly sessionId: SessionId
   readonly title: string
+}
+
+/** Session status request. */
+export interface SessionSetStatusRequest {
+  readonly sessionId: SessionId
+  /** Vocabulary id to set, or null to clear the current status. */
+  readonly statusId: string | null
+}
+
+/** Session status result value. */
+export interface SessionSetStatusValue {
+  /** The resolved status after the set, or null after a clear. */
+  readonly status: SessionStatusValue | null
+  /** Durable event sequence that committed the change. */
+  readonly seq: number
+}
+
+/** The deployment's declared status vocabulary. */
+export interface SessionListStatusesValue {
+  readonly statuses: readonly SessionStatusValue[]
 }
 
 /** Normalized title and the durable event position that committed it. */
