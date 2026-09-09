@@ -18,10 +18,8 @@ describe('sessionsDefinition', () => {
     expect(definition.guide?.[0]).toMatchObject({
       order: 10,
       title: expect.any(Function),
-      description: expect.any(Function),
       icon: expect.any(Function),
     })
     expect(definition.guide?.[0]?.title()).toBe('guide.title')
-    expect(definition.guide?.[0]?.description()).toBe('guide.description')
   })
 })

@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-tool-session-status",
   "description": "Model-facing set_session_status tool over the DeepSeek Harness session-status domain",
-  "version": "0.1.5-alpha.1",
+  "version": "0.1.5-alpha.2",
   "publishConfig": {
     "access": "public"
   },

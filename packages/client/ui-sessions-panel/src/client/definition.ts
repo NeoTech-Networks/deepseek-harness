@@ -30,7 +30,6 @@ export function sessionsDefinition(t: TranslateNS<'sessionsPanel'>): SidebarRigh
     guide: [{
       order: 10,
       title: () => t('guide.title'),
-      description: () => t('guide.description'),
       icon: IconListPenOutline16,
     }],
   }
