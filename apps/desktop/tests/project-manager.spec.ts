@@ -459,7 +459,7 @@ describe('desktop project transactions', () => {
     const manager = new DesktopProjectManager(
       paths,
       { node: process.execPath, pnpm: writeHangingFakePnpm(root, started) },
-      { pnpmTimeoutMs: 1_500, pnpmExitGraceMs: 200 },
+      { pnpmTimeoutMs: 1_500, pnpmExitGraceMs: 200, heartbeatMs: 300 },
     )
 
     await expect(manager.applyRelease(seed, '1.0.0', hooks()))
@@ -473,6 +473,8 @@ describe('desktop project transactions', () => {
     const body = readFileSync(join(paths.logs, transcripts[0] as string), 'utf8')
     expect(body).toMatch(/exceeded its 1500ms deadline/u)
     expect(body).toMatch(/offline install started/u)
+    // The heartbeat is what proves, in a stalled run, that the main process's timers ran at all.
+    expect(body).toMatch(/pnpm install still running after \d+s/u)
   })
 
   it('sweeps abandoned staging directories and keeps the one a journal claims', async () => {

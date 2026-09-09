@@ -84,6 +84,8 @@ export interface DesktopProjectOptions {
   readonly pnpmTimeoutMs?: number
   /** Grace after pnpm exits for its stdio pipes to close. Defaults to ten seconds. */
   readonly pnpmExitGraceMs?: number
+  /** Cadence of the running-install heartbeat. Defaults to thirty seconds. */
+  readonly heartbeatMs?: number
   /** Age past which an unclaimed staging directory is swept. Defaults to six hours. */
   readonly stagingMaxAgeMs?: number
   /** Write transaction transcripts. Defaults to true. */
@@ -126,6 +128,22 @@ const DESKTOP_REGISTRY = 'https://registry.npmjs.org/'
 const DESKTOP_PNPM_TIMEOUT_MS = 20 * 60 * 1000
 /** Grace after pnpm exits for its stdio pipes to close before the transaction moves on. */
 const DESKTOP_PNPM_EXIT_GRACE_MS = 10 * 1000
+/**
+ * Report whether one process id still exists.
+ * @param pid - process id to probe.
+ * @returns true while the process is alive or is alive but not signallable.
+ */
+function processIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ESRCH'
+  }
+}
+
+/** Cadence of the running-install heartbeat, which proves the main process's timers still run. */
+const HEARTBEAT_INTERVAL_MS = 30 * 1000
 /** Age past which an unclaimed staging directory belongs to an abandoned transaction. */
 const DESKTOP_STAGING_MAX_AGE_MS = 6 * 60 * 60 * 1000
 
@@ -653,6 +671,7 @@ export class DesktopProjectManager {
     const log = this.log
     const timeoutMs = this.options.pnpmTimeoutMs ?? DESKTOP_PNPM_TIMEOUT_MS
     const graceMs = this.options.pnpmExitGraceMs ?? DESKTOP_PNPM_EXIT_GRACE_MS
+    const heartbeatMs = this.options.heartbeatMs ?? HEARTBEAT_INTERVAL_MS
     for (const path of [this.paths.root, this.paths.pnpm.store, this.paths.pnpm.cache,
       this.paths.pnpm.state, this.paths.pnpm.config, this.paths.pnpm.home]) {
       mkdirSync(path, { recursive: true, mode: 0o700 })
@@ -704,7 +723,13 @@ export class DesktopProjectManager {
       let diagnostics = ''
       let completed = false
       let timedOut = false
-      const timers: { deadline?: NodeJS.Timeout; grace?: NodeJS.Timeout; kill?: NodeJS.Timeout } = {}
+      const timers: {
+        deadline?: NodeJS.Timeout
+        grace?: NodeJS.Timeout
+        kill?: NodeJS.Timeout
+        heartbeat?: NodeJS.Timeout
+      } = {}
+      const startedAt = Date.now()
       const appendDiagnostics = (chunk: string): void => {
         diagnostics = (diagnostics + chunk).slice(-MAX_PNPM_DIAGNOSTIC_BYTES)
         log.raw(chunk)
@@ -719,6 +744,7 @@ export class DesktopProjectManager {
         if (timers.deadline !== undefined) clearTimeout(timers.deadline)
         if (timers.grace !== undefined) clearTimeout(timers.grace)
         if (timers.kill !== undefined) clearTimeout(timers.kill)
+        if (timers.heartbeat !== undefined) clearInterval(timers.heartbeat)
         try {
           this.writeLockOwner(process.pid)
         } catch (error) {
@@ -754,6 +780,22 @@ export class DesktopProjectManager {
           ))
         })
       }
+      // A heartbeat, so a run that stalls says whether the main process's timers ran at all.
+      // Without it, a deadline that never fires is indistinguishable from a blocked event loop.
+      timers.heartbeat = setInterval(() => {
+        if (completed) return
+        const seconds = String(Math.round((Date.now() - startedAt) / 1000))
+        if (processIsAlive(childPid)) {
+          log.step(`pnpm ${command} still running after ${seconds}s`)
+          return
+        }
+        // The child is gone but neither `exit` nor `close` arrived. Observed on Windows on
+        // 2026-09-09: the transaction sat forever with a dead pid still named in the lock.
+        // The staged health check below is what proves the dependency graph, so settling
+        // here turns a permanent hang into either a working app or a real error.
+        log.step(`pnpm ${command} pid ${String(childPid)} is gone after ${seconds}s with no exit event: settling`)
+        complete(() => { settle() })
+      }, heartbeatMs)
       timers.deadline = setTimeout(() => {
         if (completed) return
         timedOut = true
@@ -762,13 +804,15 @@ export class DesktopProjectManager {
         // Give the killed tree time to release the staging directory it holds open as its cwd,
         // so the caller's cleanup does not race a process Windows has not finished reaping.
         timers.kill = setTimeout(rejectTimedOut, Math.max(graceMs, 2_000))
-        timers.kill.unref()
       }, timeoutMs)
-      timers.deadline.unref()
-      child.once('error', (error) => { complete(() => { reject(error) }) })
+      child.once('error', (error) => {
+        log.step(`pnpm ${command} raised ${error.message}`)
+        complete(() => { reject(error) })
+      })
       // pnpm can exit while a build script grandchild still holds the inherited stdio pipes,
       // which never lets `close` fire. Exit is the authoritative signal; the pipes get a grace.
       child.once('exit', (code, signal) => {
+        log.step(`pnpm ${command} emitted exit (code ${String(code ?? signal)})`)
         if (completed) return
         if (timedOut) {
           finish(code, signal)
@@ -778,9 +822,11 @@ export class DesktopProjectManager {
           log.step(`pnpm ${command} stdio stayed open ${String(graceMs)}ms after exit: settling on exit`)
           finish(code, signal)
         }, graceMs)
-        timers.grace.unref()
       })
-      child.once('close', (code, signal) => { finish(code, signal) })
+      child.once('close', (code, signal) => {
+        log.step(`pnpm ${command} emitted close (code ${String(code ?? signal)})`)
+        finish(code, signal)
+      })
     })
   }
 
