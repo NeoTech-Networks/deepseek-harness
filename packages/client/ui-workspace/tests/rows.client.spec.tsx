@@ -601,6 +601,30 @@ describe('workspace browser rows', () => {
     expect(view.container.querySelector('[data-phase="planning"][data-active]')).toBeNull()
   })
 
+  it('marks the running-descendants glyph live', () => {
+    // It stands in for a running indicator, so it carries the same liveness.
+    const node = sessionRow({ id: sid('delegator'), title: 'Delegating', runningSubagentCount: 2 })
+    const view = render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    expect(view.container.querySelector('[data-phase="subagents"][data-active="true"]')).not.toBeNull()
+  })
+
+  it('keeps showing the work while a status is declared mid-turn, and the status once it stops', () => {
+    // The model declares its status before the turn's last events land. The
+    // row must keep reporting the work and switch at the real boundary.
+    const declared = { id: 'finished', label: '完成', icon: 'check' as const, tone: 'success' as const }
+    const working = sessionRow({ id: sid('finisher'), title: 'Finishing', running: true, declaredStatus: declared })
+    const view = render(<SessionNodeItem node={working} currentId={undefined} now={0} onOpen={vi.fn()}
+      onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    expect(view.container.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    expect(view.container.querySelector('[data-tone="success"]')).toBeNull()
+
+    view.rerender(<SessionNodeItem node={sessionRow({ ...working, running: false })} currentId={undefined} now={0}
+      onOpen={vi.fn()} onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
+    expect(view.container.querySelector('[data-tone="success"]')).not.toBeNull()
+    expect(view.container.querySelector('[data-state="ongoing"]')).toBeNull()
+  })
+
   it('idle hover card shows the Idle status line', () => {
     vi.useFakeTimers()
     try {

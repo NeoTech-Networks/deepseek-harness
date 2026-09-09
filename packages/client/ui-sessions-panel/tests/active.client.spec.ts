@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionPendingInteractionBase } from '@deepseek-ai/dsh-client-ui-session/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { derivePhase } from '@deepseek-ai/dsh-client-ui-workspace/src/client/tree.ts'
 import { deriveSessions } from '../src/client/active.ts'
 
 const sid = (id: string) => id as SessionId
@@ -123,5 +124,76 @@ describe('deriveSessions', () => {
 
   it('returns empty buckets for an empty list', () => {
     expect(deriveSessions(list(), noArchive, noAttention)).toEqual({ active: [], idle: [] })
+  })
+
+  // This panel re-derives phase on its own (a feature plugin must not
+  // runtime-import another feature plugin's values), so nothing but a test can
+  // keep the two derivations honest. Without it the two sidebars in one window
+  // drifted: this one had no declared state at all and ranked plan mode as a
+  // generic attention dot.
+  it('agrees with the workspace sidebar on every phase', () => {
+    const status = { id: 'stuck', label: 'Stuck', icon: 'stop' as const, tone: 'error' as const }
+    const cases: readonly {
+      name: string
+      summary: SessionSummary
+      pending?: string
+      facts: Parameters<typeof derivePhase>[0]
+    }[] = [
+      {
+        name: 'awaiting',
+        summary: summary('awaiting', 1),
+        pending: 'question',
+        facts: {
+          pendingInteraction: 'question', running: false, runningSubagentCount: 0,
+          completed: false, planActive: false, hasActiveSchedule: false,
+        },
+      },
+      {
+        name: 'planning beats running',
+        summary: { ...summary('planning', 1), running: true, projectionValues: { plan: { active: true, pending: false } } },
+        facts: { running: true, runningSubagentCount: 0, completed: false, planActive: true, hasActiveSchedule: false },
+      },
+      {
+        name: 'running beats a declared status',
+        summary: { ...summary('running', 1), running: true, projectionValues: { sessionStatus: status } },
+        facts: {
+          running: true, runningSubagentCount: 0, completed: false,
+          planActive: false, hasActiveSchedule: false, declaredStatus: status,
+        },
+      },
+      {
+        name: 'declared beats the completion reminder',
+        summary: { ...summary('declared', 1), completed: true, projectionValues: { sessionStatus: status } },
+        facts: {
+          running: false, runningSubagentCount: 0, completed: true,
+          planActive: false, hasActiveSchedule: false, declaredStatus: status,
+        },
+      },
+      {
+        name: 'done',
+        summary: { ...summary('done', 1), completed: true },
+        facts: { running: false, runningSubagentCount: 0, completed: true, planActive: false, hasActiveSchedule: false },
+      },
+      {
+        name: 'idle',
+        summary: summary('idle', 1),
+        facts: { running: false, runningSubagentCount: 0, completed: false, planActive: false, hasActiveSchedule: false },
+      },
+    ]
+
+    for (const testCase of cases) {
+      const result = deriveSessions(
+        list(testCase.summary),
+        noArchive,
+        testCase.pending === undefined
+          ? noAttention
+          : attention(testCase.summary.id as string, testCase.pending),
+      )
+      const row = [...result.active, ...result.idle][0]
+      // The panel collapses the three awaiting-* phases into one; every other
+      // phase name is shared verbatim.
+      const expected = derivePhase(testCase.facts).replace(/^awaiting-.*$/, 'awaiting')
+      expect(`${testCase.name}: ${String(row?.phase)}`).toBe(`${testCase.name}: ${expected}`)
+    }
   })
 })

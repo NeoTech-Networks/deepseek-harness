@@ -137,7 +137,7 @@ describe('SessionsPanel', () => {
     expect(view.queryByText('Beta')).toBeNull()
   })
 
-  it('draws the right state dot for each phase and none for idle', () => {
+  it('draws the right mark for each phase and none for idle', () => {
     const now = Date.now()
     const awaiting = summary('awaiting', now - 5 * 60_000)
     const planning = { ...summary('planning', now - 4 * 60_000), projectionValues: { plan: { active: true, pending: false } } }
@@ -154,14 +154,40 @@ describe('SessionsPanel', () => {
       pending,
     })
 
-    expect(view.container.querySelectorAll('[data-state="warning"]')).toHaveLength(2)
-    expect(view.container.querySelectorAll('[data-state="ongoing"]')).toHaveLength(2)
+    // Plan mode and running descendants get their own glyph rather than a
+    // dot, so this panel says the same thing about them as the workspace
+    // sidebar does: an amber dot for plan mode and a plain ongoing dot for a
+    // delegating parent told the operator neither fact.
+    expect(view.container.querySelectorAll('[data-state="warning"]')).toHaveLength(1)
+    expect(view.container.querySelectorAll('[data-state="ongoing"]')).toHaveLength(1)
     expect(view.container.querySelectorAll('[data-state="done"]')).toHaveLength(1)
+    expect(view.container.querySelectorAll('[data-phase="planning"]')).toHaveLength(1)
+    expect(view.container.querySelectorAll('[data-phase="subagents"][data-active="true"]')).toHaveLength(1)
 
-    // The idle row renders no dot until it is shown under All.
+    // The idle row renders no mark at all until it is shown under All.
     fireEvent.click(view.getByText('filter.all'))
     const idleRow = view.container.querySelector('[data-sessions-panel-row="idle"]')
     expect(idleRow?.querySelector('[data-state]')).toBeNull()
+    expect(idleRow?.querySelector('[data-phase]')).toBeNull()
+  })
+
+  it('shows a declared status with its own glyph and tone, below live activity', () => {
+    const now = Date.now()
+    const status = { id: 'waiting-production', label: 'Waiting', icon: 'right-up' as const, tone: 'attention' as const }
+    const held = { ...summary('held', now), projectionValues: { sessionStatus: status } }
+    // Same status, but this one is still working: the work wins the mark.
+    const busy = {
+      ...summary('busy', now - 60_000),
+      running: true,
+      projectionValues: { sessionStatus: status },
+    }
+    const { view } = mount({ sessions: [held, busy] })
+
+    const heldRow = view.container.querySelector('[data-sessions-panel-row="held"]')
+    expect(heldRow?.querySelector('[data-tone="attention"]')).not.toBeNull()
+    const busyRow = view.container.querySelector('[data-sessions-panel-row="busy"]')
+    expect(busyRow?.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    expect(busyRow?.querySelector('[data-tone]')).toBeNull()
   })
 
   it('shows a relative time and a localized New Session label for the blank row', () => {

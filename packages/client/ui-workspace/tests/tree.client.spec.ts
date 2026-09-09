@@ -217,51 +217,29 @@ describe('deriveGroups', () => {
     ).items.map(node => [node.id, node.planActive])).toEqual(expected)
   })
 
-  it('derives a declared status from sessionStatus, falling back to the goal phase', () => {
+  it('takes the declared status from sessionStatus alone, never from the goal projection', () => {
+    // The goal phase to status mapping moved into the session-status fold. It
+    // cannot live here: this derivation sees the `goal` projection, which
+    // never expires, so a completed goal used to pin a status on the row for
+    // the rest of the session. The fold's copy is cleared by the next human
+    // message like every other declared status.
     const explicit = {
       ...summary('explicit', 5),
       projectionValues: { sessionStatus: { id: 'paused', label: 'Paused', icon: 'pause' as const, tone: 'neutral' as const } },
     }
-    const blocked = {
-      ...summary('blocked', 4),
-      projectionValues: {
-        goal: { goal: { id: 'g1' as GoalId, revision: 1, objective: 'x', phase: 'blocked' as const, maxGoalRounds: 1 }, roundsStarted: 0, createdAt: 0, updatedAt: 0 },
-      },
-    }
-    const complete = {
+    const completeGoalOnly = {
       ...summary('complete', 3),
       projectionValues: {
         goal: { goal: { id: 'g2' as GoalId, revision: 1, objective: 'x', phase: 'complete' as const, maxGoalRounds: 1 }, roundsStarted: 0, createdAt: 0, updatedAt: 0 },
       },
     }
-    const active = {
-      ...summary('active', 2),
-      projectionValues: {
-        goal: { goal: { id: 'g3' as GoalId, revision: 1, objective: 'x', phase: 'active' as const, maxGoalRounds: 1 }, roundsStarted: 0, createdAt: 0, updatedAt: 0 },
-      },
-    }
-    const pausedGoal = {
-      ...summary('paused-goal', 1),
-      projectionValues: {
-        goal: { goal: { id: 'g4' as GoalId, revision: 1, objective: 'x', phase: 'paused' as const, maxGoalRounds: 1 }, roundsStarted: 0, createdAt: 0, updatedAt: 0 },
-      },
-    }
-    const sessions = list(explicit, blocked, complete, active, pausedGoal)
+    const sessions = list(explicit, completeGoalOnly)
     const rows = deriveFlat(sessions, noArchive, noAttention)
 
     expect(rows.find(row => row.id === explicit.id)?.declaredStatus).toEqual({
       id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral',
     })
-    expect(rows.find(row => row.id === blocked.id)?.declaredStatus).toEqual({
-      id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error',
-    })
-    expect(rows.find(row => row.id === complete.id)?.declaredStatus).toEqual({
-      id: 'finished', label: 'Finished', icon: 'check', tone: 'success',
-    })
-    expect(rows.find(row => row.id === active.id)?.declaredStatus).toBeUndefined()
-    expect(rows.find(row => row.id === pausedGoal.id)?.declaredStatus).toEqual({
-      id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral',
-    })
+    expect(rows.find(row => row.id === completeGoalOnly.id)?.declaredStatus).toBeUndefined()
   })
 
   it('hides subagent-origin sessions without hiding ordinary forks', () => {
@@ -673,10 +651,22 @@ describe('derivePhase', () => {
       .toBe('planning')
   })
 
-  it('ranks a declared status below operator-blocking phases and above plan mode', () => {
+  it('ranks a declared status below everything the session is actually doing', () => {
+    // The mark reports, it does not announce. A status set mid-turn (which is
+    // when the model sets it, about ten events before the turn ends) must not
+    // replace the running indicator, or the row shows the outcome early and
+    // then never changes at the moment work actually stops.
     const declared = { id: 'stuck', label: 'Stuck', icon: 'stop' as const, tone: 'error' as const }
-    expect(derivePhase(facts({ declaredStatus: declared, planActive: true, running: true }))).toBe('declared')
+    expect(derivePhase(facts({ declaredStatus: declared, planActive: true, running: true }))).toBe('planning')
+    expect(derivePhase(facts({ declaredStatus: declared, running: true }))).toBe('running')
+    expect(derivePhase(facts({ declaredStatus: declared, runningSubagentCount: 1 }))).toBe('subagents')
     expect(derivePhase(facts({ pendingInteraction: 'approval', declaredStatus: declared }))).toBe('awaiting-approval')
+  })
+
+  it('shows the declared status once the session goes quiet, ahead of the completion reminder', () => {
+    const declared = { id: 'finished', label: 'Finished', icon: 'check' as const, tone: 'success' as const }
+    expect(derivePhase(facts({ declaredStatus: declared }))).toBe('declared')
+    expect(derivePhase(facts({ declaredStatus: declared, completed: true }))).toBe('declared')
   })
 
   it('ranks own activity above descendant activity', () => {

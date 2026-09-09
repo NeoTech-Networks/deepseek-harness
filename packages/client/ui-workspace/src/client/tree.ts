@@ -72,7 +72,7 @@ export interface SessionRowFacts {
   completed: boolean
   /** Logged plan mode is in force (the `plan` projection's `active`). */
   planActive: boolean
-  /** A declared status, from `sessionStatus` or the goal-phase fallback. */
+  /** A declared status, from the `sessionStatus` projection (goal phases feed it host-side). */
   declaredStatus?: SessionStatusValue
   /** The current list projection contains at least one active Schedule record. */
   hasActiveSchedule: boolean
@@ -234,23 +234,21 @@ function planActive(session: SessionSummary): boolean {
 }
 
 /**
- * The declared status a row presents. The `sessionStatus` projection wins when
- * present; otherwise a goal's durable phase maps to the matching shipped
- * status, so a session that manages a goal through the goal tools lights up
- * the icon without a second declaration. An absent key is capability absence
- * (session-status not composed, or hints that have not warmed) and reads as no
- * status.
+ * The declared status a row presents: the `sessionStatus` projection, whole.
+ * An absent key is capability absence (session-status not composed, or hints
+ * that have not warmed) and reads as no status.
+ *
+ * A goal's durable phase used to be mapped to a status HERE, as a client-side
+ * fallback. It was moved into the session-status fold, because the fallback
+ * could never expire: `sessionStatus` clears on the next human message and the
+ * `goal` projection does not, so one completed goal pinned a green check on
+ * the row for the rest of the session (measured: four sessions on one
+ * workstation carried a frozen mark through 192 to 1263 later events). The
+ * fold now owns the mapping, and it inherits the one expiry rule. That also
+ * restores the framework contract that no client-side domain folding exists.
  */
 function declaredStatusOf(session: SessionSummary): SessionStatusValue | undefined {
-  const explicit = session.projectionValues?.sessionStatus
-  if (explicit != null) return explicit
-  const goal = session.projectionValues?.goal?.goal
-  switch (goal?.phase) {
-    case 'blocked': return { id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error' }
-    case 'complete': return { id: 'finished', label: 'Finished', icon: 'check', tone: 'success' }
-    case 'paused': return { id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral' }
-    default: return undefined
-  }
+  return session.projectionValues?.sessionStatus ?? undefined
 }
 
 /* v8 ignore next 3 -- closed-union backstop; only reached if a pending kind is forged */
@@ -259,13 +257,25 @@ function assertNever(value: never): never {
 }
 
 /**
- * Resolve the one phase a row presents. Anything blocking this operator
- * outranks everything the agent can do alone; a declared status outranks plan
- * mode and activity because it is the durable state the operator asked to see,
- * and a new prompt clears it anyway; plan mode outranks activity because it is
- * the durable collaboration state a running turn does not change; own activity
- * outranks descendant activity; the finished-but-unopened reminder is last
- * before idle.
+ * Resolve the one phase a row presents.
+ *
+ * The rule the order encodes: **the mark says what the session is doing now,
+ * and a declared status is what an idle session says about why it is idle.**
+ *
+ * Anything blocking this operator outranks everything the agent can do alone.
+ * Then plan mode, because it is the durable collaboration state a running turn
+ * does not change. Then own activity, then descendant activity. A declared
+ * status sits BELOW all of those: a session that is working is not holding, so
+ * its hold badge waits until the work stops.
+ *
+ * The declared status used to sit second, directly under the awaiting phases.
+ * That is what made the mark read as a prediction rather than a report: the
+ * model sets its status roughly ten events before the turn actually ends
+ * (measured across the status events on one workstation), so the green check
+ * appeared while the session was still working and then nothing at all changed
+ * at the moment it genuinely stopped.
+ *
+ * The finished-but-unopened reminder is last before idle.
  * @param facts - the row's derived live facts.
  * @returns the winning phase.
  */
@@ -278,10 +288,10 @@ export function derivePhase(facts: Omit<SessionRowFacts, 'phase'>): SessionPhase
     /* v8 ignore next -- closed SessionPendingInteractionStatus union */
     default: return assertNever(facts.pendingInteraction)
   }
-  if (facts.declaredStatus !== undefined) return 'declared'
   if (facts.planActive) return 'planning'
   if (facts.running) return 'running'
   if (facts.runningSubagentCount > 0) return 'subagents'
+  if (facts.declaredStatus !== undefined) return 'declared'
   return facts.completed ? 'done' : 'idle'
 }
 

@@ -108,6 +108,21 @@ describe('WorkspaceBrowser.module.css list', () => {
       .toBe('var(--dsw-alias-interactive-bg-hover)')
   })
 
+  it('gives a live glyph the ongoing colour and the pulse, and drops the pulse under reduced motion', () => {
+    // The selector is phase-agnostic on purpose: plan mode and running
+    // descendants both replace a running indicator with a glyph, so both must
+    // carry the liveness that indicator would have carried.
+    const reducedAt = rowsCss.indexOf('@media (prefers-reduced-motion: reduce)')
+    expect(reducedAt).toBeGreaterThan(-1)
+    const live = declarationsFrom(rowsCss.slice(0, reducedAt), ".phaseIcon[data-active='true']")
+    expect(live?.get('color')).toBe('var(--dsw-static-deepseek-450)')
+    expect(live?.get('animation')).toContain('dsw-plan-active')
+    // The reduced-motion block must name the same selector, or the pulse
+    // survives the preference.
+    const reduced = declarationsFrom(rowsCss.slice(reducedAt), ".phaseIcon[data-active='true']")
+    expect(reduced?.get('animation')).toBe('none')
+  })
+
   it('pins both rail controls to the shared left anchor during the column slide', () => {
     expect(declarations('.rail .sectionHeader')?.get('justify-content')).toBe('flex-start')
     expect(declarations('.rail .iconButton')?.get('width')).toBe('36px')

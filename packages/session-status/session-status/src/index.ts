@@ -16,13 +16,15 @@ import type { ZodType } from 'zod'
 import type { Session } from '@deepseek-ai/dsh-session'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-session-projection'
-import { applySessionStatusProjection } from './fold.ts'
+import { applySessionStatusProjection, INITIAL_SESSION_STATUS_STATE, sessionStatusOf } from './fold.ts'
 import type {
   SessionStatusConfig,
   SessionStatusIconId,
+  SessionStatusProjectionState,
   SessionStatusTone,
   SessionStatusValue,
   SessionStatusVocabularyEntry,
+  SessionStatusVocabularyResolver,
 } from './types.ts'
 export type * from './types.ts'
 
@@ -73,15 +75,39 @@ const sessionStatusSchema: ZodType<SessionStatusValue | null> = zod.union([
   zod.null(),
 ])
 
-/** Wire payload schema of the `sessionStatus` projection (status or cleared null). */
-export const sessionStatusProjectionDefinition = {
-  key: 'sessionStatus',
-  stateVersion: 1,
-  stateSchema: sessionStatusSchema,
-  init: () => null,
-  apply: applySessionStatusProjection,
-  wire: { viewSchema: sessionStatusSchema, view: state => state },
-} satisfies ProjectionDefinition<'sessionStatus', SessionStatusValue | null>
+/** Persisted fold state: the published status plus the goal-transition marker. */
+const sessionStatusStateSchema: ZodType<SessionStatusProjectionState> = zod.object({
+  status: sessionStatusSchema,
+  goalPhase: zod.string().nullable(),
+}).strict()
+
+/**
+ * Build the `sessionStatus` projection for one resolved vocabulary.
+ *
+ * The definition is per-deployment rather than a module constant because the
+ * fold now declares a status of its own on a durable goal phase transition,
+ * and the value it declares must come from the vocabulary that deployment
+ * validated at load, not from a table hard-coded in the fold.
+ *
+ * @param resolve - resolves a shipped status id against the deployment vocabulary.
+ * @returns the projection definition to register.
+ */
+export function createSessionStatusProjectionDefinition(resolve: SessionStatusVocabularyResolver) {
+  // No return annotation: `register` demands a definition whose `wire` is
+  // present, and annotating the optional-`wire` interface would widen it away.
+  return {
+    key: 'sessionStatus',
+    // v2: state gained `goalPhase` and the fold gained the goal drive, so
+    // every v1 checkpoint must be discarded and re-folded.
+    stateVersion: 2,
+    stateSchema: sessionStatusStateSchema,
+    init: () => INITIAL_SESSION_STATUS_STATE,
+    apply: (state, event) => applySessionStatusProjection(state, event, resolve),
+    // `status` is the reference carried by the event, so an internal-only
+    // change (a goal transition that declares nothing) republishes nothing.
+    wire: { viewSchema: sessionStatusSchema, view: state => state.status },
+  } satisfies ProjectionDefinition<'sessionStatus', SessionStatusProjectionState>
+}
 
 /**
  * Validate the deployment vocabulary and return it detached. Missing, blank,
@@ -132,8 +158,11 @@ export class SessionStatusService extends Service {
   constructor(ctx: Context, config: SessionStatusConfig = { vocabulary: DEFAULT_VOCABULARY }) {
     super(ctx, 'sessionStatus')
     const vocabulary = resolveVocabulary(config)
-    this.byId = new Map(vocabulary.map(entry => [entry.id, entry]))
-    ctx.sessionProjections.register(sessionStatusProjectionDefinition)
+    const byId = new Map(vocabulary.map(entry => [entry.id, entry]))
+    this.byId = byId
+    ctx.sessionProjections.register(
+      createSessionStatusProjectionDefinition(id => byId.get(id)),
+    )
   }
 
   /**
@@ -175,7 +204,7 @@ export class SessionStatusService extends Service {
   current(session: Session): SessionStatusValue | null {
     const state = this.ctx.sessionProjections.stateOf(session, 'sessionStatus')
     if (state === undefined) throw new Error('session-status requires the sessionStatus session projection')
-    return state
+    return sessionStatusOf(state)
   }
 }
 
