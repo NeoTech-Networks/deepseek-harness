@@ -55,6 +55,19 @@ one command and is the regression check for everything below.
   names (DeepSeek called the short name and failed three times).
 - Built and synced `dsh-fs-local` and `dsh-plan-mode` into `~/.dsh/profiles/desktop`; both
   take effect on the next app relaunch.
+- **Hook tax cut, and its SHAPE fixed.** Four causes in the bridge, all measured, none of
+  them the hook scripts: pool width below the fan-out; `shell=True` spawning `cmd.exe` per
+  hook (553ms to 214ms over 22 cold starts); the transcript projection re-decompressing the
+  whole session log every call; and `session_route` doing that same full decompress a second
+  time to read two strings (0.671s of a 1.002s run). Cost used to GROW with session length;
+  it is now 461ms on a 100KB log and 483ms on a 2.78MB log, effectively flat, down from a
+  median 1,113ms. Commits `56969c4b` and `09fce83d` in `C:\Claude`.
+- Final verification sweep, all green: the atomic-writer concurrency test (4 arms, the
+  control arm still proving it can fail), the incremental-decode test (byte-identical to a
+  full rebuild), fs-local 142 passed with the 13 pre-existing POSIX-on-Windows failures
+  unchanged, plan-mode 94/94, bridge 69 passed with its one pre-existing policy-listing
+  failure, 9 allowed models with `glm-5.3-highspeed` gone, the full MCP memory tool names
+  present, and the save-state worker reporting "0 needing attention" for all three repos.
 
 ## 2026-09-09 - Desktop hung on the boot screen: accountUsage was never mounted on the Client
 
