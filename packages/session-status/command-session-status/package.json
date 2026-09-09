@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-command-session-status",
   "description": "Human-facing /status slash command for declared session status",
-  "version": "0.1.3-alpha.2",
+  "version": "0.1.5-alpha.1",
   "publishConfig": {
     "access": "public"
   },

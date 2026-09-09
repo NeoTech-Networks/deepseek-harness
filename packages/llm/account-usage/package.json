@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-account-usage",
   "description": "Subscription-account usage service and composer-dock reading: the account's rolling and weekly limit occupancy over the accountUsage Remote namespace",
-  "version": "0.1.3-alpha.2",
+  "version": "0.1.5-alpha.1",
   "publishConfig": {
     "access": "public"
   },
