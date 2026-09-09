@@ -1,3 +1,40 @@
+## 2026-09-09 - Alt+S / Alt+P root cause, fix, and the two update-survival guards
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Shortcut code in the running 0.1.5-alpha.1 build | present or absent | PRESENT, `SAVE_STATE_SHORTCUT` at line 15794 of the profile's `dsh-client-ui-conversation/lib/client.js`; not a lost commit | VERIFIED |
+| Same code in a real browser | fires or not | FIRES; headless Chromium against `dsh web` submitted `/save-state`, turn admitted | VERIFIED |
+| Real Alt+S into a real Electron window | keydown delivered | NOT DELIVERED; only `AltLeft` keydown plus a `KeyS` KEYUP with altKey | VERIFIED |
+| Application menu as the cause | ruled in or out | RULED OUT; identical with `setApplicationMenu(null)` | VERIFIED |
+| `before-input-event` in the main process | sees the keydown | NO; same keyUp-only pair | VERIFIED |
+| Hidden menu accelerator `Alt+S` | fires | NO, never fired | VERIFIED |
+| `SendKeys` as a probe | valid | INVALID; no scan code, so every event arrives with an empty `code`. `SendInput` with `KEYEVENTF_SCANCODE` is the correct instrument | VERIFIED |
+| Fix: bind to keyup | tests | 93/93 input-bar, 400/400 across ui-conversation and plan-mode | VERIFIED |
+| Typecheck and build | exit 0 | both exit 0 | VERIFIED |
+| Rebuilt bundle in a real browser | still submits | YES, `/save-state` admitted with the keyup binding | VERIFIED |
+| Fix inside the packaged installer | present | `shortcutUnavailable` and `deploy to production` found in the seed `.tgz` for `dsh-client-ui-conversation` | VERIFIED |
+| Installer artifact | exists | `deepseek-harness-0.1.5-alpha.2-win-x64.exe`, 194,655,398 bytes, packaged exit 0 | VERIFIED |
+| Config vault round trip | byte identical | sha256 match after corrupt-restore and after delete-restore of `skills/dtp.md` | VERIFIED |
+| Vault secret guard | no secret in history | 4 live credential values searched across `git log -p --all`, 0 hits; 0 credential paths ever added | VERIFIED |
+| Vault drift detection | exit 3 and names the file | yes, and prints the restore command | VERIFIED |
+| Daily snapshot task | exists and runs | `DSH Config Vault Snapshot`, next 2026-09-10 09:00, manual run LastTaskResult 0 | VERIFIED |
+| Local-feature marker check | catches a missing feature | yes; reports exactly the two shortcut markers as absent from the build not yet installed | VERIFIED |
+| Alt+S in the INSTALLED app | works | NOT YET; installer built, install is operator gated | UNVERIFIED |
+
+## 2026-09-09 - Why no state-sync PR can merge on this fork
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Status PR exists | worker opened one | #6, `chore/state-sync-2026-09-09-163027`, opened 16:31:48Z | VERIFIED |
+| Why it will not merge | a real reason, not a flake | `Issue policy` and `Issue lifecycle` fail in 9s on every run | VERIFIED |
+| The failure text | names the cause | `The 'client-id' (or deprecated 'app-id') input must be set to a non-empty string` | VERIFIED |
+| Whose credential | upstream only | both call `create-github-app-token` with `owner: deepseek-harness` | VERIFIED |
+| Other checks | not the problem | `node 26`, `node 24.9`, `Pack npm tarballs`, python matrix all pass | VERIFIED |
+| Second, separate failure | push, not merge | lefthook `pre-push` typecheck dies building `fs-ext` with no Visual Studio | VERIFIED |
+| Save-state writer as suspect | ruled in or out | RULED OUT; `apply_marker_block` L1030-1079 has no shortening branch | VERIFIED |
+| Stale copies on this machine | counted | 8 of 10 checkouts hold short copies against 287 in git | VERIFIED |
+| Who publishes the stale copy | named | not identified; worker and /save-state remain the candidates | UNVERIFIED |
+
 ## 2026-09-09 - 0.1.5-alpha.2 build gates and installer proof (PRE-install; nothing here is live yet)
 
 Worktree `C:/Projects/worktrees/dsh-update-v0.1.5-alpha.2`, branch

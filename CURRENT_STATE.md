@@ -4,6 +4,81 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-09 - The Alt+S / Alt+P shortcuts: root cause found, fixed, packaged, install pending
+
+The shortcuts never worked in the desktop app, and the update did not break
+them. The code was in the installed 0.1.5-alpha.1 build the whole time.
+
+**Root cause: Electron on Windows never delivers the KEYDOWN of an Alt+letter
+chord to the renderer.** Only `Alt` arrives as a keydown; the letter arrives
+solely as a `keyup` carrying `altKey`. Measured with a stripped-down Electron
+window built from the packaged runtime and real `SendInput` scan-code
+keystrokes. `before-input-event` in the main process sees the same keyUp-only
+pair, a hidden `Alt+S` menu accelerator never fires, and removing the
+application menu changes nothing. A browser delivers both events, which is why
+93 unit tests and a real headless Chromium run both passed against the broken
+binding.
+
+**Fix** (commit `aca41e5f7b` on `update/v0.1.5-alpha.2`): bind to `keyup`, toast
+instead of refusing in silence when the composer is locked or mid-admission, and
+send the canonical lowercase `deploy to production`. Rebuilt and repackaged as
+`deepseek-harness-0.1.5-alpha.2-win-x64.exe` (194,655,398 bytes); the fix is
+confirmed inside the packaged seed archive. **Install is operator gated and has
+not happened yet**, so the running app is still 0.1.5-alpha.1.
+
+**Two survival guards now exist**, and they cover different halves:
+
+- `C:\Claude\bin\dsh_config_vault.py` with the vault at
+  `C:\Projects\repos\dsh-config` (local git, no remote) protects the operator's
+  `~/.dsh` configuration: `settings.yaml`, the `.agent-presets` preset that
+  mounts the desktop MCP servers, `cordis.patch.yml`, `AGENTS.md` and the 13
+  slash-command skill wrappers. 18 files. `.credentials.yaml` is denied by the
+  manifest and proven never to have entered the history. A hidden daily task
+  snapshots at 09:00.
+- `C:\Claude\bin\dsh_local_features_check.py` covers what a settings backup
+  cannot: it reads the EXTRACTED profile and reports any of the 10 local fork
+  features an update dropped. A dropped feature leaves a perfectly healthy app.
+
+`finish-install.ps1` now snapshots before it installs, verifies after, and
+prints the feature-check command.
+
+## 2026-09-09 - Why state files keep dying: two inherited upstream checks and a native build the fork cannot do
+
+Two independent, provable reasons no state-sync PR ever merges on this fork.
+Both were read live this session and together they explain every "diverged from
+origin/master" receipt going back to 2026-09-08.
+
+- **Reason 1, the required checks can never pass here.** `Issue policy` and
+  `Issue lifecycle` both call `actions/create-github-app-token` against
+  `owner: deepseek-harness` with a GitHub App credential that exists only in the
+  upstream organization. On `NeoTech-Networks/deepseek-harness` they fail in 9
+  seconds on every PR, verbatim: `Error: The 'client-id' (or deprecated
+  'app-id') input must be set to a non-empty string.` Everything else on the
+  live status PR #6 is green or pending (`node 26`, `node 24.9`, `Pack npm
+  tarballs`, the python matrix). The maintenance worker is behaving correctly by
+  refusing to merge; the gate is simply unpassable.
+- **Reason 2, the pre-push hook cannot build a native dependency.** Two receipts
+  (13:31Z and 12:19Z) show the PUSH failing, not the merge: lefthook's
+  `pre-push` typecheck runs `pnpm install` in the worker's throwaway worktree,
+  `fs-ext@2.1.1` needs `node-gyp`, and there is no Visual Studio C++ toolchain
+  here, so `Could not find any Visual Studio installation to use` kills it.
+  NOTE: upstream alpha.2 ships "Fix npm installations that previously required a
+  local `fs-ext` build", so installing alpha.2 should remove this half by itself.
+- **Consequence, measured.** `origin/master` never moves, every checkout drifts,
+  and 8 of the 10 checkouts on this machine holding `CURRENT_STATE.md` carry
+  short stale copies (80, 68, 106, 119, 135, 98, 98 lines) against 287 in git.
+  Any process that publishes one of those over the primary destroys real
+  history, which happened twice today (11:56 and 12:31 local, both recovered
+  from git, damaged copies kept in `%TEMP%`).
+- **The save-state writer is RULED OUT.** `apply_marker_block` in
+  `memory_save_state_actor.py` was re-read at lines 1030-1079: create-if-missing,
+  regex-replace one block in place, or append at the end. No branch can shorten a
+  file, and its read-failure branch skips rather than overwrites.
+- **The fix is a DECISION, not housekeeping**, because it changes what gates a
+  merge on `master`: stop those two inherited workflows running on this fork,
+  drop them from the required set, or point status PRs at a branch they do not
+  gate.
+
 ## 2026-09-09 - 0.1.5-alpha.2 built, packaged and proven in the installer; INSTALL NOT YET RUN
 
 - **Upstream moved again the same day.** `dsh-v0.1.5-alpha.2` published
