@@ -17,9 +17,6 @@ cherry-pick `7c577fb6fe` (was `92e043bf4d` on the 0.1.3 line).
 | App id used for packaging | matches the running install | `com.deepseek.harness`, proven by the NSIS uninstall key `7808434f-469e-5eba-848e-edf64d3b94ce` = `uuid5(50e065bc-3134-11e6-9bab-38c9862bdaf3, "com.deepseek.harness")` | VERIFIED |
 | The defect being fixed, reproduced live | plan-mode rejects a blockquote-first plan | this session's own plan was rejected once by the running build: `exit_plan_mode requires a non-empty markdown plan starting with a # heading` | VERIFIED |
 | Fixes running in the app | new code in `~/.dsh/profiles/desktop` | NOT YET - installer built and proven, install is the operator's step | UNVERIFIED |
-
-## 2026-09-09 - Sessions panel
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | ui-sessions-panel tests | 39 tests, 100% coverage | 39/39 pass, 100% | VERIFIED |
@@ -27,8 +24,6 @@ cherry-pick `7c577fb6fe` (was `92e043bf4d` on the 0.1.3 line).
 | tsconfig path alias | no alias gap | alias added, closes the sessions-panel half of OPEN_ISSUES item 9 | VERIFIED |
 | prepare-runtime extraction | full node runtime extraction | system tar extracts correctly; extract-zip was empty | VERIFIED |
 | live install | sessions-panel in installed profile | present in the 0.1.5-alpha.1 installed profile | VERIFIED |
-## 2026-09-09 - DSH v0.1.5-alpha.1 update
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | Rebase onto v0.1.5-alpha.1 | 14 commits onto 5dda764 | squashed + 3 fix commits | VERIFIED |
@@ -37,9 +32,6 @@ cherry-pick `7c577fb6fe` (was `92e043bf4d` on the 0.1.3 line).
 | Installer packaged | 0.1.5-alpha.1-win-x64.exe | 181.9 MB, unsigned | VERIFIED |
 | Installed app version | 0.1.5-alpha.1 | desktop-release.json reads 0.1.5-alpha.1 | VERIFIED |
 | Fork synced | branch + tag | both pushed | VERIFIED |
-
-## 2026-09-09 - accountUsage remote mount, desktop boot restored
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | named the failing entry | one entry, named, with its missing service | renderer console: `web boot: 1 entry did not activate / @deepseek-ai/dsh-account-usage: pending (waiting for service: remote.accountUsage)` | VERIFIED |
@@ -191,6 +183,14 @@ cherry-pick `7c577fb6fe` (was `92e043bf4d` on the 0.1.3 line).
 | live behavior | new session starts in plan mode | user restarted and confirmed "Appears to work" | VERIFIED |
 | remote origin | NeoTech fork | read back correct | VERIFIED |
 | state worker | exit 0 | PR #2/#3 merged | VERIFIED |
+
+## 2026-09-09 - Sessions panel
+
+## 2026-09-09 - DSH v0.1.5-alpha.1 update
+
+
+## 2026-09-09 - accountUsage remote mount, desktop boot restored
+
 
 ## 2026-09-08 - Claude Max usage readout in the composer footer
 

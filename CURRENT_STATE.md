@@ -1,5 +1,9 @@
-
-
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
+-->
 ## 2026-09-09 - The two harness fixes ported to 0.1.5 and packaged into an installer
 
 The job in `NEXT_SESSION_PROMPT.md`, done up to the operator's install step.
@@ -312,3 +316,24 @@ lands on the fork (PRs #2 and #3 merged).
 
 <!-- claude-memory-actor:end -->
 
+## Last save-state (2026-09-09T00:08:42.118722+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
+
+<!-- claude-memory-actor:end -->
+
+## Last save-state (2026-09-08T17:47:04.847381+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `1af9c4e8-f7ce-40d6-8170-dd9119e4caf2`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-d236bdea-4e7a-4e0c-b761-552123f3da1d
+
+<!-- claude-memory-actor:end -->
