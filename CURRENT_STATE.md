@@ -4,6 +4,15 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-09 - Alt+S / Alt+P: DONE, installed and confirmed working in the app
+
+0.1.5-alpha.2 installed at 14:29, profile re-extracted at 14:34. The keyup
+binding was read back out of the RUNNING profile, `dsh_local_features_check.py`
+reported 10 of 10 present (exit 0), `dsh_config_vault.py verify` reported 18
+files all same (exit 0) with a post-install snapshot of 0 changed, and Steve
+pressed Alt+S in the installed app and reported it worked. The section below is
+the record of how it was found and fixed.
+
 ## 2026-09-09 - The Alt+S / Alt+P shortcuts: root cause found, fixed, packaged, install pending
 
 The shortcuts never worked in the desktop app, and the update did not break

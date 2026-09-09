@@ -22,7 +22,11 @@
 | Fixed build under a REAL Electron window, REAL OS keystroke | Alt+S submits | SUBMITTED `/save-state`; turn ran and failed only on the scratch home's missing API key, which is the admission proof | VERIFIED |
 | Same, Alt+P | submits the promote phrase | SUBMITTED `deploy to production`, lowercase and exact | VERIFIED |
 | The keyup-only behaviour in that same run | reconfirmed | main process logged `keyDown AltLeft`, then `keyUp KeyS` / `keyUp KeyP`, no letter keydown | VERIFIED |
-| Alt+S in the INSTALLED app | works | NOT YET; installer built and the fix proven live in Electron, but the install itself is operator gated | UNVERIFIED |
+| Install performed | 0.1.5-alpha.2 running | installed 14:29, profile re-extracted 14:34, four processes from the new install | VERIFIED |
+| Fix in the RUNNING profile | keyup binding present | `addEventListener("keyup", onShortcut)` L16029, `DEPLOY_SHORTCUT = "deploy to production"` L15815, `shortcutUnavailable` toast L16022 | VERIFIED |
+| Local features after the update | none dropped | `dsh_local_features_check.py` 10 of 10 ok, exit 0 | VERIFIED |
+| Settings after the update | untouched | `dsh_config_vault.py verify` 18 files all same exit 0; post-install snapshot 0 changed | VERIFIED |
+| Alt+S in the INSTALLED app | works | WORKS; confirmed by the operator after the install | VERIFIED |
 
 ## 2026-09-09 - Why no state-sync PR can merge on this fork
 
