@@ -781,6 +781,19 @@ workspaceDesktop(): { name: string; available: boolean; fileManager: 'finder' | 
 @Remote('rename') rename(request: SessionRenameRequest): Promise<SessionRenameValue>
 
 /**
+ * Set or clear one declared session status after explicitly resuming it.
+ * @param request - Session identity and the vocabulary id, or null to clear.
+ * @returns the resolved status and the durable event sequence.
+ */
+@Remote('setStatus') setStatus(request: SessionSetStatusRequest): Promise<SessionSetStatusValue>
+
+/**
+ * Read the deployment's declared status vocabulary, for the row menu.
+ * @returns the vocabulary in declaration order.
+ */
+@Remote('listStatuses') listStatuses(): SessionListStatusesValue
+
+/**
  * Fork one cold-readable completed-turn prefix into a new Session.
  * @param request - source Session and optional event anchor.
  * @returns the new Session identity.

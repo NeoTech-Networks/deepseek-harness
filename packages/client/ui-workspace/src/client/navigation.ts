@@ -44,6 +44,13 @@ export interface UiWorkspace {
    */
   startSession(workspaceId?: WorkspaceId): void
   /**
+   * Open (or reuse) a Session rooted at one directory, registering that
+   * directory as its own Workspace when it is not one already.
+   * @param path - absolute directory to own; adopted idempotently by canonical path.
+   * @param group - grouping label applied only when the resolved Workspace has none.
+   */
+  openDirectory(path: string, group?: string): Promise<void>
+  /**
    * Archive a Session and clear it when it is the current selection.
    * @param sessionId - Session to archive.
    */
@@ -170,6 +177,17 @@ class UiWorkspaceService extends Service implements UiWorkspace {
     void this.openWorkspace(target).catch(
       (reason: unknown) => { console.warn('new session failed:', reason) },
     )
+  }
+
+  async openDirectory(path: string, group?: string): Promise<void> {
+    const workspace = await this.workspaces.create({ path })
+    // A Workspace created through this path is one the user has not grouped yet;
+    // an existing Workspace keeps whatever label it already carries.
+    if (group !== undefined && workspace.group === '') {
+      await this.workspaces.setGroup(workspace.workspaceId, group)
+    }
+    const sessionId = await this.connectWorkspace(workspace.workspaceId)
+    this.sessions.open(sessionId)
   }
 
   async archiveSession(sessionId: SessionId): Promise<void> {

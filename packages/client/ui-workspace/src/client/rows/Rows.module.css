@@ -228,6 +228,50 @@
   flex: none;
 }
 
+/* Phase glyph, drawn in the same 16px status slot as the state dot: the glyph
+   names the phase and the color carries urgency — warn for every phase that
+   blocks the operator, secondary label color for plan mode, which is a session
+   mode rather than a request for attention. */
+.phaseIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+.phaseIcon[data-phase='planning'] {
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* Plan mode + running: pulse the glyph so "working in plan mode" reads as
+   live, without changing the muted color that marks plan mode as a mode. */
+.phaseIcon[data-phase='planning'][data-active='true'] {
+  animation: dsw-plan-active 1.6s var(--ds-ease-in-out) infinite;
+}
+
+@keyframes dsw-plan-active {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Declared status tones: the glyph names the status and the colour carries
+   urgency, reusing the state-dot colour tokens. */
+.phaseIcon[data-tone='attention'] {
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+.phaseIcon[data-tone='error'] {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.phaseIcon[data-tone='success'] {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.phaseIcon[data-tone='neutral'] {
+  color: var(--dsw-alias-label-secondary);
+}
+
 /* Trailing action buttons surface on hover only (figma 27:4668 / 27:4656):
    bare 16px glyphs, gap 12, tertiary grey. */
 .rowActions {
@@ -361,7 +405,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sessionRow,
-  .arrow {
+  .arrow,
+  .phaseIcon[data-phase='planning'][data-active='true'] {
     animation: none;
     transition: none;
   }

@@ -18,6 +18,8 @@ export interface WorkspaceView {
   readonly path: string
   /** User-visible title. */
   readonly title: string
+  /** Grouping label; empty string means ungrouped. */
+  readonly group: string
   /** Sessions accounted to this Workspace in manual order. */
   readonly sessionIds: readonly SessionId[]
   /** ISO-8601 creation instant. */
@@ -64,6 +66,12 @@ export interface WorkspaceCreateValue {
 export interface WorkspaceRenameRequest {
   readonly workspaceId: WorkspaceId
   readonly title: string
+}
+
+/** Workspace group mutation; an empty group clears the assignment. */
+export interface WorkspaceSetGroupRequest {
+  readonly workspaceId: WorkspaceId
+  readonly group: string
 }
 
 /** Workspace mutation returning the complete changed row. */

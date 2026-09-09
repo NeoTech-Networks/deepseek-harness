@@ -143,6 +143,8 @@ Insert and unlock the token before packaging. The electron-builder hook passes e
 
 The PIN cannot contain `]`, a quote, or a line break because those characters delimit the SafeNet `/kc` value or its CMD argument. The CMD disables delayed expansion so a PIN containing `!` reaches SafeNet unchanged. Packaging withholds every `DSH_DESKTOP_WINDOWS_*` field from build and seed-preparation subprocesses, gives electron-builder only the four configured inputs, gives the signing CMD only the validated signing fields in an otherwise scrubbed environment, clears those fields before SignTool starts, and redacts SignTool diagnostics. SafeNet still requires the PIN in the SignTool process command line. Inject it as an ephemeral secret only on a controlled self-hosted Windows runner with the physical token attached; never commit it, put it in `.env`, or persist it as a Windows user or system environment variable.
 
+To build an unsigned Windows installer locally, set `DSH_DESKTOP_ALLOW_UNSIGNED=1` (or `true`). This opts out of Windows code signing: `forceCodeSigning` is disabled and the SignTool hook is skipped, so the NSIS installer is emitted unsigned. Use it only for local testing on a machine without the GlobalSign EV certificate and SafeNet token; a release must still sign. The default behavior (failing instead of emitting unsigned artifacts) is unchanged.
+
 Create a runnable application directory instead of an installer by using the matching `:dir` command, such as:
 
 ```sh

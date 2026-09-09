@@ -142,6 +142,7 @@ async function main(): Promise<void> {
   let mainWindow: BrowserWindow | undefined
   let pluginWindow: BrowserWindow | undefined
   let shellInstallerOwnsQuit = false
+  let quitConfirmed = false
   let updateState: DesktopUpdateState = { phase: 'idle' }
   const locale = resolveDesktopLocale(app.getLocale())
   const messages = locale.messages
@@ -345,6 +346,23 @@ async function main(): Promise<void> {
     mainWindow = window
     window.once('ready-to-show', () => { if (!window.isDestroyed()) window.show() })
     window.on('closed', () => { if (mainWindow === window) mainWindow = undefined })
+    window.on('close', (event) => {
+      if (quitConfirmed || shellInstallerOwnsQuit || host === undefined) return
+      event.preventDefault()
+      void (async () => {
+        const result = await dialog.showMessageBox(window, {
+          type: 'question',
+          title: messages.quitConfirmTitle,
+          message: messages.quitConfirmMessage,
+          buttons: [messages.quit, messages.cancel],
+          defaultId: 1,
+          cancelId: 1,
+        })
+        if (result.response !== 0) return
+        quitConfirmed = true
+        app.quit()
+      })().catch(() => undefined)
+    })
     return window
   }
   focusPrimaryWindow = () => {

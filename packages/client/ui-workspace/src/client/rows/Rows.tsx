@@ -8,15 +8,22 @@
 import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  HoverCard, IconAlarmClockOutline16, IconArchiveOutline20, IconBranchOutline16,
+  HoverCard, IconAlarmClockOutline16, IconAgentPresetOutline16, IconArchiveOutline20,
+  IconBranchOutline16, IconCheckOutline16, IconChecklistOutline14, IconClockOutline16,
   IconEditOutline16, IconEllipsisOutline16, IconFolderClose16, IconFolderOpen16,
-  IconPlusOutline16, IconTrashOutline16, IconTriangleRightFill14, Menu, relativeTime,
-  StateDot,
+  IconListPenOutline16, IconPauseOutline16, IconPlusOutline16, IconQuestionOutline14,
+  IconRightUpOutline16, IconStopFill16, IconTrashOutline16, IconTriangleRightFill14,
+  IconWarningOutline16, Menu, relativeTime, StateDot,
 } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { IconProps, StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
+import type {
+  SessionStatusIconId, SessionStatusTone, SessionStatusValue,
+} from '@deepseek-ai/dsh-session-status/client'
 import { abbreviateHomePath } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceBrowserProps } from '../contract/slots.ts'
-import type { GroupNode, SearchResultNode, SessionNode } from '../tree.ts'
+import type {
+  GroupNode, SearchResultNode, SessionNode, SessionPhase, SessionRowFacts,
+} from '../tree.ts'
 import css from './Rows.module.css'
 
 /** The standard locale seat, prop-passed from the browser root. */
@@ -114,7 +121,7 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
   onToggle: () => void
   onCreate: () => void
   /** Real-Workspace actions; absent for the ungrouped bucket (no menu shown). */
-  actions?: { rename: () => void; delete: () => void } | undefined
+  actions?: { rename: () => void; setGroup: () => void; delete: () => void } | undefined
   /** Present only for real Workspace rows in the grouped view. */
   drag?: WorkspaceRowDragProps | undefined
   /** Host account home; POSIX home-rooted hover paths display as `~`. */
@@ -128,6 +135,7 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
   const [menuOpen, setMenuOpen] = useState(false)
   const workspaceMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutline16 /> },
+    { id: 'setGroup', label: t('group.set'), icon: <IconFolderOpen16 /> },
     { id: 'delete', label: t('delete.workspace'), icon: <IconTrashOutline16 />, danger: true },
   ]
   const ownRow = (
@@ -165,9 +173,10 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
               setMenuOpen(false)
               // Unknown ids leave before the dispatch: a future menu row must
               // not inherit the destructive branch as an else fallback.
-              /* v8 ignore next -- Menu can emit only the rename and delete rows supplied above. */
-              if (id !== 'rename' && id !== 'delete') return
+              /* v8 ignore next -- Menu can emit only the rename, set-group, and delete rows supplied above. */
+              if (id !== 'rename' && id !== 'setGroup' && id !== 'delete') return
               if (id === 'rename') actions.rename()
+              else if (id === 'setGroup') actions.setGroup()
               else actions.delete()
             }}
             portal
@@ -214,27 +223,39 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
   )
 }
 
-/* v8 ignore next 3 -- closed-union backstop; only reached if the status is forged */
-function assertNever(value: never): never {
-  throw new Error(`unknown pending interaction: ${String(value)}`)
-}
-
 interface SessionStatus {
   state: StateDotState
   label: string
 }
 
+/** Map a status tone to the state-dot colour used in the hover card. */
+function toneState(tone: SessionStatusTone): StateDotState {
+  switch (tone) {
+    case 'attention': return 'warning'
+    case 'error': return 'error'
+    case 'success': return 'done'
+    case 'neutral': return 'idle'
+  }
+}
+
 /**
- * Session status presentation; pending interaction is primary and live activity
- * outranks completion reminders.
+ * Every live status a row carries, ordered by the same precedence
+ * `derivePhase` applies — so the first entry always describes the row's phase
+ * and the rest are the secondary facts the hover card lists. A row with no
+ * live status falls back to the finished-but-unopened reminder or idle.
  */
-function sessionStatuses(
-  node: Pick<SessionNode, 'pendingInteraction' | 'running' | 'runningSubagentCount' | 'completed'>,
-  t: RowTranslate,
-): readonly [SessionStatus, ...SessionStatus[]] {
-  const subagents: SessionStatus | undefined = node.runningSubagentCount === 0
-    ? undefined
-    : {
+function sessionStatuses(node: SessionRowFacts, t: RowTranslate): readonly [SessionStatus, ...SessionStatus[]] {
+  const active: SessionStatus[] = []
+  if (node.pendingInteraction === 'approval') active.push({ state: 'warning', label: t('status.waitingApproval') })
+  if (node.pendingInteraction === 'plan-review') active.push({ state: 'warning', label: t('status.planReview') })
+  if (node.pendingInteraction === 'question') active.push({ state: 'warning', label: t('status.waitingAnswer') })
+  if (node.declaredStatus !== undefined) {
+    active.push({ state: toneState(node.declaredStatus.tone), label: node.declaredStatus.label })
+  }
+  if (node.planActive) active.push({ state: 'warning', label: t('status.planning') })
+  if (node.running) active.push({ state: 'ongoing', label: t('status.running') })
+  if (node.runningSubagentCount > 0) {
+    active.push({
       state: 'ongoing',
       label: t(
         node.runningSubagentCount === 1
@@ -242,37 +263,83 @@ function sessionStatuses(
           : 'status.subagentsRunning.other',
         { n: node.runningSubagentCount },
       ),
-    }
-  let pending: SessionStatus | undefined
-  switch (node.pendingInteraction) {
-    case 'approval':
-      pending = { state: 'warning', label: t('status.waitingApproval') }
-      break
-    case 'plan-review':
-      pending = { state: 'warning', label: t('status.planReview') }
-      break
-    case 'question':
-      pending = { state: 'warning', label: t('status.waitingAnswer') }
-      break
-    case undefined: break
-    /* v8 ignore next -- closed PendingInteractionStatus union */
-    default: return assertNever(node.pendingInteraction)
+    })
   }
-  if (pending !== undefined) return subagents === undefined ? [pending] : [pending, subagents]
-  if (node.running) {
-    const primary: SessionStatus = { state: 'ongoing', label: t('status.running') }
-    return subagents === undefined ? [primary] : [primary, subagents]
+  const settled: SessionStatus = {
+    state: 'done',
+    label: node.completed ? t('status.completed') : t('status.idle'),
   }
-  if (subagents !== undefined) return [subagents]
-  if (node.completed) return [{ state: 'done', label: t('status.completed') }]
-  return [{ state: 'done', label: t('status.idle') }]
+  const [primary = settled, ...rest] = active
+  return [primary, ...rest]
 }
 
-/** Primary status dot plus every status's screen-reader label, shared by the search and session rows. */
-function SessionStatusDots({ statuses }: { statuses: readonly [SessionStatus, ...SessionStatus[]] }) {
+/**
+ * Phases the status slot names with a glyph instead of the state dot: the ones
+ * a color alone cannot tell apart, because all three awaiting-* phases block
+ * this operator and plan mode is a session mode rather than an outcome. Every
+ * remaining phase keeps the dot, whose animation carries liveness.
+ */
+const PHASE_GLYPHS: Partial<Record<SessionPhase, (props: IconProps) => ReturnType<typeof IconWarningOutline16>>> = {
+  'awaiting-approval': IconWarningOutline16,
+  'awaiting-plan-review': IconChecklistOutline14,
+  'awaiting-answer': IconQuestionOutline14,
+  planning: IconListPenOutline16,
+  subagents: IconAgentPresetOutline16,
+}
+
+/** Status icon id to glyph component, drawn for the declared phase. */
+const STATUS_ICONS: Record<SessionStatusIconId, (props: IconProps) => ReturnType<typeof IconWarningOutline16>> = {
+  'right-up': IconRightUpOutline16,
+  stop: IconStopFill16,
+  check: IconCheckOutline16,
+  clock: IconClockOutline16,
+  pause: IconPauseOutline16,
+}
+
+/** Neutral fallback for an icon id this client does not know (never throws). */
+const UNKNOWN_STATUS_ICON = IconEllipsisOutline16
+
+/**
+ * The row's phase mark plus every status's screen-reader label, shared by the
+ * search and session rows. The mark itself stays `aria-hidden` in both
+ * branches: the labels below it are the accessible text. The declared phase
+ * draws the status's own glyph with its tone colour instead of the phase
+ * table, because the status vocabulary is deployment-owned.
+ */
+function SessionStatusDots({ phase, statuses, declared, running }: {
+  phase: SessionPhase
+  statuses: readonly [SessionStatus, ...SessionStatus[]]
+  declared: SessionStatusValue | undefined
+  running: boolean
+}) {
+  if (phase === 'declared' && declared !== undefined) {
+    const Glyph = STATUS_ICONS[declared.icon] ?? UNKNOWN_STATUS_ICON
+    return (
+      <>
+        <span className={css.phaseIcon} data-tone={declared.tone} aria-hidden="true">
+          <Glyph size={14} />
+        </span>
+        {statuses.map(status => (
+          <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
+        ))}
+      </>
+    )
+  }
+  const Glyph = PHASE_GLYPHS[phase]
   return (
     <>
-      <StateDot state={statuses[0].state} />
+      {Glyph === undefined
+        ? <StateDot state={statuses[0].state} />
+        : (
+          <span
+            className={css.phaseIcon}
+            data-phase={phase}
+            data-active={phase === 'planning' && running ? 'true' : undefined}
+            aria-hidden="true"
+          >
+            <Glyph size={14} />
+          </span>
+        )}
       {statuses.map(status => (
         <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
       ))}
@@ -332,7 +399,6 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
 }) {
   const selected = result.id === currentId
   const statuses = sessionStatuses(result, t)
-  const primaryStatus = statuses[0]
   return (
     <button
       type="button"
@@ -343,8 +409,8 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
     >
       <span className={css.searchResultHeading}>
         <span className={css.slot}>
-          {(primaryStatus.state !== 'done' || result.completed) && (
-            <SessionStatusDots statuses={statuses} />
+          {result.phase !== 'idle' && (
+            <SessionStatusDots phase={result.phase} statuses={statuses} declared={result.declaredStatus} running={result.running} />
           )}
         </span>
         <span className={css.searchResultTitle}>{result.title}</span>
@@ -377,7 +443,7 @@ export function SearchResultItem({ result, currentId, onOpen, t }: {
  * @returns the session row.
  */
 export function SessionNodeItem({
-  node, currentId, now, onOpen, onRename, onFork, onArchive, onReveal, drag, flat = false, t,
+  node, currentId, now, onOpen, onRename, onFork, onArchive, onSetStatus, onClearStatus, onReveal, drag, flat = false, t,
 }: {
   node: SessionNode
   currentId: string | undefined
@@ -389,6 +455,10 @@ export function SessionNodeItem({
   onFork: (id: SessionNode['id']) => void
   /** Archive this session (row menu action; commits without a dialog). */
   onArchive: (id: SessionNode['id']) => void
+  /** Open the browser-owned set-status dialog (row menu action). */
+  onSetStatus?: ((id: SessionNode['id']) => void) | undefined
+  /** Clear this session's declared status (row menu action; commits without a dialog). */
+  onClearStatus?: ((id: SessionNode['id']) => void) | undefined
   /** Scroll this row into view after search navigation, then acknowledge it. */
   onReveal?: (() => void) | undefined
   /** Present only on draggable rows (workspace-group sessions outside search). */
@@ -401,8 +471,7 @@ export function SessionNodeItem({
   const title = displayTitle(node, t)
   const selected = node.id === currentId
   const statuses = sessionStatuses(node, t)
-  const primaryStatus = statuses[0]
-  const showStatus = primaryStatus.state !== 'done' || row.completed
+  const showStatus = node.phase !== 'idle'
   const [menuOpen, setMenuOpen] = useState(false)
   const rowRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -416,6 +485,12 @@ export function SessionNodeItem({
   const sessionMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutline16 /> },
     { id: 'fork', label: t('menu.fork'), icon: <IconBranchOutline16 /> },
+    ...(onSetStatus === undefined
+      ? []
+      : [{ id: 'setStatus', label: t('menu.setStatus'), icon: <IconPauseOutline16 /> }]),
+    ...(onClearStatus !== undefined && node.declaredStatus !== undefined
+      ? [{ id: 'clearStatus', label: t('menu.clearStatus'), icon: <IconStopFill16 /> }]
+      : []),
     // 20-native glyph in the menu's 16px icon slot (Menu.module.css .itemIcon).
     { id: 'archive', label: t('menu.archiveSession'), icon: <IconArchiveOutline20 size={16} /> },
   ]
@@ -461,7 +536,7 @@ export function SessionNodeItem({
           and is cleared by opening the session. */}
       {(!flat || showStatus) && (
         <span className={css.slot}>
-          {showStatus && <SessionStatusDots statuses={statuses} />}
+          {showStatus && <SessionStatusDots phase={node.phase} statuses={statuses} declared={node.declaredStatus} running={node.running} />}
         </span>
       )}
       <span className={css.title}>{title}</span>
@@ -481,6 +556,8 @@ export function SessionNodeItem({
               setMenuOpen(false)
               if (id === 'rename') onRename(node.id, row.title)
               if (id === 'fork') onFork(node.id)
+              if (id === 'setStatus' && onSetStatus !== undefined) onSetStatus(node.id)
+              if (id === 'clearStatus' && onClearStatus !== undefined) onClearStatus(node.id)
               if (id === 'archive') onArchive(node.id)
             }}
             portal
