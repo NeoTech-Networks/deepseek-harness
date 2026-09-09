@@ -12,7 +12,8 @@ import clsx from 'clsx'
 import type { RemoteFailure } from '@deepseek-ai/dsh-api-remotes/client'
 import type { PropsLocale, PropsRuntime, PropsStore, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  Button, DocumentFileIcon, IconFolderClose16, IconFolderOpen16, IconRefreshOutline16, Input,
+  Button, FileTypeIcon, IconFolderClose16, IconFolderOpen16, IconRefreshOutline16, Input,
+  classifyFileType,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PinnedEntry, PinnedRoot } from '@deepseek-ai/dsh-api-pinned-files/types'
 import { EXPLORER_TEXT_KIND } from './definition.ts'
@@ -116,7 +117,7 @@ function Entry({ entry, tree, depth }: { entry: PinnedEntry; tree: TreeContext; 
   if (entry.type === 'file') {
     return (
       <button type="button" className={css.row} style={indent} onClick={() => { tree.onOpen(entry.path) }}>
-        <DocumentFileIcon />
+        <FileTypeIcon kind={classifyFileType(entry.name)} size={16} />
         <span className={css.rowName}>{entry.name}</span>
       </button>
     )

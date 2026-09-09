@@ -178,6 +178,8 @@
       "@deepseek-ai/dsh-client-ui-sidebar-files/client": ["./packages/client/ui-sidebar-files/src/client"],
       "@deepseek-ai/dsh-client-ui-sidebar-explorer": ["./packages/client/ui-sidebar-explorer/src"],
       "@deepseek-ai/dsh-client-ui-sidebar-explorer/client": ["./packages/client/ui-sidebar-explorer/src/client"],
+      "@deepseek-ai/dsh-client-ui-sessions-panel": ["./packages/client/ui-sessions-panel/src"],
+      "@deepseek-ai/dsh-client-ui-sessions-panel/client": ["./packages/client/ui-sessions-panel/src/client"],
       "@deepseek-ai/dsh-client-store": ["./packages/client/store/src/index.ts"],
       "@deepseek-ai/dsh-client-ui-renderer": ["./packages/client/ui-renderer/src"],
       "@deepseek-ai/dsh-client-ui-renderer/client": ["./packages/client/ui-renderer/src/client"],
