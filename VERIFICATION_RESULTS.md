@@ -1,3 +1,29 @@
+## 2026-09-09 - Session status icons: precedence, goal expiry, cross-surface agreement
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| session-status suite | fold, service, vocabulary, goal drive | 38/38 pass (4 files) | VERIFIED |
+| ui-workspace suite | precedence, glyphs, CSS contract | 177/177 pass (10 files) | VERIFIED |
+| ui-sessions-panel suite | phases, marks, agreement with the sidebar | 29/29 pass (4 files) | VERIFIED |
+| affected surface, clean tree | session-status + both UI + goal + plan + session-controller | 966/966 pass (66 files) | VERIFIED |
+| host typecheck | exit 0 | `build:lib:host` clean; tsdown emitted every bundle | VERIFIED |
+| client typecheck delta | no new errors from this change | 253 error lines with changes, 253 stashed; none in the touched packages | VERIFIED |
+| dependency gates | published-dependency policy, client packages, package invariants | all three pass; `verify-client-domain-graph` fails only on 3 pre-existing ui-conversation violations | VERIFIED |
+| build | exit 0 | `pnpm run build` clean from the v015-based worktree | VERIFIED |
+| packaging | Windows x64 NSIS artifact | `deepseek-harness-0.1.5-alpha.1-win-x64.exe`, 181.9 MB, 2026-09-09 00:38 | VERIFIED |
+| new code in the packaged bundle | plan pulse, subagents glyph, no goal fallback | `data-active` x2, `subagents` x9, `declaredStatus` x10, `goal` only in a doc comment | VERIFIED |
+| installer ran | exit 0, seed clean, profile cleared | install-log.txt: exit 0, expected 269 / actual 269, extra 0, missing 0, mismatch 0, PASS | VERIFIED |
+| new code in the RUNNING profile | fold and both sidebars | `dsh-session-status\lib\index.js` has `goal/change`, `goalPhase`, `stateVersion: 2`; `ui-workspace\lib\client.js` has `data-active` and no goal fallback; panel bundle carries the tone and phase attributes; all stamped 07:45:55 | VERIFIED |
+| app running | processes started after the install | 4 `DeepSeek Harness` processes | VERIFIED |
+| reduced motion not the cause | animations enabled | `UserPreferencesMask` byte 2 = 0x07, CLIENTAREAANIMATION set | VERIFIED |
+| live visual check of the glyphs | operator sees the mark change at each real transition | not performed; needs eyes on the sidebar | UNVERIFIED |
+
+Field evidence behind the diagnosis, read from 99 local session logs (zstd,
+multi-frame): `plan/mode` 110 events across 59 sessions, `goal/change` 24 across
+9 sessions, `session/status` 11 across 6 sessions. Statuses were set 10 to 16
+events before the end of a turn, and goals completed 192 to 1263 events before
+their session ended.
+
 ## 2026-09-08 - Claude Max usage readout in the composer footer
 
 | Check | Expected | Result | Status |
@@ -160,4 +186,5 @@
 | doc-sync | all gates | 32/33; one pre-existing Windows symlink EPERM | VERIFIED |
 | bundle composition | 3 plugins in tree | confirmed via `--dump-default-config` | VERIFIED |
 | live desktop screenshot | icons visible in sidebar | not run (user-gated GUI) | UNVERIFIED |
+
 

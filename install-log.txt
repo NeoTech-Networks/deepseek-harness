@@ -1,0 +1,32 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260909071959
+Username: AzureAD\SteveDempsey
+RunAs User: AzureAD\SteveDempsey
+Configuration Name: 
+Machine: STEVEHOMERIG (Microsoft Windows NT 10.0.26220.0)
+Host Application: powershell.exe -NoProfile -ExecutionPolicy Bypass -NoExit -Command Start-Transcript -Path 'C:\Projects\worktrees\dsh-status-icons-v015\install-log.txt' -Force | Out-Null; try { & 'C:\Projects\worktrees\dsh-status-icons-v015\finish-install.ps1' } catch { Write-Host $_ -ForegroundColor Red }; Stop-Transcript | Out-Null; Write-Host ''; Write-Host 'Finished. This window stays open so you can read the output above.' -ForegroundColor Cyan
+Process ID: 52248
+PSVersion: 5.1.26100.9223
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9223
+BuildVersion: 10.0.26100.9223
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+old seed cleared
+installing...
+installer exit code: 0
+verifying seed integrity...
+expected 269, actual 269
+extra 0, missing 0, mismatch 0
+PASS: seed integrity clean
+profile cleared (rollback and pnpm store kept)
+relaunched (first window can take several minutes)
+done
+**********************
+Windows PowerShell transcript end
+End time: 20260909072104
+**********************

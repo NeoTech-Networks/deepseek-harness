@@ -15,6 +15,48 @@
 
 <!-- claude-memory-actor:end -->
 
+## 2026-09-09 - Session status icons report activity instead of announcing it
+
+The sidebar mark was frozen on an announced state in three separate ways. All
+three are fixed, built, installed and read back out of the running profile.
+
+- **The goal-to-status mapping moved into the session-status fold.**
+  `packages/client/ui-workspace/src/client/tree.ts` used to derive a declared
+  status straight from the `goal` projection, which never expires, while a real
+  `session/status` clears on the next human message. Four sessions on this
+  machine carried a frozen green tick through 192 to 1263 later events after
+  their goal completed. `applySessionStatusProjection` now folds `goal/change`
+  itself (complete -> finished, blocked -> stuck, paused -> paused, active or a
+  clear tombstone -> cleared), acts only on a phase TRANSITION, and resolves the
+  value against the deployment vocabulary. Fold state gained an internal
+  `goalPhase` marker, so `stateVersion` went 1 -> 2 and the projection is now
+  built per-deployment by `createSessionStatusProjectionDefinition`. The goal
+  event payload is read structurally, not through `@deepseek-ai/dsh-goal`, whose
+  event declaration lives in a host-coupled module.
+- **`derivePhase` precedence reordered.** A declared status now ranks BELOW plan
+  mode, running and running descendants. The model sets its status roughly ten
+  events before a turn ends, so the old order showed the outcome while the
+  session was still working and then changed nothing when it actually stopped.
+- **Liveness made legible.** `.phaseIcon[data-active='true']` is now
+  phase-agnostic, takes the ongoing blue (`--dsw-static-deepseek-450`) and the
+  pulse, and covers running descendants as well as plan mode. Reduced motion
+  still suppresses it.
+- **The right-hand Sessions panel was brought into agreement.** It had no
+  `declared` state at all and drew plan mode as a generic attention dot, so one
+  session could read as two things in one window. It gains the same vocabulary,
+  the same precedence and the same glyph tones, and a test in
+  `active.client.spec.ts` holds the two independent derivations in agreement.
+
+Base-branch correction: the work was first committed on
+`fix/account-usage-remote-mount`, which is the PRE-0.1.5 line. The installed app
+ships from `update/v0.1.5-alpha.1`, so the commit was cherry-picked onto
+`fix/session-status-icons-v015` (worktree
+`C:\Projects\worktrees\dsh-status-icons-v015`) and built from there. The
+wrong-base worktree and branch were removed.
+
+Reduced motion was ruled out as a cause: `UserPreferencesMask` byte 2 is 0x07,
+so CLIENTAREAANIMATION is set and animations are enabled on this machine.
+
 ## 2026-09-08 - Live Claude Max usage readout in the composer footer
 
 - New package `packages/llm/account-usage` (`@deepseek-ai/dsh-account-usage`), both faces: a Host `TypertRemoteService` (`ctx.accountUsage.read()`) and a browser dock entry seated on `conversation.composer.dock` beside the stats line.
