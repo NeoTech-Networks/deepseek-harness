@@ -243,15 +243,22 @@
   color: var(--dsw-alias-label-secondary);
 }
 
-/* Plan mode + running: pulse the glyph so "working in plan mode" reads as
-   live, without changing the muted color that marks plan mode as a mode. */
-.phaseIcon[data-phase='planning'][data-active='true'] {
+/* A glyph phase that stands in for a running indicator (plan mode during a
+   running turn, or running descendants) carries the liveness the state dot
+   would otherwise have carried: the ongoing blue plus a pulse. Muted grey with
+   a slow opacity fade was the earlier treatment, and it did not read as "this
+   session is working" - which mattered more than it looks, because plan mode
+   outranks running and is the usual mode here, so that fade was the only
+   working signal most rows ever showed. The blue is the same static step
+   StateDot pins for `ongoing`, so the two indicators agree on what live is. */
+.phaseIcon[data-active='true'] {
+  color: var(--dsw-static-deepseek-450);
   animation: dsw-plan-active 1.6s var(--ds-ease-in-out) infinite;
 }
 
 @keyframes dsw-plan-active {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.35; }
 }
 
 /* Declared status tones: the glyph names the status and the colour carries
@@ -406,7 +413,7 @@
 @media (prefers-reduced-motion: reduce) {
   .sessionRow,
   .arrow,
-  .phaseIcon[data-phase='planning'][data-active='true'] {
+  .phaseIcon[data-active='true'] {
     animation: none;
     transition: none;
   }
