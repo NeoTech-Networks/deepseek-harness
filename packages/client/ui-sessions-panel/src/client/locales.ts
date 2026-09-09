@@ -8,7 +8,6 @@
 export const zh = {
   'tab.title': '会话',
   'guide.title': '会话',
-  'guide.description': '查看所有工作区中的会话，进行中的排在最前。',
   'filter.active': '进行中',
   'filter.all': '全部',
   'empty.active': '暂无进行中的会话',
@@ -30,7 +29,6 @@ export type SessionsPanelKey = keyof typeof zh
 export const en = {
   'tab.title': 'Sessions',
   'guide.title': 'Sessions',
-  'guide.description': 'See every session across your workspaces, active ones first.',
   'filter.active': 'Active',
   'filter.all': 'All',
   'empty.active': 'No active sessions',

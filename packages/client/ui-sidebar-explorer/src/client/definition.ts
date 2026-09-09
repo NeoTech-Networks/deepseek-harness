@@ -10,7 +10,7 @@
 import type { SidebarRightTabDefinition } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
 import type {} from './locales.ts'
-import { DocumentFileIcon, IconFolderClose16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { FileTypeIcon, IconFolderClose16, classifyFileType } from '@deepseek-ai/dsh-client-ui-primitives'
 
 /** The pinned-directory tree's kind. */
 export const EXPLORER_KIND = 'explorer'
@@ -45,7 +45,6 @@ export function explorerDefinition(t: TranslateNS<'sidebarExplorer'>): SidebarRi
     guide: [{
       order: 5,
       title: () => t('guide.title'),
-      description: () => t('guide.description'),
       icon: IconFolderClose16,
     }],
   }
@@ -67,5 +66,5 @@ export function explorerTextDefinition(t: TranslateNS<'sidebarExplorer'>): Sideb
   }
 }
 
-/** The icon the preview's rows use, re-exported so the body names one import site. */
-export { DocumentFileIcon }
+/** The file-type icon the preview's rows use, re-exported so the body names one import site. */
+export { FileTypeIcon, classifyFileType }

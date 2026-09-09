@@ -68,7 +68,6 @@ describe('ui-sessions-panel apply', () => {
     expect(definition?.title('sidebar://sessions')).toBe('tab.title')
     expect(definition?.guide).toHaveLength(1)
     expect(definition?.guide?.[0]?.title()).toBe('guide.title')
-    expect(definition?.guide?.[0]?.description()).toBe('guide.description')
     expect(definition?.guide?.[0]?.order).toBe(10)
     expect(dictionaries.get('sessionsPanel')).toEqual({ zh, en })
     // The seat key is the implementation's id, not the kind.
