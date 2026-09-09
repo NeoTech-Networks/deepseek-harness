@@ -77,10 +77,14 @@ describe('resolveVocabulary', () => {
 })
 
 describe('session-status service', () => {
-  it('lists the shipped vocabulary in declaration order', async () => {
+  it('lists the shipped vocabulary in declaration order with its icon and tone', async () => {
     const { ctx } = await harness()
-    expect(ctx.sessionStatus.list().map(entry => entry.id)).toEqual([
-      'waiting-production', 'stuck', 'finished', 'waiting-external', 'paused',
+    expect(ctx.sessionStatus.list()).toEqual([
+      { id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'right-up', tone: 'attention' },
+      { id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error' },
+      { id: 'finished', label: 'Finished', icon: 'check', tone: 'success' },
+      { id: 'waiting-external', label: 'Waiting on someone else', icon: 'clock', tone: 'attention' },
+      { id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral' },
     ])
   })
 
