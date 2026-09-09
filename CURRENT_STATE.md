@@ -17,6 +17,80 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-09 - Why state files keep dying: two inherited upstream checks and a native build the fork cannot do
+
+Two independent, provable reasons no state-sync PR ever merges on this fork.
+Both were read live this session and together they explain every "diverged from
+origin/master" receipt going back to 2026-09-08.
+
+- **Reason 1, the required checks can never pass here.** `Issue policy` and
+  `Issue lifecycle` both call `actions/create-github-app-token` against
+  `owner: deepseek-harness` with a GitHub App credential that exists only in the
+  upstream organization. On `NeoTech-Networks/deepseek-harness` they fail in 9
+  seconds on every PR, verbatim: `Error: The 'client-id' (or deprecated
+  'app-id') input must be set to a non-empty string.` Everything else on the
+  live status PR #6 is green or pending (`node 26`, `node 24.9`, `Pack npm
+  tarballs`, the python matrix). The maintenance worker is behaving correctly by
+  refusing to merge; the gate is simply unpassable.
+- **Reason 2, the pre-push hook cannot build a native dependency.** Two receipts
+  (13:31Z and 12:19Z) show the PUSH failing, not the merge: lefthook's
+  `pre-push` typecheck runs `pnpm install` in the worker's throwaway worktree,
+  `fs-ext@2.1.1` needs `node-gyp`, and there is no Visual Studio C++ toolchain
+  here, so `Could not find any Visual Studio installation to use` kills it.
+  NOTE: upstream alpha.2 ships "Fix npm installations that previously required a
+  local `fs-ext` build", so installing alpha.2 should remove this half by itself.
+- **Consequence, measured.** `origin/master` never moves, every checkout drifts,
+  and 8 of the 10 checkouts on this machine holding `CURRENT_STATE.md` carry
+  short stale copies (80, 68, 106, 119, 135, 98, 98 lines) against 287 in git.
+  Any process that publishes one of those over the primary destroys real
+  history, which happened twice today (11:56 and 12:31 local, both recovered
+  from git, damaged copies kept in `%TEMP%`).
+- **The save-state writer is RULED OUT.** `apply_marker_block` in
+  `memory_save_state_actor.py` was re-read at lines 1030-1079: create-if-missing,
+  regex-replace one block in place, or append at the end. No branch can shorten a
+  file, and its read-failure branch skips rather than overwrites.
+- **The fix is a DECISION, not housekeeping**, because it changes what gates a
+  merge on `master`: stop those two inherited workflows running on this fork,
+  drop them from the required set, or point status PRs at a branch they do not
+  gate.
+
+## 2026-09-09 - 0.1.5-alpha.2 built, packaged and proven in the installer; INSTALL NOT YET RUN
+
+- **Upstream moved again the same day.** `dsh-v0.1.5-alpha.2` published
+  2026-09-09T14:23:10Z, one release past the installed 0.1.5-alpha.1. It brings
+  the right-sidebar document preview (Markdown, code, HTML, PDF, images),
+  model-delivered files in a session, `/feedback` detail, and seven fixes.
+  Session-data format is now V3 and the web plugin panel API moved the
+  `conversation` slot under `main`.
+- **Branch `update/v0.1.5-alpha.2`**, worktree
+  `C:/Projects/worktrees/dsh-update-v0.1.5-alpha.2`, pushed to the fork. The
+  local stack was rebased onto the tag (`git rebase --onto dsh-v0.1.5-alpha.2
+  dsh-v0.1.5-alpha.1`), 18 files conflicted and were resolved by hand; the
+  lockfile took the upstream side and `pnpm install` re-added the workspace.
+- **Four previously unshipped local fixes cherry-picked in**, so this build is
+  the first to carry them: session-status icons `e5146450e3`, first-run
+  provisioning `f82bb8df30` and `f291778191`, console-window suppression
+  `5e10c7c560`.
+- **Upstream removed two APIs the fork used**, which no conflict marker showed
+  and only the client typecheck caught: `SidebarRightGuideEntry.description` is
+  gone, and `DocumentFileIcon` was replaced by `FileTypeIcon` +
+  `classifyFileType`. The sessions panel and the explorer follow both, tests and
+  locale dictionaries included. `gen-tsconfig-paths` also needed a hand-written
+  alias for `@deepseek-ai/dsh-client-ui-sessions-panel`.
+- **Gates, all green:** client typecheck exit 0, full build exit 0, plan-mode
+  94/94, fs-local 156 passed 1 skipped 0 failed (the 13 documented Windows
+  failures are GONE upstream, so that baseline no longer applies), 594 tests
+  across 50 targeted files, packaging exit 0.
+- **Installer:** `deepseek-harness-0.1.5-alpha.2-win-x64.exe`, 194,655,398
+  bytes, app id `com.deepseek.harness`. Every fork package is in the packaged
+  seed at 0.1.5-alpha.2, and `SessionPanelPhase` was read back out of the
+  packaged `.tgz`'s built `client.js`, so the fix is in the artifact and not
+  just in the source.
+- **WHAT IS LEFT:** Steve runs `finish-install.ps1` from a separate PowerShell
+  window. Until then the running app is still 0.1.5-alpha.1 and NOTHING in this
+  section is live. After the install: the six verification rows, then
+  `dsh_update_check.py` must report `UP TO DATE`.
+
 ## 2026-09-09 - Both harness fixes CONFIRMED LIVE in the running app, and a state file lost and recovered in the same pass
 
 - **Installed and verified.** Steve installed at 08:35; the profile re-extracted
@@ -185,6 +259,17 @@ one command and is the regression check for everything below.
 - CONCURRENCY HAZARD, confirmed live. Sessions restored inside the desktop app resumed autonomous builds in the SAME primary checkout, stomping the packed tarball directory mid-run (count observed climbing 100 to 126 with no build of this session's running) and breaking two packaging attempts. One of those sessions also committed this session's staged files into an unrelated wip commit on this session's branch. The app had to be closed to finish. This is the One Worktree Per Session rule failing in practice.
 - Git left tidy: `fix/account-usage-remote-mount-only` = the isolated fix; `fix/account-usage-remote-mount` = the wip rebased on top of it (78d5d95934, tree identical to the pre-rebase commit so no file moved); `backup/wip-pre-rebase-87607362` = the pre-rebase copy. Nothing merged to master, nothing pushed.
 
+## Last save-state (2026-09-09T03:50:14.915068+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `321e7af0-b0ab-4a0b-9a4c-de8eea784e39`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-6d11ab26-811b-4500-899f-621252ea2c9a
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-08 - Live Claude Max usage readout in the composer footer
 
 - New package `packages/llm/account-usage` (`@deepseek-ai/dsh-account-usage`), both faces: a Host `TypertRemoteService` (`ctx.accountUsage.read()`) and a browser dock entry seated on `conversation.composer.dock` beside the stats line.
@@ -308,6 +393,28 @@ one command and is the regression check for everything below.
 
 - Committed `9a30a554e8` on branch `feat/open-session-in-subfolder`; pushed that branch and local `master` (`67ceb5406a`) to a new org fork `NeoTech-Networks/deepseek-harness` (`neotech` remote).
 
+## 2026-09-08 - Plan mode defaults on for every new session (model-agnostic)
+
+- Added `defaultActive?: boolean` to `@deepseek-ai/dsh-plan-mode` (`packages/plan/plan-mode/src/index.ts`): `resolveConfig` validates and defaults it, and a new `pinInitialPlanMode` appends `plan/mode { active: true }` at session creation (a `session/created` listener plus a one-time sweep of existing sessions), skipping subagents (`header.origin === 'subagent'`) and any session that already carries a `plan/mode` event, so forks and resumes keep their state.
+- Set `defaultActive: true` on all four plan-mode mounts: the standard/ptc/cordis agent presets and the base bundle (CLI/headless). The web-app bundle only disables the base mount, so it needed no change.
+- Plan mode is model-agnostic: the `plan:policy` section is injected into every model request's system prompt regardless of provider/model, so the default covers Claude, Kimi, DeepSeek and GLM.
+- Verified: 93/93 plan-mode tests (4 files); `tsc -b packages/plan/plan-mode/tsconfig.json` clean; `pnpm build:lib:host` exit 0.
+- Made it live without a full repackage: synced the rebuilt `@deepseek-ai/dsh-plan-mode/lib/` and the three preset YAMLs into `~/.dsh/profiles/desktop/node_modules/`; user restarted and confirmed "Appears to work".
+- Docs updated: README.md/.zh.md + README.i18n.yaml, docs/config-catalog.md/.zh.md. Committed on `feat/open-session-in-subfolder` (bundled into the bulk `feat(vision)` commit, whose message does not name plan mode) and pushed to the `NeoTech-Networks` fork.
+
+## 2026-09-08 - Repointed origin to the NeoTech fork, state auto-commit fixed
+
+`origin` was the upstream deepseek-ai repo, so every state push failed 403.
+Repointed to NeoTech-Networks/deepseek-harness (upstream kept as `upstream`),
+set `gh repo set-default`, and tracked the untracked state files. State now
+lands on the fork (PRs #2 and #3 merged).
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=321e7af0-b0ab-4a0b-9a4c-de8eea784e39 at=2026-09-09T03:50:14.915068+00:00
+-->
 ## 2026-09-07 - Session status icons in the sidebar
 
 - Added a durable, model-independent declared session status. New `packages/session-status/` group: domain (`session/status` event, `sessionStatus` projection, validated vocabulary, `ctx.sessionStatus`), `tool-session-status` (`set_session_status`), `command-session-status` (`/status`).
@@ -333,36 +440,3 @@ one command and is the regression check for everything below.
 - Committed: `67ceb5406a` on local `master`, rebased cleanly onto `c389f96bf3`.
 
 - Open: `git push` denied (neotechnet has no access to the deepseek-ai org; no fork exists). Either fork to a chosen account and push, or keep the change local. Visual smoke test of the grouped sidebar still pending.
-
-## 2026-09-08 - Plan mode defaults on for every new session (model-agnostic)
-
-- Added `defaultActive?: boolean` to `@deepseek-ai/dsh-plan-mode` (`packages/plan/plan-mode/src/index.ts`): `resolveConfig` validates and defaults it, and a new `pinInitialPlanMode` appends `plan/mode { active: true }` at session creation (a `session/created` listener plus a one-time sweep of existing sessions), skipping subagents (`header.origin === 'subagent'`) and any session that already carries a `plan/mode` event, so forks and resumes keep their state.
-- Set `defaultActive: true` on all four plan-mode mounts: the standard/ptc/cordis agent presets and the base bundle (CLI/headless). The web-app bundle only disables the base mount, so it needed no change.
-- Plan mode is model-agnostic: the `plan:policy` section is injected into every model request's system prompt regardless of provider/model, so the default covers Claude, Kimi, DeepSeek and GLM.
-- Verified: 93/93 plan-mode tests (4 files); `tsc -b packages/plan/plan-mode/tsconfig.json` clean; `pnpm build:lib:host` exit 0.
-- Made it live without a full repackage: synced the rebuilt `@deepseek-ai/dsh-plan-mode/lib/` and the three preset YAMLs into `~/.dsh/profiles/desktop/node_modules/`; user restarted and confirmed "Appears to work".
-- Docs updated: README.md/.zh.md + README.i18n.yaml, docs/config-catalog.md/.zh.md. Committed on `feat/open-session-in-subfolder` (bundled into the bulk `feat(vision)` commit, whose message does not name plan mode) and pushed to the `NeoTech-Networks` fork.
-
-## 2026-09-08 - Repointed origin to the NeoTech fork, state auto-commit fixed
-
-`origin` was the upstream deepseek-ai repo, so every state push failed 403.
-Repointed to NeoTech-Networks/deepseek-harness (upstream kept as `upstream`),
-set `gh repo set-default`, and tracked the untracked state files. State now
-lands on the fork (PRs #2 and #3 merged).
-
-<!-- claude-memory-actor:begin
-  Auto-managed by the claude-memory save-state hook.
-  Anything between :begin and :end is overwritten on every save-state.
-  Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=321e7af0-b0ab-4a0b-9a4c-de8eea784e39 at=2026-09-09T03:50:14.915068+00:00
--->
-## Last save-state (2026-09-09T03:50:14.915068+00:00)
-
-- Trigger: `save_state`
-- Actor: `claude-code:steve`
-- Session id: `321e7af0-b0ab-4a0b-9a4c-de8eea784e39`
-- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
-- Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-6d11ab26-811b-4500-899f-621252ea2c9a
-
-<!-- claude-memory-actor:end -->

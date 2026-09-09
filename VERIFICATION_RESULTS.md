@@ -1,3 +1,37 @@
+## 2026-09-09 - Why no state-sync PR can merge on this fork
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Status PR exists | worker opened one | #6, `chore/state-sync-2026-09-09-163027`, opened 16:31:48Z | VERIFIED |
+| Why it will not merge | a real reason, not a flake | `Issue policy` and `Issue lifecycle` fail in 9s on every run | VERIFIED |
+| The failure text | names the cause | `The 'client-id' (or deprecated 'app-id') input must be set to a non-empty string` | VERIFIED |
+| Whose credential | upstream only | both call `create-github-app-token` with `owner: deepseek-harness` | VERIFIED |
+| Other checks | not the problem | `node 26`, `node 24.9`, `Pack npm tarballs`, python matrix all pass | VERIFIED |
+| Second, separate failure | push, not merge | lefthook `pre-push` typecheck dies building `fs-ext` with no Visual Studio | VERIFIED |
+| Save-state writer as suspect | ruled in or out | RULED OUT; `apply_marker_block` L1030-1079 has no shortening branch | VERIFIED |
+| Stale copies on this machine | counted | 8 of 10 checkouts hold short copies against 287 in git | VERIFIED |
+| Who publishes the stale copy | named | not identified; worker and /save-state remain the candidates | UNVERIFIED |
+
+## 2026-09-09 - 0.1.5-alpha.2 build gates and installer proof (PRE-install; nothing here is live yet)
+
+Worktree `C:/Projects/worktrees/dsh-update-v0.1.5-alpha.2`, branch
+`update/v0.1.5-alpha.2`, rebased onto `dsh-v0.1.5-alpha.2` plus four cherry-picks.
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Client typecheck | exit 0 | exit 0 after following two upstream API removals | VERIFIED |
+| Full build | exit 0 | exit 0, 240 client artifacts recorded | VERIFIED |
+| plan-mode suite | 94 of 94 | 94 passed across 4 files | VERIFIED |
+| fs-local suite | old baseline 13 Windows failures | 156 passed, 1 skipped, 0 FAILED; baseline no longer applies | VERIFIED |
+| Targeted suites (desktop, session-status, workspace, sidebar) | no regressions | 594 passed, 1 skipped, 50 files | VERIFIED |
+| Packaging | exit 0 | exit 0, no EPERM this run | VERIFIED |
+| Installer artifact | present, ~180-190 MB | 194,655,398 bytes | VERIFIED |
+| Packaged seed version | 0.1.5-alpha.2 | `desktop-release.json` reads 0.1.5-alpha.2 | VERIFIED |
+| Fork packages in the seed | all at the new version | 14 fork `.tgz` archives, every one 0.1.5-alpha.2 | VERIFIED |
+| Session-status fix IS in the artifact | new symbol in built code | `SessionPanelPhase` found in the packaged `.tgz`'s `client.js` and `active.d.ts` | VERIFIED |
+| Installed app updated | 0.1.5-alpha.2 | still 0.1.5-alpha.1; operator has not run the installer | NOT YET RUN |
+| The six post-install rows | all pass | cannot be run before the install | UNVERIFIED |
+
 ## 2026-09-09 - Post-install: both fixes confirmed LIVE in the running profile
 
 Installed 08:35, app relaunched 08:36, read back from
