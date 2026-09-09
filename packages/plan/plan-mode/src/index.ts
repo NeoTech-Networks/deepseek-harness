@@ -59,6 +59,46 @@ declare module '@deepseek-ai/cordis' {
  */
 export const EXIT_PLAN_MODE = 'exit_plan_mode'
 
+/** A line that may legitimately precede the plan's `#` heading. */
+const PLAN_PREAMBLE_LINE = /^(?:\s*|>.*)$/
+
+/**
+ * Explain why a plan is not acceptable, or `undefined` when it is.
+ *
+ * The check used to be `/^#\s+\S/` against the trimmed plan, which rejected
+ * two shapes that are not mistakes:
+ *
+ *  * A plan opening with a blockquote line. Deployments put operator metadata
+ *    in a leading `>` block, so their own house style produced a rejection.
+ *  * A plan opening with blank lines, which some providers emit ahead of the
+ *    first heading.
+ *
+ * Leading blank and blockquote lines are therefore skipped before looking for
+ * the heading. Everything the old check caught is still caught: no heading at
+ * all, an empty plan, or a heading that is not top level.
+ *
+ * The message names what was actually found. The old one always said the plan
+ * was "non-empty ... starting with a # heading", which read as "your plan was
+ * empty" for a 13,000-character plan whose first line was a blockquote, and
+ * sent the model looking in the wrong place.
+ * @param plan - the plan argument as supplied by the model.
+ * @returns a one-clause fault description, or `undefined` when the plan passes.
+ */
+export function describePlanFault(plan: string): string | undefined {
+  if (plan.trim().length === 0) return 'the plan is empty'
+  const lines = plan.split('\n')
+  let index = 0
+  while (index < lines.length && PLAN_PREAMBLE_LINE.test(lines[index] as string)) index += 1
+  if (index >= lines.length) return 'the plan has no content beyond blank and blockquote lines'
+  const first = (lines[index] as string).trim()
+  if (/^#\s+\S/.test(first)) return undefined
+  if (/^#{2,}\s+\S/.test(first)) {
+    const depth = (/^#+/.exec(first) as RegExpExecArray)[0].length
+    return `the first heading is level ${depth} ("${first.slice(0, 60)}"), but the plan must open with a single "#" title`
+  }
+  return `the first content line is not a heading ("${first.slice(0, 60)}")`
+}
+
 /** Deployment-owned plan guidance. */
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
@@ -315,8 +355,9 @@ export class PlanModeController extends Service {
         if (!this.loggedActive(agent.session)) {
           throw new Error(`${EXIT_PLAN_MODE} is only available in plan mode`)
         }
-        if (!/^#\s+\S/.test(args.plan.trim())) {
-          throw new Error(`${EXIT_PLAN_MODE} requires a non-empty markdown plan starting with a # heading`)
+        const planFault = describePlanFault(args.plan)
+        if (planFault !== undefined) {
+          throw new Error(`${EXIT_PLAN_MODE} requires a markdown plan with a # heading: ${planFault}`)
         }
         const interaction = ctx.get('userQuestions')
         if (interaction === undefined) {
