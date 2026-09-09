@@ -53,8 +53,22 @@ one command and is the regression check for everything below.
   by Z.ai for lack of entitlement and was removed from `allowedModels`.
 - `~/.dsh/AGENTS.md` now gives the memory tools their full `mcp__claude-memory-bridge__`
   names (DeepSeek called the short name and failed three times).
-- Built and synced `dsh-fs-local` and `dsh-plan-mode` into `~/.dsh/profiles/desktop`; both
-  take effect on the next app relaunch.
+- Built and synced `dsh-fs-local` and `dsh-plan-mode` into `~/.dsh/profiles/desktop`. **That
+  sync did NOT hold, see the post-relaunch check below.**
+- **POST-RELAUNCH CHECK (Steve restarted the app): the two harness fixes are NOT live.** The
+  desktop app runs published `0.1.5-alpha.1`; this checkout is `0.1.3-alpha.2`.
+  `pnpm run start:desktop` re-provisions `~/.dsh/profiles/desktop` from 0.1.5 on every
+  launch, which overwrote the libs synced into it earlier in the session. Read directly from
+  the running build afterwards: `fs-local` still has `if (!isENOENT(error)) throw error;` at
+  lines 165 and 184 plus 3 unguarded "binary file" sites, and `plan-mode` line 270 still has
+  the old `/^#\s+\S/` test. The sync-into-the-profile technique therefore does not survive a
+  restart, and any earlier session that claimed a fix was live on that basis needs
+  re-checking the same way. New OPEN_ISSUES item 0; next session ports both onto the 0.1.5
+  line at `C:/Projects/worktrees/dsh-update-v015` and ships a real installer.
+- **The bridge speed-up IS live, and was measured on PRODUCTION traffic** after the change
+  rather than on a bench: PreToolUse 1,832ms to 1,176ms (36% faster, n=114), PostToolUse
+  1,520 to 1,042, UserPromptSubmit 3,048 to 2,247, Stop 5,007 to 3,252. The bridge is plain
+  Python re-read on every invocation, so it needed no relaunch.
 - **Hook tax cut, and its SHAPE fixed.** Four causes in the bridge, all measured, none of
   them the hook scripts: pool width below the fan-out; `shell=True` spawning `cmd.exe` per
   hook (553ms to 214ms over 22 cold starts); the transcript projection re-decompressing the
