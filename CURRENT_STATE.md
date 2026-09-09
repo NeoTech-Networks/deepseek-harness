@@ -90,6 +90,14 @@ origin/master" receipt going back to 2026-09-08.
   window. Until then the running app is still 0.1.5-alpha.1 and NOTHING in this
   section is live. After the install: the six verification rows, then
   `dsh_update_check.py` must report `UP TO DATE`.
+## 2026-09-09 - Right sidebar panel width made per-session
+
+Fixed the right sidebar so each session keeps its own panel width instead of sharing one global value.
+
+- **Root cause.** The panel width lived in the root-scoped layout store as one `rightbar` number, so a panel dragged narrow in one session stayed narrow everywhere ("opens to minimize size no matter what session") and the width was shared across sessions ("the view stays the same no matter the session"). The tabs and expanded flag were already per-session; the width was the one shared piece.
+- **Fix.** Keyed the width by session id (`rightbarBySession`) in `ui-layout/src/client/stores.ts`; `openRightbar`/`setRightbar` now take a session id; `AppFrame.tsx` reads/writes the current session's key; the right sidebar seat passes its session id through `syncPresentation`; the `ctx.layout.openRightbar` face and the client api-catalog follow.
+- **Verified.** 220 tests pass across `ui-layout` and `ui-sidebar-right` (including two new per-session-width regression tests), client typecheck exit 0, `gen-client-catalog --check` and `gen-cordis-api --check` pass.
+- **Not shipped.** The fix is uncommitted service code in the primary checkout `C:\Projects\repos\deepseek-harness` (branch `fix/account-usage-remote-mount`). Next: commit on the right branch, then build and install via the ds-harness-update flow, then smoke-test that each session remembers its own panel width in the desktop app.
 
 ## 2026-09-09 - Both harness fixes CONFIRMED LIVE in the running app, and a state file lost and recovered in the same pass
 
@@ -469,3 +477,4 @@ lands on the fork (PRs #2 and #3 merged).
 
 - Open: `git push` denied (neotechnet has no access to the deepseek-ai org; no fork exists). Either fork to a chosen account and push, or keep the change local. Visual smoke test of the grouped sidebar still pending.
 
+<!-- claude-memory-actor:end -->

@@ -31,6 +31,16 @@ Worktree `C:/Projects/worktrees/dsh-update-v0.1.5-alpha.2`, branch
 | Session-status fix IS in the artifact | new symbol in built code | `SessionPanelPhase` found in the packaged `.tgz`'s `client.js` and `active.d.ts` | VERIFIED |
 | Installed app updated | 0.1.5-alpha.2 | still 0.1.5-alpha.1; operator has not run the installer | NOT YET RUN |
 | The six post-install rows | all pass | cannot be run before the install | UNVERIFIED |
+## 2026-09-09 - Right sidebar per-session width fix
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| A session's drag does not leak into another | per-session width | layout-store test `keeps one session's width from leaking into another` passes | VERIFIED |
+| The frame keys width by session | current session's own 45% default on switch | app-frame test `keys the saved right panel width by session, not globally` passes | VERIFIED |
+| ui-layout + ui-sidebar-right suites | pass | 220 passed | VERIFIED |
+| Client typecheck | exit 0 | exit 0 | VERIFIED |
+| Client/cordis catalog gates | up to date | `gen-client-catalog --check` and `gen-cordis-api --check` pass | VERIFIED |
+| Live desktop smoke test | panel width independent per session | not run, needs a build and install | UNVERIFIED |
 
 ## 2026-09-09 - Post-install: both fixes confirmed LIVE in the running profile
 
