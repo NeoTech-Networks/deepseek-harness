@@ -50,6 +50,82 @@ function isPermissionError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && (error.code === 'EACCES' || error.code === 'EPERM')
 }
 
+/**
+ * Publication retry schedule. `ReplaceFileW` fails when the destination is
+ * open in another process, and the Win32 code that reports it (1175,
+ * ERROR_UNABLE_TO_REMOVE_REPLACED, "unable to remove the file to be replaced")
+ * surfaces here as `EIO`, which the pre-2026-09-08 code did not retry: any
+ * non-`ENOENT` publication failure discarded the staged content and lost the
+ * write outright. Measured on 2026-09-08 across 46 concurrent sessions, that
+ * lost 9 writes, including two consecutive attempts 22 seconds apart on the
+ * same `OPEN_ISSUES.md`.
+ *
+ * Contention here is other processes holding the destination for a read, which
+ * lasts microseconds; ~1.1s of backoff covers it without making a genuinely
+ * stuck write feel hung.
+ */
+const PUBLISH_RETRY_DELAYS_MS = [5, 10, 20, 40, 80, 100, 100, 100, 100, 100, 100, 100, 100] as const
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolvePromise) => { setTimeout(resolvePromise, ms) })
+}
+
+/**
+ * Publish a staged file over an existing destination, preserving the
+ * destination's security descriptor, and survive transient contention.
+ *
+ * Order of attempts:
+ *  1. `replaceFile` (Win32 `ReplaceFileW`), retried on the backoff above. This
+ *     is the only path that preserves the destination's ACL, so it is tried
+ *     to exhaustion first.
+ *  2. `renameFile` once, as a LAST RESORT. `rename` is `MoveFileEx` with
+ *     `MOVEFILE_REPLACE_EXISTING`, a different kernel path that can succeed
+ *     where `ReplaceFileW` cannot, but the published file keeps the staged
+ *     file's descriptor rather than the destination's. Losing the write is
+ *     worse than losing the inherited ACL on a file the caller owns, but this
+ *     ordering means the fallback only ever runs after the correct path has
+ *     genuinely failed.
+ *
+ * A destination that vanished during staging is not contention: `ENOENT` goes
+ * straight to `rename`, which is the pre-existing behaviour.
+ * @param replaceFile - ACL-preserving publication primitive.
+ * @param renameFile - fallback publication primitive.
+ * @param absolutePath - the destination being replaced.
+ * @param tempPath - the closed staging file to publish.
+ * @param delays - retry schedule; injectable so tests need no real waiting.
+ */
+async function publishOverExisting(
+  replaceFile: (replaced: string, replacement: string) => Promise<void>,
+  renameFile: (from: string, to: string) => Promise<void>,
+  absolutePath: string,
+  tempPath: string,
+  delays: readonly number[] = PUBLISH_RETRY_DELAYS_MS,
+): Promise<void> {
+  let lastError: unknown
+  for (let attempt = 0; attempt <= delays.length; attempt += 1) {
+    try {
+      await replaceFile(absolutePath, tempPath)
+      return
+    } catch (error: unknown) {
+      // If the observed target disappears during staging, the protected DACL
+      // already copied to the temp remains authoritative for recreation.
+      if (isENOENT(error)) {
+        await renameFile(tempPath, absolutePath)
+        return
+      }
+      lastError = error
+      if (attempt < delays.length) await sleep(delays[attempt] as number)
+    }
+  }
+  try {
+    await renameFile(tempPath, absolutePath)
+  } catch {
+    // Report the ReplaceFileW failure, not the fallback's: the first one
+    // carries the Win32 code that says what actually blocked the publish.
+    throw lastError
+  }
+}
+
 function throwIfAborted(signal: AbortSignal | undefined, verb: string): void {
   if (signal?.aborted) throw new FsError(`${verb} aborted`, 'FS_ABORTED')
 }
@@ -92,6 +168,19 @@ export interface FsIoInternals {
   replaceFile?: (replaced: string, replacement: string) => Promise<void>
   /** Override the hard-link no-replace publication boundary. */
   linkFile?: (existingPath: string, newPath: string) => Promise<void>
+  /** Override the rename publication boundary (the last-resort publish fallback). */
+  renameFile?: (from: string, to: string) => Promise<void>
+  /**
+   * Override the publication retry schedule. An empty array disables retrying,
+   * which is how a spec asserts the pre-2026-09-08 single-attempt behaviour;
+   * a short one keeps contention specs fast.
+   */
+  publishRetryDelaysMs?: readonly number[]
+  /**
+   * Override the transient-binary re-read delay. Zero keeps the torn-read
+   * specs instant.
+   */
+  binaryRecheckDelayMs?: number
   /** Override target inspection after guarded publication fails. */
   inspectPublicationTarget?: (path: string) => Promise<BigIntStats>
   /** Override staging-directory removal for commit-point failure coverage. */
@@ -365,20 +454,69 @@ async function statRegularFile(target: LocalTarget, verb: 'read', signal?: Abort
   return info
 }
 
+/** Default pause before a NUL-bearing sample is re-read to rule out a torn read. */
+const BINARY_RECHECK_DELAY_MS = 25
+
+function sampleHasNul(raw: Uint8Array): boolean {
+  return raw.subarray(0, BINARY_SAMPLE_BYTES).includes(0)
+}
+
+/**
+ * Read a file's bytes, and when the binary sample carries a NUL, read it once
+ * more before believing it.
+ *
+ * A NUL in the first sample is the signature of a real binary file AND of a
+ * read that landed inside another process's non-atomic rewrite. Those are not
+ * distinguishable from one observation, and treating them alike made a
+ * transient race look like a permanent property of the file: on 2026-09-08,
+ * four reads of `~/.claude/CURRENT_STATE.md` were rejected as binary on a file
+ * that is valid UTF-8 with no NUL byte in it at all, and the models that hit
+ * it abandoned the file rather than retrying. A concurrent-writer race
+ * measured the same day showed a reader observing an incomplete file on 42%
+ * of reads while a plain `write_text` loop ran.
+ *
+ * One extra read settles it: a real binary file reads the same twice, a torn
+ * read does not.
+ * @param target - the resolved file to read.
+ * @param verb - caller-facing verb for the error message.
+ * @param signal - aborts the read (`FS_ABORTED`).
+ * @param delayMs - pause before the confirming read.
+ * @returns the file's bytes, proven to have no NUL in the binary sample.
+ * @throws {FsError} `FS_NOT_TEXT` when both reads carry a NUL.
+ */
+async function readTextBytesConfirmingBinary(
+  target: LocalTarget,
+  verb: 'read' | 'edit',
+  signal: AbortSignal | undefined,
+  delayMs: number = BINARY_RECHECK_DELAY_MS,
+): Promise<Buffer> {
+  const raw = await readFileAbortable(target.targetKey, verb, signal)
+  throwIfAborted(signal, verb)
+  if (!sampleHasNul(raw)) return raw
+  if (delayMs > 0) await sleep(delayMs)
+  throwIfAborted(signal, verb)
+  const confirm = await readFileAbortable(target.targetKey, verb, signal)
+  throwIfAborted(signal, verb)
+  if (!sampleHasNul(confirm)) return confirm
+  throw new FsError(`cannot ${verb} "${target.displayPath}": binary file`, 'FS_NOT_TEXT')
+}
+
 /**
  * Read a whole regular UTF-8 text file into a single decoded string. Rejects
- * non-regular files, invalid UTF-8, and NUL-byte binary samples.
+ * non-regular files, invalid UTF-8, and NUL-byte binary samples confirmed by a
+ * second read (see {@link readTextBytesConfirmingBinary}).
  * @param target - the resolved file to read.
  * @param signal - aborts the read (`FS_ABORTED`).
+ * @param internals - test seam for the confirming-read delay.
  * @returns the full decoded text, byte-for-byte (no normalization).
  */
-export async function readWholeText(target: LocalTarget, signal?: AbortSignal): Promise<string> {
+export async function readWholeText(
+  target: LocalTarget,
+  signal?: AbortSignal,
+  internals: FsIoInternals = {},
+): Promise<string> {
   await statRegularFile(target, 'read', signal)
-  const raw = await readFileAbortable(target.targetKey, 'read', signal)
-  throwIfAborted(signal, 'read')
-  if (raw.subarray(0, BINARY_SAMPLE_BYTES).includes(0)) {
-    throw new FsError(`cannot read "${target.displayPath}": binary file`, 'FS_NOT_TEXT')
-  }
+  const raw = await readTextBytesConfirmingBinary(target, 'read', signal, internals.binaryRecheckDelayMs)
   return decodeUtf8(raw, 'read', target.displayPath)
 }
 
@@ -620,14 +758,13 @@ export async function writeFileAtomic(
         await throwGuardedCreateFailure(error, absolutePath, createIfAbsent.displayPath, inspectPublicationTarget)
       }
     } else if (platform === 'win32' && mode !== undefined) {
-      try {
-        await replaceFile(absolutePath, tempPath)
-      } catch (error: unknown) {
-        // If the observed target disappears during staging, the protected DACL
-        // already copied to the temp remains authoritative for recreation.
-        if (!isENOENT(error)) throw error
-        await rename(tempPath, absolutePath)
-      }
+      await publishOverExisting(
+        replaceFile,
+        internals.renameFile ?? rename,
+        absolutePath,
+        tempPath,
+        internals.publishRetryDelaysMs ?? PUBLISH_RETRY_DELAYS_MS,
+      )
     } else {
       await rename(tempPath, absolutePath)
     }
@@ -703,17 +840,31 @@ function countOccurrences(content: string, needle: string): number {
  * @param absolutePath - the file to read (typically a target key).
  * @param displayPath - the caller-facing path used in error messages.
  * @param signal - aborts the read (`FS_ABORTED`).
+ * @param internals - test seam for the confirming-read delay.
  * @returns the LF-normalized content and the detected style to restore on write-back.
  */
 export async function readForEdit(
   absolutePath: string,
   displayPath: string,
   signal?: AbortSignal,
+  internals: FsIoInternals = {},
 ): Promise<{ content: string; lineEndings: LineEndings }> {
   throwIfAborted(signal, 'edit')
-  const buffer = await readFileAbortable(absolutePath, 'edit', signal)
+  // Same confirming re-read as readWholeText, and for the same reason: an edit
+  // of a file another process is rewriting non-atomically must not be told the
+  // file is permanently binary. This path scans the WHOLE buffer rather than
+  // the 8 KiB sample, which is deliberate (an edit rewrites every byte), so
+  // the confirmation is done here rather than through the sample helper.
+  const delayMs = internals.binaryRecheckDelayMs ?? BINARY_RECHECK_DELAY_MS
+  let buffer = await readFileAbortable(absolutePath, 'edit', signal)
   throwIfAborted(signal, 'edit')
-  if (buffer.includes(0)) throw new FsError(`cannot edit "${displayPath}": binary file`, 'FS_NOT_TEXT')
+  if (buffer.includes(0)) {
+    if (delayMs > 0) await sleep(delayMs)
+    throwIfAborted(signal, 'edit')
+    buffer = await readFileAbortable(absolutePath, 'edit', signal)
+    throwIfAborted(signal, 'edit')
+    if (buffer.includes(0)) throw new FsError(`cannot edit "${displayPath}": binary file`, 'FS_NOT_TEXT')
+  }
   const raw = decodeUtf8(buffer, 'edit', displayPath)
   return { content: normalizeLineEndings(raw), lineEndings: detectLineEndings(raw) }
 }

@@ -917,13 +917,43 @@ describe('exit_plan_mode', () => {
 
   it('rejects an empty or heading-less plan before asking the reviewer', async () => {
     const { ctx, agent, asked } = await setupWithReview({ selected: ['Approve'] })
-    for (const plan of ['', 'do things']) {
-      const result = await callExit(ctx, agent, plan)
-      expect(result.isError).toBe(true)
-      expect(result.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a non-empty markdown plan starting with a # heading' }])
-    }
+    const empty = await callExit(ctx, agent, '')
+    expect(empty.isError).toBe(true)
+    expect(empty.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the plan is empty' }])
+
+    const headingless = await callExit(ctx, agent, 'do things')
+    expect(headingless.isError).toBe(true)
+    expect(headingless.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the first content line is not a heading ("do things")' }])
+
+    // A level-2-or-deeper opener is still refused, and the message names the
+    // level it found so the model fixes the heading instead of the plan.
+    const subheading = await callExit(ctx, agent, '### Contract gap list\n\nbody')
+    expect(subheading.isError).toBe(true)
+    expect(subheading.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the first heading is level 3 ("### Contract gap list"), but the plan must open with a single "#" title' }])
+
     expect(asked).toHaveLength(0)
     expect(foldPlanMode(agent.session.snapshotEvents())).toBe(true)
+  })
+
+  it('accepts a plan whose # heading follows blank or blockquote lines', async () => {
+    // Both shapes were rejected before 2026-09-08. The blockquote one is the
+    // costly case: a deployment whose plan format puts operator metadata in a
+    // leading `>` block had its own house style refused, and the message said
+    // the plan was empty.
+    for (const plan of [
+      '> _Operator metadata only._\n\n# Real title\n\nbody',
+      '\n\n# Real title\n\nbody',
+      '> one\n> two\n\n# Real title\n\nbody',
+    ]) {
+      const { ctx, agent, asked } = await setupWithReview({ selected: ['Approve'] })
+      const result = await callExit(ctx, agent, plan)
+      // Accepted: the validator let it through and the reviewer was asked.
+      // (Leaving plan mode itself lands at the next accepted pre-step, which
+      // is asserted by the approval tests, not here.)
+      expect(result.isError).toBeFalsy()
+      expect(asked).toHaveLength(1)
+      expect(asked[0]?.questions[0]?.detail).toBe(plan)
+    }
   })
 
   it('degrades to the manual exit when no user-questions seam is composed', async () => {
