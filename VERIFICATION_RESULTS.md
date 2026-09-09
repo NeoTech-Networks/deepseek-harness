@@ -1,3 +1,19 @@
+## 2026-09-09 - Right sidebar per-session width port and install
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| ui-layout + ui-sidebar-right suites | pass | 249/249 across 16 files | VERIFIED |
+| Client typecheck | exit 0 | exit 0 | VERIFIED |
+| Catalog gates (cordis-inspect, client-catalog, cordis-api) | up to date | all three pass | VERIFIED |
+| Full build | exit 0 | exit 0, 240 client artifacts | VERIFIED |
+| Packaging | exit 0 | exit 0, installer 194,643,720 bytes | VERIFIED |
+| Fix in packaged seed | rightbarBySession present | 6 occurrences in dsh-client-ui-layout client.js | VERIFIED |
+| Commit + push | on update/v0.1.5-alpha.2 | bf27396cf6 pushed | VERIFIED |
+| Install | seed integrity clean | install-log 271/271 PASS, profile cleared, relaunched | VERIFIED |
+| Fix in RUNNING profile | rightbarBySession present, old rightbar gone | 6 occurrences, no legacy rightbar | VERIFIED |
+| Settings survived | unchanged | dsh-config-vault 18 files all same | VERIFIED |
+| Per-session width on screen | independent widths | not yet eyeballed | UNVERIFIED |
+
 ## 2026-09-09 - Alt+S / Alt+P root cause, fix, and the two update-survival guards
 
 | Check | Expected | Result | Status |

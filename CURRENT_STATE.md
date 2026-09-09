@@ -1,3 +1,25 @@
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
+-->
+## 2026-09-09 - Right sidebar per-session width: ported, built, installed, verified
+
+The per-session panel-width fix (written 2026-09-09 but left uncommitted on the
+pre-0.1.5 line, branch fix/account-usage-remote-mount) is now LIVE in the
+running app. It was ported onto update/v0.1.5-alpha.2, resolving the
+0.1.3-to-0.1.5 store-shape conflicts (the single global `rightbar` became
+`layoutInfo.rightbarBySession`, keyed by session id), committed bf27396cf6,
+pushed, built, packaged (194,643,720 bytes), and installed by Steve at 19:13
+via a new INSTALL.cmd double-click wrapper (added because the pasted one-liner
+was failing silently again). The running profile's
+`dsh-client-ui-layout/lib/client.js` carries `rightbarBySession` (6 occurrences)
+and the old single `rightbar` value is gone. Install-log: seed integrity
+271/271 PASS, profile cleared, relaunched, dsh-config-vault 18 files all same.
+What is left is Steve's visual pass: resize the right sidebar in one session,
+switch to a second, and confirm the widths are independent.
+
 ## 2026-09-09 - Alt+S / Alt+P: DONE, installed and confirmed working in the app
 
 0.1.5-alpha.2 installed at 14:29, profile re-extracted at 14:34. The keyup
