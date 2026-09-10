@@ -72,6 +72,17 @@ Upstream published dsh-v0.1.5-rc.2 at 15:09Z, about an hour before this install
 finished. It is cosmetic (feedback dialog, delivered-file cards, icons,
 spacing) and touches ZERO sidebar or workspace source, so it does not fix the
 open sidebar defect below.
+## Last save-state (2026-09-10T16:40:13.537019+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `deddfeae-e84e-445b-84c5-f1a7c670cea5`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-2b58f034-4583-4670-ac9a-7461e7fead40
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-09 - Right sidebar per-session width: ported, built, installed, verified
 
 The per-session panel-width fix (written 2026-09-09 but left uncommitted on the
@@ -685,3 +696,9 @@ lands on the fork (PRs #2 and #3 merged).
   Last write: actor=claude-code:steve session=a463cfd2-49e3-4da7-b34c-e0db2cd09616 at=2026-09-09T23:35:44.128791+00:00
 -->
 
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=deddfeae-e84e-445b-84c5-f1a7c670cea5 at=2026-09-10T16:40:13.537019+00:00
+-->
