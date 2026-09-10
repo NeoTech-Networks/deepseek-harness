@@ -244,7 +244,7 @@ function toneState(tone: SessionStatusTone): StateDotState {
  * and the rest are the secondary facts the hover card lists. A row with no
  * live status falls back to the finished-but-unopened reminder or idle.
  */
-function sessionStatuses(node: SessionRowFacts, t: RowTranslate): readonly [SessionStatus, ...SessionStatus[]] {
+export function sessionStatuses(node: SessionRowFacts, t: RowTranslate): readonly [SessionStatus, ...SessionStatus[]] {
   const active: SessionStatus[] = []
   if (node.pendingInteraction === 'approval') active.push({ state: 'warning', label: t('status.waitingApproval') })
   if (node.pendingInteraction === 'plan-review') active.push({ state: 'warning', label: t('status.planReview') })
@@ -306,7 +306,7 @@ const UNKNOWN_STATUS_ICON = IconEllipsisOutline16
  * draws the status's own glyph with its tone colour instead of the phase
  * table, because the status vocabulary is deployment-owned.
  */
-function SessionStatusDots({ phase, statuses, declared, running }: {
+export function SessionStatusDots({ phase, statuses, declared, running }: {
   phase: SessionPhase
   statuses: readonly [SessionStatus, ...SessionStatus[]]
   declared: SessionStatusValue | undefined

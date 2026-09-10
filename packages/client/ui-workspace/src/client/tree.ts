@@ -93,6 +93,12 @@ export interface SessionNode extends SessionRowFacts {
 /** Session order selected by the Workspace browser. */
 export type SessionOrderBy = 'manual' | 'updated'
 
+/** One "All Sessions" quick-nav row: a flat session row plus its workspace label. */
+export interface AllSessionNode extends SessionNode {
+  /** Owning Workspace title, or the cwd basename for an ungrouped session. */
+  workspace: string
+}
+
 /** One workspace group section: header row facts + visible top-level session rows. */
 export interface GroupNode {
   /** Group key: the workspace id or {@link UNGROUPED_KEY}. */
@@ -167,6 +173,22 @@ export function workspaceLabel(cwd: string | undefined): string {
   if (cwd === undefined || cwd === '') return ''
   const base = workspaceTitleOf(cwd)
   return base !== '' ? base : cwd
+}
+
+/**
+ * Workspace display label for one Session: the owning Workspace title, or the
+ * Session's cwd basename when no Workspace accounts for it.
+ * @param workspaces - authoritative Workspace membership.
+ * @param summary - the Session whose label is required.
+ * @returns the owning Workspace title, the cwd basename, or empty when neither applies.
+ */
+export function sessionWorkspaceLabel(
+  workspaces: readonly WorkspaceView[],
+  summary: SessionSummary,
+): string {
+  const owner = workspaces.find(workspace => workspace.sessionIds.includes(summary.id))
+  if (owner !== undefined) return owner.title
+  return workspaceLabel(summary.cwd)
 }
 
 /** Recency comparator: newest first, id as the deterministic tiebreak (ids are unique per group). */
@@ -522,6 +544,38 @@ export function deriveFlat(
 }
 
 /**
+ * Derive the "All Sessions" quick-nav list: every visible session, newest
+ * first, annotated with its owning Workspace label. Blank sessions are
+ * excluded except the selected provisional New Session row; archived sessions
+ * are excluded. No grouping, no parent/child adjacency.
+ * @param list - sessions list snapshot.
+ * @param workspaces - Workspace membership and display labels.
+ * @param archivedSessionIds - registry-global archive set.
+ * @param pendingInteractions - pending UI interactions by Session.
+ * @returns flat rows in render order.
+ */
+export function deriveAllSessions(
+  list: SessionListState,
+  workspaces: readonly WorkspaceView[],
+  archivedSessionIds: readonly SessionId[],
+  pendingInteractions: SessionPendingInteractions,
+): AllSessionNode[] {
+  const archived = new Set(archivedSessionIds)
+  const descendants = indexSubagentDescendants(list.byId)
+  const rows: SessionSummary[] = []
+  for (const id of list.ids) {
+    const s = list.byId[id]
+    if (s === undefined || !sessionVisible(s, list.current, archived)) continue
+    rows.push(s)
+  }
+  rows.sort(byRecency)
+  return rows.map(session => ({
+    ...sessionNode(session, descendants, pendingInteractions),
+    workspace: sessionWorkspaceLabel(workspaces, session),
+  }))
+}
+
+/**
  * Merge immediate title/Workspace substring matches with ranked Host content
  * matches. Local rows lead newest-first, content-only rows retain backend
  * order, and duplicate sessions receive the backend snippet in place.
@@ -548,14 +602,7 @@ export function deriveSearchResults(
   const archived = new Set(archivedSessionIds)
   const descendants = indexSubagentDescendants(list.byId)
 
-  const workspaceBySession = new Map<SessionId, string>()
-  for (const workspace of workspaces) {
-    for (const sessionId of workspace.sessionIds) {
-      if (!workspaceBySession.has(sessionId)) workspaceBySession.set(sessionId, workspace.title)
-    }
-  }
-  const labelOf = (summary: SessionSummary): string =>
-    workspaceBySession.get(summary.id) ?? workspaceLabel(summary.cwd)
+  const labelOf = (summary: SessionSummary): string => sessionWorkspaceLabel(workspaces, summary)
   const contentBySession = new Map<SessionId, SessionSearchResultItem>()
   for (const item of content.items) {
     if (!contentBySession.has(item.sessionId)) contentBySession.set(item.sessionId, item)

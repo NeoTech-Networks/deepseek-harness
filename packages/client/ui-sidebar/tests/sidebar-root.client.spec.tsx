@@ -37,8 +37,10 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
   const startSession = vi.fn()
   const toggleSidebar = vi.fn()
   let regionOwner: SidebarSectionOwnerProps | undefined
+  let allSessionsOwner: SidebarSectionOwnerProps | undefined
   let settingsOwner: SidebarSettingsOwnerProps | undefined
   let footerActionOwner: SidebarFooterActionOwnerProps | undefined
+  const seen: string[] = []
   const brandMark = <span data-testid="custom-brand-mark">M</span>
   const brandName = <span data-testid="custom-brand-name">Custom Brand</span>
   let current = { collapsed, width }
@@ -53,8 +55,13 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
         key: string,
         owner: SidebarFooterActionOwnerProps | SidebarSectionOwnerProps | SidebarSettingsOwnerProps,
       ) => {
+        seen.push(key)
         if (key === 'sidebar.brand.mark') return brandMark
         if (key === 'sidebar.brand.name') return brandName
+        if (key === 'sidebar.allSessions') {
+          allSessionsOwner = owner as SidebarSectionOwnerProps
+          return <div data-testid="all-sessions-seat" data-wide={owner.wide} />
+        }
         if (key === 'sidebar.settings') {
           settingsOwner = owner
           return <div data-testid="settings-seat" data-wide={owner.wide} />
@@ -76,6 +83,11 @@ function mountShell({ collapsed = false, width = 300 }: { collapsed?: boolean; w
       if (regionOwner === undefined) throw new Error('region owner not rendered')
       return regionOwner
     },
+    allSessionsOwner: () => {
+      if (allSessionsOwner === undefined) throw new Error('all sessions owner not rendered')
+      return allSessionsOwner
+    },
+    seen,
     settingsOwner: () => {
       if (settingsOwner === undefined) throw new Error('settings owner not rendered')
       return settingsOwner
@@ -166,6 +178,15 @@ describe('SidebarRoot shell', () => {
     // Expanded: the request is a no-op (no accidental collapse).
     b.regionOwner().expandSidebar()
     expect(b.toggleSidebar).not.toHaveBeenCalled()
+  })
+
+  it('renders the All Sessions section above the workspace browser', () => {
+    const b = mountShell()
+    expect(b.allSessionsOwner().wide).toBe(true)
+    const allSessionsIndex = b.seen.indexOf('sidebar.allSessions')
+    const workspacesIndex = b.seen.indexOf('sidebar.workspaces')
+    expect(allSessionsIndex).toBeGreaterThanOrEqual(0)
+    expect(allSessionsIndex).toBeLessThan(workspacesIndex)
   })
 
   it('keeps the region mounted through collapse and expands on its request', () => {

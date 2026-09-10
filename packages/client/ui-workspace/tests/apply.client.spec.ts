@@ -4,9 +4,10 @@ import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { RemoteError, TestRemote } from '@deepseek-ai/dsh-client-test-runtime'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { apply, inject } from '@deepseek-ai/dsh-client-ui-workspace/client'
-import type { WorkspaceBrowserInjected, WorkspacePickerInjected } from '@deepseek-ai/dsh-client-ui-workspace/client'
+import type { AllSessionsInjected, WorkspaceBrowserInjected, WorkspacePickerInjected } from '@deepseek-ai/dsh-client-ui-workspace/client'
 import { WorkspaceBrowser } from '../src/client/rows/WorkspaceBrowser.tsx'
 import { WorkspacePicker } from '../src/client/WorkspacePicker.tsx'
+import { AllSessionsSection } from '../src/client/rows/AllSessions.tsx'
 import { apply as hostApply } from '../src/index.ts'
 
 async function bench() {
@@ -77,7 +78,7 @@ async function bench() {
   }
 }
 
-type HoleName = 'sidebar.workspaces' | 'conversation.hero.workspace' | 'conversation.empty.workspace'
+type HoleName = 'sidebar.workspaces' | 'sidebar.allSessions' | 'conversation.hero.workspace' | 'conversation.empty.workspace'
 
 /** Declare any subset of the holes with a single root registration ('root' is a single slot). */
 function declare(slots: SlotRegistry, ...names: HoleName[]): () => void {
@@ -112,6 +113,18 @@ describe('ui-workspace apply', () => {
     await Promise.resolve()
     expect(after.slots.entries('conversation.hero.workspace')[0]!.component).toBe(WorkspacePicker)
     // expect(after.slots.entries('conversation.empty.workspace')[0]!.component).toBe(WorkspacePicker)
+  })
+
+  it('registers the All Sessions section with an open action', async () => {
+    const b = await bench()
+    declare(b.slots, 'sidebar.allSessions')
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    expect(b.slots.entries('sidebar.allSessions')[0]!.component).toBe(AllSessionsSection)
+    expect(b.slots.entries('sidebar.allSessions')[0]!.locale).toBe('workspace')
+
+    const section = (b.slots.entries('sidebar.allSessions')[0]!.inject as () => AllSessionsInjected)()
+    section.open('session' as never)
+    expect(b.open).toHaveBeenCalledWith('session')
   })
 
   it('routes browser actions and picker creation to the services', async () => {

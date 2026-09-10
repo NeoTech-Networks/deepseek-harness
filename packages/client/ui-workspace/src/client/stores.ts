@@ -85,3 +85,29 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
     },
   })
 }
+
+/** Viewing state of the "All Sessions" quick-nav section. */
+type AllSessionsViewState = {
+  /** Whether the flat session list under the section header is shown. */
+  expanded: boolean
+}
+
+/** Annotation twin of the actions literal (drift fails assignability). */
+type AllSessionsViewActions = {
+  setExpanded: (draft: AllSessionsViewState, expanded: boolean) => void
+}
+
+/**
+ * Create the "All Sessions" section store handle: one persisted fold flag,
+ * defaulting to expanded so the quick-nav list is visible on first load.
+ * @returns the store handle.
+ */
+export function createAllSessionsStore(): EngineStoreHandle<AllSessionsViewState, AllSessionsViewActions> {
+  return defineStore({
+    init: (): AllSessionsViewState => ({ expanded: true }),
+    persist: 'dsh.workspace.allSessions.v1',
+    actions: {
+      setExpanded: (d, expanded: boolean) => { d.expanded = expanded },
+    },
+  })
+}
