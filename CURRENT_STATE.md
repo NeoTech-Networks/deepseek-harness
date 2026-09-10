@@ -4,6 +4,26 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-10 - All Sessions sidebar section: built and packaged, install pending
+
+New `sidebar.allSessions` slot (declared by ui-sidebar, filled by ui-workspace)
+adds a collapsible "All Sessions" section above the Workspace browser: every
+unarchived session newest-first, each row showing the live status mark, the
+session title, and the owning Workspace name; clicking a row opens the session.
+Fold state persisted in a new `dsh.workspace.allSessions.v1` store, default
+expanded, wide-only. Built on `feat/sidebar-all-sessions` (worktree
+`C:/Projects/worktrees/dsh-all-sessions`, commit `6eb1341b69`), one commit on
+top of `update/v0.1.5-alpha.2`.
+
+Gates green: client typecheck exit 0, 69 targeted tests pass (4 files), oxlint
+clean on changed files, client slot catalog regenerated, Agent Note plus
+bilingual READMEs pass format/classification/pairing gates. Installer
+`deepseek-harness-0.1.5-alpha.2-win-x64.exe` (194,723,910 bytes) packaged after
+seeding the Node runtime download cache and clearing a stale win-unpacked
+(EPERM, error-ledger row 14). Feature confirmed inside the packed
+`dsh-client-ui-workspace` tarball. Install handed to Steve via
+`finish-install.ps1`; NOT yet confirmed installed.
+
 ## 2026-09-09 - Right sidebar per-session width: ported, built, installed, verified
 
 The per-session panel-width fix (written 2026-09-09 but left uncommitted on the

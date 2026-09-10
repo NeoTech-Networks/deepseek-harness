@@ -1,3 +1,16 @@
+## 2026-09-10 - All Sessions sidebar section
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Client typecheck | exit 0 | tsc -b tsconfig.client.json exit 0 | VERIFIED |
+| Targeted tests | pass | 69 passed across tree, apply, sidebar-root, all-sessions | VERIFIED |
+| Lint (changed files) | 0 errors | oxlint 0 errors on 8 src files | VERIFIED |
+| Client slot catalog | current | gen-client-catalog --check up to date | VERIFIED |
+| Agent Note + READMEs | pass gates | format/classification/pairing all pass | VERIFIED |
+| Feature in the packed package | AllSessionsSection present | found in dsh-client-ui-workspace .tgz lib/client.js | VERIFIED |
+| Installer artifact | ~185 MB | 194,723,910 bytes, packaged exit 0 | VERIFIED |
+| Installed app shows the section | renders above Workspaces | install NOT confirmed by Steve | UNVERIFIED |
+
 ## 2026-09-09 - Right sidebar per-session width port and install
 
 | Check | Expected | Result | Status |
@@ -13,7 +26,6 @@
 | Fix in RUNNING profile | rightbarBySession present, old rightbar gone | 6 occurrences, no legacy rightbar | VERIFIED |
 | Settings survived | unchanged | dsh-config-vault 18 files all same | VERIFIED |
 | Per-session width on screen | independent widths | not yet eyeballed | UNVERIFIED |
-
 ## 2026-09-09 - Alt+S / Alt+P root cause, fix, and the two update-survival guards
 
 | Check | Expected | Result | Status |
