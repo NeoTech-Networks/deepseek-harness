@@ -1,3 +1,30 @@
+A. [OPEN, 2026-09-10] All Sessions disappears from the sidebar after a rail
+round-trip on 0.1.5-rc.1. Shrink the sidebar to the 56px icon rail and open it
+again: the whole section, header included, is gone. A second rail round-trip
+does NOT bring it back; only restarting the app does, every time. Collapse and
+expand via its own chevron work fine, so this is not the collapsed state. rc.2
+is ruled out as a fix: its compare against rc.1 changes ZERO sidebar or
+workspace source files. Suspect our section against the reworked sidebar /
+panel slot contract this release introduced. Diagnosable offline; only the
+final confirmation needs the app.
+
+B. [OPEN, 2026-09-10] dsh-v0.1.5-rc.2 is available and NOT installed. Published
+15:09Z 2026-09-10, about an hour before the rc.1 install finished, and the tag
+fetch that preceded the build predated it. Cosmetic only: feedback confirmation
+dialog, delivered-file card layout, code-file icons, conversation spacing. It
+does not fix item A. Taking it is a replay of the 24 commits onto the rc.2 tag;
+the session format is unchanged from rc.1, so it is not the one-way step the
+alpha-to-rc move was.
+
+C. [OPEN, 2026-09-10] A stray "deploy to production" sits in the history of the
+blog-articles session "Fix state initials capitalization and remove em dashes
+in blogs", sent 12:18 while testing the Alt+P shortcut. The session was stopped
+about 20 seconds later and produced NO model response and NO tool call, so
+nothing acted on it. It is inert but still the last user message in that
+session, and that session does PR merges and deploys. DSH offers no delete
+control on a SENT message (only on queued ones), and editing session files is
+forbidden, so this needs the operator. Recommend clearing it in the app or
+simply not resuming that session cold.
 0. [RESOLVED 2026-09-09, VERIFIED IN THE RUNNING CODE] Both fixes are LIVE. Steve installed at 08:35 and the app relaunched at 08:36; the profile was re-extracted with 247 packages. Read directly out of the running profile afterwards: `dsh-fs-local/lib/index.js` now carries `PUBLISH_RETRY_DELAYS_MS` (137), `publishOverExisting` (181, 652) and `readTextBytesConfirmingBinary` (449, 463, 471), and `dsh-plan-mode/lib/index.js` carries `describePlanFault` (59, 305, 474) with ZERO occurrences of the old `requires a non-empty markdown plan` message. One install directory on disk, no crash events in the Windows Application log. THE "CRASH" THE INSTALL REPORTS IS EXPECTED: `finish-install.ps1` step 1 is a `taskkill /F`, so Windows and any session inside the app report a crash; that is the forced close working, not the install failing, and the script now announces it before doing it. The four items this issue cast doubt on were re-checked the same way: every feature package (`dsh-workspace`, `dsh-session-status`, `dsh-vision-routing`, `dsh-account-usage`, `dsh-client-ui-sessions-panel`, `dsh-win32-process` carrying the CREATE_NO_WINDOW flag, `dsh-goal`) is present in the running profile and the accountUsage remote mount is in the running client bundle, so the CODE is live; only the on-screen behaviour of items 1, 2, 5 and 10 is still unproven and that needs eyes, not another read. Also cleaned up: the stale duplicate Add/Remove Programs entry left by the old app id (`7260a3eb...`) was backed up to `~\.claude\Exports\2026-09-09_dsh-stale-uninstall-key-backup.reg` and removed; one entry remains.
 
 0-build. [HOW IT WAS BUILT, kept for the record] Port: `git cherry-pick 92e043bf4d` onto `update/v0.1.5-alpha.1` in worktree `C:/Projects/worktrees/dsh-update-v015`, clean, as `7c577fb6fe`; the four touched files had diverged by exactly one non-overlapping line. Proven: fs-local 142 passed with the 13 pre-existing POSIX failures unchanged and all 6 new cases green, plan-mode 94/94, typecheck exit 0, build exit 0, packaging exit 0, and the two packaged seed `.tgz` archives read back with `publishOverExisting` / `describePlanFault` present and the old `requires a non-empty markdown plan` message gone. Installer: `apps/desktop/.desktop-build/targets/win-x64/artifacts/deepseek-harness-0.1.5-alpha.1-win-x64.exe`, 190,730,194 bytes, packaged with `DSH_DESKTOP_APP_ID=com.deepseek.harness`. WHAT IS LEFT: Steve runs `finish-install.ps1` from a separate PowerShell window, then the next session reads `~/.dsh/profiles/desktop/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js` and `.../dsh-plan-mode/lib/index.js` for the new symbols and submits one blockquote-first plan. Only then does this close. The doubt this item casts on items 1, 2, 5 and 10 is unchanged.
@@ -37,3 +64,4 @@
 18a. [OPEN, low] The dsh-hook-bridge test test_every_configured_hook_is_listed_in_policy fails, and failed identically before any 2026-09-09 change (confirmed by stashing the change and re-running). Two configured hooks are absent from the bridge's policy.json: skill_frontmatter_guard.py and auto_state_commit_dispatch.py. Left alone deliberately rather than blind-edited, because policy.json governs the enforcement layer and the gap is unrelated to the latency work.
 19. [OPEN, harness] Sixteen tool results were lost on 2026-09-08 to "interrupted after it was recorded, but no result was durably recorded", in two process-wide bursts (three sessions at 14:26:34/36/38 local, two at 14:40:21/29). The affected tools were exclusively long-blocking or interactive ones (pwsh 7, ask_user_question 3, exit_plan_mode 2, todo_write 1). Simultaneity across independent sessions rules out per-session aborts. Cause not yet attributed to a restart, a crash or a shared abort path.
 20. [RECORDED 2026-09-09, no action] Three tool calls that day arrived with damaged arguments (two with a stray "and" inside the first string value, one missing ~6,000 leading characters). This is NOT a harness fault and the accumulator was deliberately left alone: assistant/message already records the raw provider stream, and in all three the damage is present in the model's own FIRST JSON delta, before any harness code runs. bin/dsh_session_audit.mjs re-attributes any future occurrence automatically.
+
