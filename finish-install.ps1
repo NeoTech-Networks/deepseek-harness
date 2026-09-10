@@ -32,6 +32,15 @@
 # sufficient and safe: recover() early-returns when the journal is absent, so a
 # kept rollback is never restored over the fresh profile.
 
+param(
+  # Skip the safety guards below. Only for the case where a guard is provably
+  # wrong and you have read why it fired. It does NOT skip the seed integrity
+  # assertion, which is a correctness check, not a guard.
+  [switch]$Force,
+  # Install and relaunch, but do not wait for first-run setup to finish.
+  [switch]$NoWait
+)
+
 $ErrorActionPreference = 'Continue'
 
 $appDir   = 'C:\Users\SteveDempsey\AppData\Local\Programs\DeepSeek Harness'
@@ -39,6 +48,123 @@ $exe      = Join-Path $appDir 'DeepSeek Harness.exe'
 $seedDir  = Join-Path $appDir 'resources\seed'
 $dshHome  = 'C:\Users\SteveDempsey\.dsh'
 $checker  = Join-Path $PSScriptRoot 'check-seed-integrity.py'
+$logDir   = Join-Path $dshHome 'desktop\logs'
+$selfLock = Join-Path $env:TEMP 'dsh-finish-install.lock'
+
+# ---------------------------------------------------------------------------
+# GUARDS. Every one of these exists because the step below it destroyed a
+# working install at least once. Step 1 force-kills the app, so this script is
+# only safe to start from a state where nothing is mid-flight.
+# ---------------------------------------------------------------------------
+
+function Test-RunningInsideHarness {
+  # Walk the parent chain. DeepSeek Harness runs shell tool calls in a child
+  # pwsh, so a session that "just runs the script" is a descendant of the very
+  # process step 1 kills.
+  $id = $PID
+  for ($i = 0; $i -lt 10; $i++) {
+    $p = Get-CimInstance Win32_Process -Filter "ProcessId=$id" -ErrorAction SilentlyContinue
+    if (-not $p) { return $false }
+    if ($p.Name -like 'DeepSeek Harness*') { return $true }
+    if (-not $p.ParentProcessId -or $p.ParentProcessId -eq 0) { return $false }
+    $id = $p.ParentProcessId
+  }
+  return $false
+}
+
+function Get-ProvisionState {
+  # 'running'  first-run setup is in flight RIGHT NOW. Killing it here is what
+  #            leaves a dead lock, a half-written staging folder and no profile.
+  # 'stalled'  a provision started and stopped writing. Safe to retry.
+  # 'finished' last provision completed.
+  if (-not (Test-Path $logDir)) { return 'none' }
+  $log = Get-ChildItem $logDir -Filter 'provision-*.log' -ErrorAction SilentlyContinue |
+         Sort-Object LastWriteTime -Descending | Select-Object -First 1
+  if (-not $log) { return 'none' }
+  if ((Get-Content $log.FullName -Raw) -match 'applyRelease finished') { return 'finished' }
+  if (((Get-Date) - $log.LastWriteTime).TotalMinutes -lt 15) { return 'running' }
+  return 'stalled'
+}
+
+function Stop-Guard($reason, $advice) {
+  Write-Host ""
+  Write-Host "REFUSING TO RUN: $reason" -ForegroundColor Red
+  Write-Host $advice
+  Write-Host ""
+  Write-Host "If you are certain this is wrong, re-run with -Force." -ForegroundColor DarkGray
+  exit 2
+}
+
+# Guard 1: never run from inside the app this script force-closes.
+if (Test-RunningInsideHarness) {
+  if ($Force) {
+    Write-Warning "GUARD OVERRIDDEN: running inside DeepSeek Harness. This will kill your own session."
+  } else {
+    Stop-Guard "this script is running inside DeepSeek Harness." @"
+  Step 1 force-closes the app, which would kill the session running this script
+  and leave the install half done.
+
+  Open a NEW PowerShell window (Win+R, then: powershell) and run it from there.
+"@
+  }
+}
+
+# Guard 2: one copy at a time.
+if (Test-Path $selfLock) {
+  $otherPid = (Get-Content $selfLock -Raw -ErrorAction SilentlyContinue).Trim()
+  $alive = $false
+  if ($otherPid -match '^\d+$') {
+    $alive = [bool](Get-Process -Id ([int]$otherPid) -ErrorAction SilentlyContinue)
+  }
+  if ($alive -and -not $Force) {
+    Stop-Guard "another copy of this script is already running (pid $otherPid)." @"
+  Two copies race: the second one kills the app the first one just relaunched.
+  Wait for the first to print 'done', or close that window.
+"@
+  }
+  Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
+}
+Set-Content -Path $selfLock -Value $PID -Encoding ascii
+# Release the lock no matter how this script ends.
+$null = Register-EngineEvent PowerShell.Exiting -Action {
+  Remove-Item (Join-Path $env:TEMP 'dsh-finish-install.lock') -Force -ErrorAction SilentlyContinue
+}
+
+# Guard 3: never interrupt a first-run setup. THIS IS THE ONE THAT BIT ON
+# 2026-09-10: the script was started a second time on top of its own relaunch,
+# the kill landed in the middle of provisioning, and the app was left with no
+# profile at all.
+$state = Get-ProvisionState
+if ($state -eq 'running') {
+  if ($Force) {
+    Write-Warning "GUARD OVERRIDDEN: first-run setup is in flight. Killing it now will leave no profile."
+  } else {
+    Stop-Guard "DeepSeek Harness is in the middle of first-run setup." @"
+  Setup takes about four minutes and shows NO WINDOW while it runs, which is
+  why it looks stuck. Killing it now is what leaves the app with no profile.
+
+  Wait for it to finish, then check the newest log in:
+    $logDir
+  It is done when the last line reads 'applyRelease finished'.
+"@
+  }
+}
+
+# Stale leftovers from a previously killed run. Removing these is safe: the
+# lock names a dead process and the staging folder is a partial copy the app
+# will rebuild. This is the cleanup that had to be done by hand on 2026-09-10.
+$dshLock = Join-Path $dshHome 'desktop\lock'
+if (Test-Path $dshLock) {
+  $lockPid = (Get-Content $dshLock -Raw -ErrorAction SilentlyContinue).Trim()
+  $lockAlive = $false
+  if ($lockPid -match '^\d+$') {
+    $lockAlive = [bool](Get-Process -Id ([int]$lockPid) -ErrorAction SilentlyContinue)
+  }
+  if (-not $lockAlive) {
+    Remove-Item $dshLock -Force -ErrorAction SilentlyContinue
+    Write-Host "cleared a stale lock left by a killed run (pid $lockPid was not running)"
+  }
+}
 
 # 0. Snapshot the operator's own customisations BEFORE anything is removed.
 #    settings.yaml, the agent preset that mounts the MCP servers, AGENTS.md and
@@ -85,7 +211,7 @@ if (Test-Path $seedDir) {
 
 # 3. Reinstall (silent). The installer is unsigned (built with
 #    DSH_DESKTOP_ALLOW_UNSIGNED=1), so SmartScreen may prompt: choose "Run anyway".
-$installer = 'C:\Projects\worktrees\dsh-update-v0.1.5-alpha.2\apps\desktop\.desktop-build\targets\win-x64\artifacts\deepseek-harness-0.1.5-alpha.2-win-x64.exe'
+$installer = 'C:\Projects\worktrees\dsh-update-v015-rc1\apps\desktop\.desktop-build\targets\win-x64\artifacts\deepseek-harness-0.1.5-rc.1-win-x64.exe'
 if (-not (Test-Path $installer)) {
   Write-Host "installer not found: $installer" -ForegroundColor Red
   exit 1
@@ -120,11 +246,67 @@ Write-Host "profile cleared (rollback and pnpm store kept)"
 
 # 6. Relaunch. The first launch runs a full offline pnpm install into a fresh
 #    profile and takes minutes, not seconds.
-if (Test-Path $exe) {
-  Start-Process $exe
-  Write-Host "relaunched (first window can take several minutes)"
-} else {
+#
+#    Then WAIT for it, and say so. The script used to exit the moment it called
+#    Start-Process, which left the operator watching a windowless app with no
+#    way to tell "still working" from "dead". That uncertainty is what caused
+#    the second run that broke the install on 2026-09-10. Waiting here removes
+#    the reason to re-run it.
+$priorLog = (Get-ChildItem $logDir -Filter 'provision-*.log' -ErrorAction SilentlyContinue |
+             Sort-Object LastWriteTime -Descending | Select-Object -First 1).Name
+
+if (-not (Test-Path $exe)) {
   Write-Host "app exe not found after install: $exe" -ForegroundColor Red
+  Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
+  exit 1
+}
+
+Start-Process $exe
+Write-Host "relaunched"
+
+if ($NoWait) {
+  Write-Host "not waiting (-NoWait). First-run setup takes about four minutes and shows no window."
+  Write-Host "DO NOT run this script again while that is happening." -ForegroundColor Yellow
+} else {
+  Write-Host ""
+  Write-Host "Waiting for first-run setup. This takes about four minutes and shows NO WINDOW."
+  Write-Host "Leave this alone. Do not close the app and do not re-run this script." -ForegroundColor Yellow
+
+  $deadline = (Get-Date).AddMinutes(12)
+  $done = $false
+  $newLog = $null
+  while ((Get-Date) -lt $deadline) {
+    Start-Sleep -Seconds 10
+    $newLog = Get-ChildItem $logDir -Filter 'provision-*.log' -ErrorAction SilentlyContinue |
+              Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($newLog -and $newLog.Name -ne $priorLog) {
+      $body = Get-Content $newLog.FullName -Raw
+      if ($body -match 'applyRelease finished') { $done = $true; break }
+      # Show the last milestone so the wait is legible rather than a blank pause.
+      $last = ($body -split "`n" | Where-Object { $_ -match '^\[\d{4}-' } | Select-Object -Last 1)
+      if ($last) { Write-Host ("  " + $last.Trim()) -ForegroundColor DarkGray }
+    }
+    if (-not (Get-Process -Name 'DeepSeek Harness' -ErrorAction SilentlyContinue)) {
+      Write-Host ""
+      Write-Host "The app exited during setup. It did NOT finish." -ForegroundColor Red
+      Write-Host "Log: $(if ($newLog) { $newLog.FullName } else { $logDir })"
+      Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
+      exit 1
+    }
+  }
+
+  if ($done) {
+    $activated = (Select-String -Path $newLog.FullName -Pattern 'activated as (.+)$' |
+                  Select-Object -Last 1).Matches.Groups[1].Value
+    Write-Host ""
+    Write-Host "SETUP COMPLETE. Running $activated" -ForegroundColor Green
+  } else {
+    Write-Host ""
+    Write-Host "Setup did not report completion within 12 minutes." -ForegroundColor Red
+    Write-Host "It may still be working. Check the newest log in $logDir"
+    Write-Host "and look for 'applyRelease finished'. Do NOT re-run this script" -ForegroundColor Yellow
+    Write-Host "until that line appears or the app has exited." -ForegroundColor Yellow
+  }
 }
 
 # 7. Say whether the install touched any of the operator's own settings, and
@@ -150,8 +332,8 @@ if (Test-Path $VaultTool) {
 }
 
 Write-Host ""
-Write-Host "Once the window is up (first launch takes minutes), check that every one of"
-Write-Host "your own features made it into this build:"
+Write-Host "Check that every one of your own features made it into this build:"
 Write-Host "    py C:\Claude\bin\dsh_local_features_check.py"
 
+Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
 Write-Host "done"
