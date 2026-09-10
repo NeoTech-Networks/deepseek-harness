@@ -524,34 +524,34 @@ describe('image draft rail', () => {
 
 describe('operator shortcuts', () => {
   const chord = (code: string, extra: KeyboardEventInit = {}): KeyboardEvent =>
-    new window.KeyboardEvent('keyup', { code, altKey: true, bubbles: true, cancelable: true, ...extra })
+    new window.KeyboardEvent('keydown', { code, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true, ...extra })
 
-  it('Alt+S fills the composer with the save-state command and submits it', () => {
+  it('Ctrl+Shift+S fills the composer with the save-state command and submits it', () => {
     const { sink } = bench({})
     fireEvent(window, chord('KeyS'))
     expect(sink).toHaveBeenCalledWith('/save-state', [], 'queue', expect.any(AbortSignal))
   })
 
-  it('Alt+P fills the composer with the production promote phrase and submits it', () => {
+  it('Ctrl+Shift+P fills the composer with the production promote phrase and submits it', () => {
     const { sink } = bench({})
     fireEvent(window, chord('KeyP'))
     expect(sink).toHaveBeenCalledWith('deploy to production', [], 'queue', expect.any(AbortSignal))
   })
 
-  // Electron on Windows never delivers the keydown of an Alt+letter chord to
-  // the renderer (measured 2026-09-09 against the packaged runtime): only the
-  // keyup carries the letter. A keydown binding therefore passes in a browser
-  // and does nothing in the desktop app, which is the regression this guards.
-  it('does NOT act on the keydown, because the desktop app never delivers it', () => {
+  // Requires BOTH Ctrl and Shift. A lone Ctrl+S or Shift+S must not fire, and
+  // neither may a bare key, because those are ordinary editor keystrokes.
+  it('does NOT act without both Ctrl and Shift', () => {
     const { sink } = bench({})
-    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', altKey: true, bubbles: true, cancelable: true }))
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', ctrlKey: true, bubbles: true, cancelable: true }))
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', shiftKey: true, bubbles: true, cancelable: true }))
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', bubbles: true, cancelable: true }))
     expect(sink).not.toHaveBeenCalled()
   })
 
-  it('ignores the chord without Alt, with an extra modifier, or for another key', () => {
+  it('ignores the chord with an extra modifier or for another key', () => {
     const { sink } = bench({})
-    fireEvent(window, new window.KeyboardEvent('keyup', { code: 'KeyS', bubbles: true, cancelable: true }))
-    fireEvent(window, chord('KeyS', { ctrlKey: true }))
+    fireEvent(window, chord('KeyS', { altKey: true }))
+    fireEvent(window, chord('KeyS', { metaKey: true }))
     fireEvent(window, chord('KeyA'))
     expect(sink).not.toHaveBeenCalled()
   })
