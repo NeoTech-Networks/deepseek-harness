@@ -404,6 +404,28 @@ one command and is the regression check for everything below.
 
 <!-- claude-memory-actor:end -->
 
+## Last save-state (2026-09-09T23:35:44.128791+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `a463cfd2-49e3-4da7-b34c-e0db2cd09616`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-58e0688c-a243-41d8-9833-8412029663cc
+
+<!-- claude-memory-actor:end -->
+
+## Last save-state (2026-09-09T00:08:42.118722+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-08 - Live Claude Max usage readout in the composer footer
 
 - New package `packages/llm/account-usage` (`@deepseek-ai/dsh-account-usage`), both faces: a Host `TypertRemoteService` (`ctx.accountUsage.read()`) and a browser dock entry seated on `conversation.composer.dock` beside the stats line.
@@ -549,6 +571,17 @@ lands on the fork (PRs #2 and #3 merged).
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=321e7af0-b0ab-4a0b-9a4c-de8eea784e39 at=2026-09-09T03:50:14.915068+00:00
 -->
+## Last save-state (2026-09-08T17:47:04.847381+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `1af9c4e8-f7ce-40d6-8170-dd9119e4caf2`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-d236bdea-4e7a-4e0c-b761-552123f3da1d
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-07 - Session status icons in the sidebar
 
 - Added a durable, model-independent declared session status. New `packages/session-status/` group: domain (`session/status` event, `sessionStatus` projection, validated vocabulary, `ctx.sessionStatus`), `tool-session-status` (`set_session_status`), `command-session-status` (`/status`).
@@ -577,3 +610,9 @@ lands on the fork (PRs #2 and #3 merged).
 
 <!-- claude-memory-actor:end -->
 
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=a463cfd2-49e3-4da7-b34c-e0db2cd09616 at=2026-09-09T23:35:44.128791+00:00
+-->
