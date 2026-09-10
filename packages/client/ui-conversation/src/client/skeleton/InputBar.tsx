@@ -38,12 +38,12 @@ import { ContextMeter } from './ContextMeter.tsx'
 import { PermissionSelect } from './PermissionSelect.tsx'
 import css from './InputBar.module.css'
 
-/** Alt+S fills the composer with this operator command and submits it. */
+/** Ctrl+Shift+S fills the composer with this operator command and submits it. */
 const SAVE_STATE_SHORTCUT = '/save-state'
 /**
- * Alt+P fills the composer with this text and submits it. Lowercase and exact:
- * it is the operator's canonical production promote phrase, and downstream
- * tooling matches it verbatim.
+ * Ctrl+Shift+P fills the composer with this text and submits it. Lowercase and
+ * exact: it is the operator's canonical production promote phrase, and
+ * downstream tooling matches it verbatim.
  */
 const DEPLOY_SHORTCUT = 'deploy to production'
 
@@ -320,28 +320,27 @@ export const InputBar = memo(function InputBar({
     })
   }, [editor, keyboard])
 
-  // Operator shortcuts: Alt+S submits the save-state command, Alt+P submits the
-  // production promote phrase. A renderer-level listener keeps these inside the
-  // focused app window, so they never collide with system-wide hotkeys. The
-  // draft is replaced wholesale (setDraft), then submitted through the same
-  // path as the primary send button; /save-state is not a slash command, so it
-  // falls through to the default sink and resolves as a user-invocable skill.
+  // Operator shortcuts: Ctrl+Shift+S submits the save-state command,
+  // Ctrl+Shift+P submits the production promote phrase. A renderer-level
+  // listener keeps these inside the focused app window, so they never collide
+  // with system-wide hotkeys. The draft is replaced wholesale (setDraft), then
+  // submitted through the same path as the primary send button; /save-state is
+  // not a slash command, so it falls through to the default sink and resolves
+  // as a user-invocable skill.
   //
-  // KEYUP, NOT KEYDOWN, AND THAT IS LOAD BEARING (measured 2026-09-09 on
-  // Windows, against the packaged Electron runtime with real scan-code input).
-  // Electron on Windows never delivers the keydown of an Alt+letter chord to
-  // the renderer: only `Alt` itself arrives as a keydown, the letter arrives
-  // solely as a keyup carrying altKey. The main process cannot see it either
-  // (before-input-event reports the same keyUp-only pair), and a hidden menu
-  // accelerator does not fire, so keyup is the ONLY place this chord is
-  // observable. A browser delivers both, so a keydown listener passes every
-  // offline test and then does nothing in the desktop app, which is exactly
-  // what happened to the first version of this shortcut. Binding keyup fires
-  // once on both surfaces.
+  // NOT ALT (measured 2026-09-09 on Windows, against the packaged Electron
+  // runtime with real scan-code input): Electron on Windows never delivers the
+  // keydown of an Alt+letter chord to the renderer; only `Alt` itself arrives
+  // as a keydown and the letter arrives solely as a keyup carrying altKey. The
+  // first version bound keyup, which made the shortcut fire, but the Alt
+  // keydown still woke the native menu bar whose first item is "Desktop
+  // Plugins…", so Alt+P popped that window open. Ctrl+Shift is delivered
+  // normally on both keydown and keyup, so we bind keydown and leave the menu
+  // bar alone.
   useEffect(() => {
     if (inputActions === undefined) return
-    const onShortcut = (event: WindowEventMap['keyup']): void => {
-      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+    const onShortcut = (event: WindowEventMap['keydown']): void => {
+      if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return
       if (event.code !== 'KeyS' && event.code !== 'KeyP') return
       // Refusing in silence is indistinguishable from a broken shortcut, so a
       // locked or mid-admission composer says so rather than swallowing it.
@@ -353,8 +352,8 @@ export const InputBar = memo(function InputBar({
       inputActions.setDraft(event.code === 'KeyS' ? SAVE_STATE_SHORTCUT : DEPLOY_SHORTCUT)
       inputActions.submit()
     }
-    window.addEventListener('keyup', onShortcut)
-    return () => { window.removeEventListener('keyup', onShortcut) }
+    window.addEventListener('keydown', onShortcut)
+    return () => { window.removeEventListener('keydown', onShortcut) }
   }, [inputActions, locked, machineBusy, showToast, t])
 
   // Button presses steal focus from the editor; suppress at mousedown so
