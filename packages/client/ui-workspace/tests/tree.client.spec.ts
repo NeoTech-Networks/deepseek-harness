@@ -6,11 +6,12 @@ import type { ScheduleId, ScheduleRecord } from '@deepseek-ai/dsh-schedule/clien
 import type { GoalId } from '@deepseek-ai/dsh-goal/types'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
-  deriveFlat, deriveGroups as deriveGroupsSectioned, derivePhase, deriveSearchResults, owningGroupKey, workspaceLabel,
+  deriveAllSessions, deriveFlat, deriveGroups as deriveGroupsSectioned, derivePhase, deriveSearchResults,
+  owningGroupKey, sessionWorkspaceLabel, workspaceLabel,
   UNGROUPED_KEY,
 } from '../src/client/tree.ts'
 import type { SessionRowFacts } from '../src/client/tree.ts'
-import { createWorkspaceViewStore } from '../src/client/stores.ts'
+import { createAllSessionsStore, createWorkspaceViewStore } from '../src/client/stores.ts'
 
 const sid = (id: string) => id as SessionId
 const wid = (id: string) => id as WorkspaceId
@@ -426,6 +427,42 @@ describe('deriveFlat', () => {
   })
 })
 
+describe('deriveAllSessions', () => {
+  it('flattens every visible session newest-first with its owning Workspace label', () => {
+    const owned = summary('owned', 20)
+    const loose = summary('loose', 10, '/projects/loose')
+    const rows = deriveAllSessions(
+      list(owned, loose),
+      [workspace('alpha', ['owned'], 'Alpha'), workspace('beta', [], 'Beta')],
+      noArchive,
+      noAttention,
+    )
+    expect(rows.map(row => row.id)).toEqual([owned.id, loose.id])
+    expect(rows.map(row => row.workspace)).toEqual(['Alpha', 'loose'])
+  })
+
+  it('hides archived and subagent-origin sessions', () => {
+    const kept = summary('kept', 3)
+    const gone = summary('gone', 2)
+    const subagent = { ...summary('subagent', 1), origin: 'subagent' as const }
+    const rows = deriveAllSessions(list(kept, gone, subagent), [], archived('gone'), noAttention)
+    expect(rows.map(row => row.id)).toEqual([kept.id])
+  })
+
+  it('keeps only the current blank session', () => {
+    const currentBlank = { ...summary('current-blank', 9), blank: true }
+    const staleBlank = { ...summary('stale-blank', 8), blank: true }
+    const real = summary('real', 1)
+    const rows = deriveAllSessions(
+      { ...list(real, currentBlank, staleBlank), current: currentBlank.id },
+      [],
+      noArchive,
+      noAttention,
+    )
+    expect(rows.map(row => row.id)).toEqual([currentBlank.id, real.id])
+  })
+})
+
 describe('deriveSearchResults archive filtering', () => {
   it('archived sessions never match — not by title and not via a backend content hit', () => {
     const hit = summary('hit', 2)
@@ -690,5 +727,23 @@ describe('workspaceLabel', () => {
     expect(workspaceLabel('/projects/demo/')).toBe('demo')
     expect(workspaceLabel('C:\\projects\\demo\\')).toBe('demo')
     expect(workspaceLabel('/')).toBe('/')
+  })
+})
+
+describe('sessionWorkspaceLabel', () => {
+  it('returns the owning Workspace title or the cwd basename fallback', () => {
+    const owned = summary('owned', 1, '/projects/alpha')
+    expect(sessionWorkspaceLabel([workspace('alpha', ['owned'], 'Alpha')], owned)).toBe('Alpha')
+    expect(sessionWorkspaceLabel([], summary('loose', 1, '/projects/loose'))).toBe('loose')
+    expect(sessionWorkspaceLabel([], summary('bare', 1))).toBe('')
+  })
+})
+
+describe('createAllSessionsStore', () => {
+  it('persists the section fold flag, defaulting to expanded', () => {
+    const store = createAllSessionsStore().create()
+    expect(store.getSnapshot().expanded).toBe(true)
+    store.actions.setExpanded(false)
+    expect(store.getSnapshot().expanded).toBe(false)
   })
 })

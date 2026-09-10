@@ -59,7 +59,7 @@ The value is intentionally best effort for cold Sessions. An identity-matching u
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The package is one composition: both target slots are declared by other plugins, so `apply` uses `slots.inject()` to register for each declaration lifetime and re-register after a declaring slot is restored.
+The package is one composition: all three target slots are declared by other plugins, so `apply` uses `slots.inject()` to register for each declaration lifetime and re-register after a declaring slot is restored. The `sidebar.allSessions` registration adds the collapsible flat quick-nav list above the workspace browser, sharing the browser's session derivation.
 
 ### The directory-flow hole
 

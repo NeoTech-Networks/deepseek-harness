@@ -31,6 +31,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'sidebar.panellist': { kind: 'list'; scope: 'root'; owner: SidebarPanelIconOwnerProps }
     /**
+     * The "All Sessions" quick-nav section rendered above the workspace
+     * browser: a collapsible header and a flat list of every unarchived
+     * session. Declared by this package's 'sidebar' entry (declaring is
+     * claiming); ui-workspace registers the section.
+     */
+    'sidebar.allSessions': { kind: 'single'; scope: 'root'; owner: SidebarSectionOwnerProps }
+    /**
      * The workspace/session browsing region: section header, search, the
      * grouped/flat session list, and every workspace dialog. Declared by this
      * package's 'sidebar' entry (declaring is claiming); ui-workspace
@@ -137,6 +144,7 @@ export type SidebarRootComponentProps =
     | 'sidebar.brand.mark'
     | 'sidebar.brand.name'
     | 'sidebar.panellist'
+    | 'sidebar.allSessions'
     | 'sidebar.workspaces'
     | 'sidebar.settings'
     | 'sidebar.footer.action'
