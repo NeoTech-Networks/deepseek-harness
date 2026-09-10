@@ -11,6 +11,32 @@
 | Installer artifact | ~185 MB | 194,723,910 bytes, packaged exit 0 | VERIFIED |
 | Installed app shows the section | renders above Workspaces | install NOT confirmed by Steve | UNVERIFIED |
 
+## 2026-09-10 - rc.1 install and the local stack, verified
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| First-run provisioning | log ends "applyRelease finished" | 16:11:20Z to 16:15:21Z, all six milestones in order | VERIFIED |
+| Activated version | 0.1.5-rc.1 | "staging profile activated as 0.1.5-rc.1" | VERIFIED |
+| Local features | 11 of 11 present | dsh_local_features_check.py exit 0, 11 ok rows | VERIFIED |
+| No commit lost in replay | subject lists match | diff found 1 missing, re-picked, now 0 missing | VERIFIED |
+| Alt+S | inserts /save-state | seen in composer on rc.1 | VERIFIED |
+| Alt+P | exact lowercase promote phrase | queued as "deploy to production" on rc.1 | VERIFIED |
+| Config vault | 18 files all same | dsh_config_vault.py verify exit 0, post-install | VERIFIED |
+| MCP servers mounted | stdio children spawned | 4 of 4 live under rc.1 (memory-bridge, design, design_team_account, playwright) | VERIFIED |
+| Claude Code hook bridge | a hook fires | "Context injection - hooks-claude-code" in session | VERIFIED |
+| Slash command expansion | /save resolves | menu resolved save-state with description | VERIFIED |
+| All Sessions renders | above workspace browser, newest first | renders with workspace label and status glyph | VERIFIED |
+| All Sessions collapse/expand | chevron toggles list | both directions work | VERIFIED |
+| All Sessions click | opens the session | opened the clicked session | VERIFIED |
+| All Sessions on 56px rail | renders nothing | rail shows only the four icons | VERIFIED |
+| All Sessions after rail round-trip | still renders | SECTION DISAPPEARS, returns only after app restart | BROKEN |
+| Seed integrity after install | expected == actual | 271 of 271, extra 0 missing 0 mismatch 0 | VERIFIED |
+| Installer artifact | ~185 MB | 194,688,379 bytes | VERIFIED |
+| Branch on GitHub | head matches local | update/v0.1.5-rc.1 at cf682495c5 | VERIFIED |
+| Derived installer path | resolves per worktree | rc.1 and alpha.2 resolve, unpackaged worktree refuses | VERIFIED |
+| Guard: inside Harness | true from a DSH descendant | walk found DeepSeek Harness.exe 2 hops up | VERIFIED |
+| Guard: provision in flight | reads the provision log | reported "finished" correctly | VERIFIED |
+| rc.2 touches the sidebar | expected some overlap | ZERO sidebar/workspace source files changed | VERIFIED |
 ## 2026-09-09 - Right sidebar per-session width port and install
 
 | Check | Expected | Result | Status |
@@ -353,3 +379,4 @@ cherry-pick `7c577fb6fe` (was `92e043bf4d` on the 0.1.3 line).
 
 
 ## 2026-09-07 - Session status icons
+

@@ -24,6 +24,54 @@ seeding the Node runtime download cache and clearing a stale win-unpacked
 `dsh-client-ui-workspace` tarball. Install handed to Steve via
 `finish-install.ps1`; NOT yet confirmed installed.
 
+## 2026-09-10 - 0.1.5-rc.1 is live with all 11 local features, and finish-install is hardened
+
+Installed build is 0.1.5-rc.1 (provision log 16:11:20Z to 16:15:21Z ends
+"applyRelease finished", "staging profile activated as 0.1.5-rc.1"). The 23
+local commits were replayed onto the rc.1 tag in this worktree; a 24th commit
+bumps the 8 fork-local packages to 0.1.5-rc.1 because the release family
+requires one version across every member.
+
+ONE COMMIT WAS SILENTLY DROPPED AND RECOVERED. `fix(session-status)`
+(121ab8e9dc) vanished from the replay: the pick stopped on a DIRTY TREE, not a
+conflict, so there was no CHERRY_PICK_HEAD and `--continue` stepped past it with
+no output. Caught by diffing commit subject lists, re-picked cleanly as
+3247cf6c1e. Branch now carries all 23 originals.
+
+8313ae9873 (console flash) was KEPT, not dropped. Upstream rc.1 added
+`windowsHide` in subprocess-local/spawn.ts, which is the Node child_process
+path; ours is the win32-process native path (STARTF_USESHOWWINDOW / SW_HIDE for
+the restricted-token Job launch). rc.1 has no CREATE_NO_WINDOW in win32-process
+at all, so the two are complementary.
+
+finish-install.ps1 gained three guards plus a wait (75022500af, cf682495c5).
+It refuses to run inside the app, refuses a second concurrent copy, refuses
+while a provision is in flight, clears a stale lock from a killed run, and now
+waits for "applyRelease finished" and prints the activated version. It also
+DERIVES its installer from its own folder plus this worktree's package.json
+version, and resolves machine paths from LOCALAPPDATA / USERPROFILE / DSH_HOME
+instead of a hardcoded profile.
+
+Branch `update/v0.1.5-rc.1` is pushed to origin at cf682495c5. Branch
+`feat/sidebar-all-sessions` is pushed at 6eb1341b69.
+
+NOT ON MASTER, DELIBERATELY. finish-install.ps1 and check-seed-integrity.py
+have never existed on master, and putting them there achieves nothing: update
+worktrees are branched from the upstream TAG, so master is never inherited.
+These files travel only by the local feature-stack replay. A scratch branch
+that tried it was abandoned and deleted; master is untouched at f84d6b8763.
+Master also cannot be built here at all: it is still 0.1.3-alpha.2, which needs
+the native module fs-ext and there is no Visual Studio toolchain on this box.
+
+Packaging needs four things, all now in the skill: DSH_DESKTOP_APP_ID
+com.deepseek.harness (derived from the NSIS uuid5, NOT recalled),
+DSH_DESKTOP_ALLOW_UNSIGNED=1, DOWNLOAD_TEST_ORIGIN, and PowerShell rather than
+Git Bash because GNU tar reads a C:\ output path as a remote host.
+
+Upstream published dsh-v0.1.5-rc.2 at 15:09Z, about an hour before this install
+finished. It is cosmetic (feedback dialog, delivered-file cards, icons,
+spacing) and touches ZERO sidebar or workspace source, so it does not fix the
+open sidebar defect below.
 ## 2026-09-09 - Right sidebar per-session width: ported, built, installed, verified
 
 The per-session panel-width fix (written 2026-09-09 but left uncommitted on the
@@ -636,3 +684,4 @@ lands on the fork (PRs #2 and #3 merged).
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=a463cfd2-49e3-4da7-b34c-e0db2cd09616 at=2026-09-09T23:35:44.128791+00:00
 -->
+
