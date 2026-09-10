@@ -1,10 +1,13 @@
 /**
- * ui-workspace contracts. Two registrations share this package:
+ * ui-workspace contracts. Three registrations share this package:
  *
  * - WorkspaceBrowser fills the sidebar shell's `sidebar.workspaces` hole —
  *   the whole browsing region (section header, search, grouped/flat session
  *   list, workspace dialogs). It registers this package's viewing store and
  *   consumes the shell's two-fact owner share (wide / expandSidebar).
+ * - AllSessionsSection fills the shell's `sidebar.allSessions` hole — the
+ *   collapsible flat list of every unarchived session, rendered above the
+ *   workspace browser.
  * - WorkspacePicker fills the conversation empty-state hole (menu + error
  *   dialog shared with the browser).
  *
@@ -32,7 +35,7 @@ import type { RemoteHostFacts } from '@deepseek-ai/dsh-api-remotes/client'
 import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { createWorkspaceViewStore } from '../stores.ts'
+import type { createAllSessionsStore, createWorkspaceViewStore } from '../stores.ts'
 
 /**
  * Owner share of the directory-flow holes: the complete conversation between
@@ -158,6 +161,23 @@ export type WorkspaceBrowserProps =
   & PropsStore<ReturnType<typeof createWorkspaceViewStore>>
   & Omit<WorkspaceBrowserInjected, 'hooks'>
   & PropsHooks<WorkspaceBrowserInjected['hooks']>
+  & PropsLocale<'workspace'>
+
+/**
+ * Section-private injected share: the one action the flat quick-nav list
+ * drives. Data reads use the global framework hooks (useSessions,
+ * useWorkspaces, useSessionPendingInteraction).
+ */
+export type AllSessionsInjected = {
+  /** Open a listed Session (the same navigation the browser rows use). */
+  open: (sessionId: SessionId) => void
+}
+
+/** Full section props: shell owner share + fold store + injected open + the locale seat. */
+export type AllSessionsProps =
+  PropsRuntime<'sidebar.allSessions'>
+  & PropsStore<ReturnType<typeof createAllSessionsStore>>
+  & AllSessionsInjected
   & PropsLocale<'workspace'>
 
 /**

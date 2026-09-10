@@ -8,6 +8,7 @@
 export const zh = {
   'group.ungrouped': '未分组',
   'session.new': '新会话',
+  'section.allSessions': '全部会话',
   'section.workspaces': '工作区',
   'section.sessions': '会话',
   'viewOptions.label': '视图选项',
@@ -23,6 +24,7 @@ export const zh = {
   'empty.noMatches': '无匹配结果',
   'workspace.add': '添加工作区',
   'search.sessions.aria': '搜索会话',
+  'allSessions.toggle': '展开或收起全部会话',
   'search.placeholder': '搜索会话…',
   'search.clear': '清除搜索',
   'search.results.aria': '搜索结果',
@@ -88,6 +90,7 @@ export type WorkspaceKey = keyof typeof zh
 export const en = {
   'group.ungrouped': 'Ungrouped',
   'session.new': 'New Session',
+  'section.allSessions': 'All Sessions',
   'section.workspaces': 'Workspaces',
   'section.sessions': 'Sessions',
   'viewOptions.label': 'View options',
@@ -103,6 +106,7 @@ export const en = {
   'empty.noMatches': 'No matches',
   'workspace.add': 'Add workspace',
   'search.sessions.aria': 'Search sessions',
+  'allSessions.toggle': 'Toggle All Sessions',
   'search.placeholder': 'Search sessions...',
   'search.clear': 'Clear search',
   'search.results.aria': 'Search results',

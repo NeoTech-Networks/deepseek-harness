@@ -1,0 +1,122 @@
+/* "All Sessions" quick-nav section: a collapsible header above the workspace
+   browser, with a bounded, independently scrolling flat list when expanded.
+   The root restores the sidebar's right inset (the region seat cancels it) so
+   rows align with the workspace browser beneath. */
+
+.root {
+  flex: none;
+  padding-right: var(--dsh-sidebar-inline-padding);
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 36px;
+  padding: 0 4px;
+  margin-bottom: 4px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.header:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* Expand arrow (filled triangle): points right closed, rotates down open. */
+.chevron {
+  flex: none;
+  color: var(--dsw-alias-label-caption);
+  transition: transform 150ms var(--ds-ease-in-out);
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Bounded so the section can never swallow the workspace browser below; the
+   list scrolls on its own once it grows past the cap. */
+.list {
+  max-height: 264px;
+  overflow-y: auto;
+  margin-bottom: 4px;
+  padding-right: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--dsw-alias-label-primary);
+}
+
+.row + .row {
+  margin-top: 2px;
+}
+
+.row:hover,
+.row.selected {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.status {
+  flex: none;
+  width: 16px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0 6px 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.workspace {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.empty {
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}
