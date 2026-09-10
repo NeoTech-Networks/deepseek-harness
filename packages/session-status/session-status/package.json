@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-session-status",
   "description": "Durable declared session status (waiting to deploy, stuck, finished) over the DeepSeek Harness session log",
-  "version": "0.1.5-alpha.2",
+  "version": "0.1.5-rc.1",
   "publishConfig": {
     "access": "public"
   },
