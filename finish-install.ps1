@@ -3,6 +3,18 @@
 # Run this from a NEW PowerShell window (Win+R -> "powershell" -> paste the
 # command from the session). Do NOT run it from inside the DeepSeek Harness app:
 # it force-closes the app, which would kill the very session hosting the app.
+# That is no longer left to discipline: a guard below refuses to run when this
+# script's own parent chain contains the app.
+#
+# Run it from the worktree you just built in. It picks its installer from its
+# OWN folder and this worktree's package.json version, so there is no path to
+# edit per release and no way to install a build from a different worktree.
+#
+# Guards run before anything is touched, and each exits 2 explaining itself:
+# running inside the app, a second copy already running, or a first-run setup
+# currently in flight. -Force overrides them (but never the seed integrity
+# assertion). After relaunching it WAITS for setup and prints the version, so
+# a windowless app is never mistaken for a dead one.
 #
 # It does six things:
 #   1. Force-closes any running DeepSeek Harness processes. This is a forced
@@ -43,10 +55,13 @@ param(
 
 $ErrorActionPreference = 'Continue'
 
-$appDir   = 'C:\Users\SteveDempsey\AppData\Local\Programs\DeepSeek Harness'
+# Resolved, not hardcoded: this file lives in the repo, so it must not carry one
+# machine's user profile. DSH_HOME wins when set, because the harness itself
+# honours it and a session can be running against a non-default home.
+$appDir   = Join-Path $env:LOCALAPPDATA 'Programs\DeepSeek Harness'
 $exe      = Join-Path $appDir 'DeepSeek Harness.exe'
 $seedDir  = Join-Path $appDir 'resources\seed'
-$dshHome  = 'C:\Users\SteveDempsey\.dsh'
+$dshHome  = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
 $checker  = Join-Path $PSScriptRoot 'check-seed-integrity.py'
 $logDir   = Join-Path $dshHome 'desktop\logs'
 $selfLock = Join-Path $env:TEMP 'dsh-finish-install.lock'
@@ -211,11 +226,39 @@ if (Test-Path $seedDir) {
 
 # 3. Reinstall (silent). The installer is unsigned (built with
 #    DSH_DESKTOP_ALLOW_UNSIGNED=1), so SmartScreen may prompt: choose "Run anyway".
-$installer = 'C:\Projects\worktrees\dsh-update-v015-rc1\apps\desktop\.desktop-build\targets\win-x64\artifacts\deepseek-harness-0.1.5-rc.1-win-x64.exe'
-if (-not (Test-Path $installer)) {
-  Write-Host "installer not found: $installer" -ForegroundColor Red
+#
+#    The path is DERIVED from this script's own location and this worktree's
+#    package.json version, never hardcoded. There are a dozen dsh-* worktrees on
+#    this machine, each with its own artifacts folder, and a hardcoded path was
+#    both a chore to update every release and a live risk of silently installing
+#    a build from a DIFFERENT worktree than the one just built.
+$version = $null
+try {
+  $version = (Get-Content (Join-Path $PSScriptRoot 'package.json') -Raw | ConvertFrom-Json).version
+} catch {
+  Write-Host "cannot read version from $PSScriptRoot\package.json" -ForegroundColor Red
+  Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
   exit 1
 }
+$artifactDir = Join-Path $PSScriptRoot 'apps\desktop\.desktop-build\targets\win-x64\artifacts'
+$installer   = Join-Path $artifactDir "deepseek-harness-$version-win-x64.exe"
+
+if (-not (Test-Path $installer)) {
+  Write-Host "installer not found for version $version" -ForegroundColor Red
+  Write-Host "  expected: $installer"
+  $others = Get-ChildItem $artifactDir -Filter '*-win-x64.exe' -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending
+  if ($others) {
+    Write-Host "  this worktree has built:" -ForegroundColor Yellow
+    $others | ForEach-Object { Write-Host ("    {0}  ({1:yyyy-MM-dd HH:mm})" -f $_.Name, $_.LastWriteTime) }
+    Write-Host "  Version mismatch usually means the package step has not been re-run since the version bump."
+  } else {
+    Write-Host "  nothing has been packaged in this worktree yet. Run: pnpm run package:desktop:win:x64" -ForegroundColor Yellow
+  }
+  Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
+  exit 1
+}
+Write-Host "installer: $(Split-Path $installer -Leaf)"
 Write-Host "installing..."
 $p = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
 Write-Host "installer exit code: $($p.ExitCode)"
