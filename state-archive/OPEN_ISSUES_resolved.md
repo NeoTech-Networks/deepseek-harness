@@ -1,3 +1,10 @@
+## 2026-09-11 - session dsh-version-trap-trunk-checkout (moved out of OPEN_ISSUES.md)
+
+Moved out of OPEN_ISSUES.md. Original wording preserved verbatim.
+
+- [was RESOLVED 2026-09-11] The right-sidebar per-session width fix (2026-09-09) was uncommitted in the primary checkout C:\Projects\repos\deepseek-harness (branch fix/account-usage-remote-mount). 11 files: ui-layout stores/service/AppFrame + ui-sidebar-right index/seat + their tests + the client api-catalog. 220 tests pass, client typecheck clean. RESOLVED 2026-09-11: the CHANGE is live and was never actually open. It was replayed onto the rc.1 line as `fceae1d6f4 fix(ui-layout): key right panel width per session`, and the running profile's `dsh-client-ui-layout/lib/client.js` carries `rightbarBySession` 7 times with the old single `rightbar` gone, so the shipped code has it. The 11 modified files sitting in the primary checkout are DUPLICATES of that already-live work, not pending work; do not commit or reset them from another session. What is still unproven is only the on-screen behaviour (independent widths per session), which needs Steve's eyes.
+  CLOSED OUT 2026-09-11 (session dsh-version-trap-trunk-checkout): the duplicate files are gone from the primary checkout, which is now clean on `master`. They were saved to `~\.claude\Exports\2026-09-11_dsh-primary-checkout-uncommitted-delta.patch` (12 files, 47,852 bytes) first, then discarded, and the branch that held them is archived at `origin/fix/account-usage-remote-mount`. The only remaining part is the on-screen check above.
+
 ## 2026-09-08 - resolved during session account-usage-footer-readout (remote-mount fix)
 
 Moved out of OPEN_ISSUES.md. Original wording preserved verbatim.
