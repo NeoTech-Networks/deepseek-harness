@@ -4,6 +4,17 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## Last save-state (2026-09-11T14:32:31.035934+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `4e5d3c40-3d3e-4fb0-ab06-3fa1f582fc3e`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-3ee23e44-26b5-406d-afb8-6877a8a9dbb9
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-10 - All Sessions sidebar section: built and packaged, install pending
 
 New `sidebar.allSessions` slot (declared by ui-sidebar, filled by ui-workspace)
@@ -701,6 +712,37 @@ lands on the fork (PRs #2 and #3 merged).
 
 - Open: uncommitted on the repo (no upstream push access to deepseek-ai); live desktop smoke test pending (user-gated).
 
+## 2026-09-07 - Workspace grouping implemented and committed
+
+- Implemented workspace grouping end-to-end: `group` field on the workspace domain record, `setGroup` in the API controller + typert wire codec, two-level group/workspace/sessions tree in the sidebar, and a "Set group…" dialog on the workspace row menu.
+
+- Verified: host + client tsc typecheck clean; typert host + client bundles built; 257 tests pass (2 failures are pre-existing symlink EPERM under the Windows sandbox, not this change).
+
+- Committed: `67ceb5406a` on local `master`, rebased cleanly onto `c389f96bf3`.
+
+- Open: `git push` denied (neotechnet has no access to the deepseek-ai org; no fork exists). Either fork to a chosen account and push, or keep the change local. Visual smoke test of the grouped sidebar still pending.
+
+<!-- claude-memory-actor:end -->
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=a463cfd2-49e3-4da7-b34c-e0db2cd09616 at=2026-09-09T23:35:44.128791+00:00
+-->
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=deddfeae-e84e-445b-84c5-f1a7c670cea5 at=2026-09-10T16:40:13.537019+00:00
+-->
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=4e5d3c40-3d3e-4fb0-ab06-3fa1f582fc3e at=2026-09-11T14:32:31.035934+00:00
+-->
 ## 2026-09-07 - Workspace grouping implemented and committed
 
 - Implemented workspace grouping end-to-end: `group` field on the workspace domain record, `setGroup` in the API controller + typert wire codec, two-level group/workspace/sessions tree in the sidebar, and a "Set group…" dialog on the workspace row menu.
