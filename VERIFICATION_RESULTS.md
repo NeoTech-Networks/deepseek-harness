@@ -1,3 +1,31 @@
+## 2026-09-11 - The operator chord double-sent: measured, fixed, packaged (install pending)
+
+Branch `fix/composer-shortcut-modifier`, commit `a28a606f4c`, worktree
+`C:\Projects\worktrees\dsh-shortcut-fix`.
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| The symptom is real | doubles in the logs, not a guess | 26 doubles in 181 promote-phrase submissions across 357 session logs | VERIFIED |
+| The two sends are distinct | two client request ids | yes; `51543c53...` and `5bfc565e...` 4 ms apart, session `e4467b58` at 2026-09-09T19:38:42Z | VERIFIED |
+| Duplicate timing | machine-fast, not a human double-press | 22 pairs 3 to 10 ms; 4 pairs 86 to 184 ms | VERIFIED |
+| Attribution: a repeat submits again | red before the fix | `ignores an auto-repeat` FAILED with 2 submits against the unfixed source | VERIFIED |
+| Attribution: one chord, two composers | red before the fix | `two composers mounted` FAILED with 2 submits against the unfixed source | VERIFIED |
+| Attribution: same-millisecond duplicate | red before the fix | `same chord twice` FAILED with 2 submits against the unfixed source | VERIFIED |
+| Latched behaviour | green after the fix | 98/98 in `input-bar.client.spec.tsx` (93 before, 5 new) | VERIFIED |
+| Deliberate re-press still works | 2 submits after the window | passes at +400 ms | VERIFIED |
+| Refusal does not arm the latch | a live composer still submits | passes | VERIFIED |
+| Typecheck | exit 0 | exit 0 (`build:lib:host` + `tsc -b tsconfig.client.json`) | VERIFIED |
+| Full build | exit 0 | exit 0, 240 client artifacts recorded | VERIFIED |
+| Guard in the built client bundle | `CHORD_LATCH_MS` present | present in `packages/client/ui-conversation/lib/client.js`, with `event.repeat` and the latch in the handler | VERIFIED |
+| Guard in the packaged seed | present | `package/lib/client.js` inside `deepseek-ai-dsh-client-ui-conversation-0.1.5-rc.1.tgz` | VERIFIED |
+| Installer artifact | rebuilt, correct app id | `deepseek-harness-0.1.5-rc.1-win-x64.exe`, 194,785,784 bytes, 07:53, `com.deepseek.harness` | VERIFIED |
+| App id matches the live install | no second Add/Remove entry | live 0.1.5-rc.1 owns uninstall key `7808434f-...`; the build used the same id | VERIFIED |
+| Client and host suite | no new failures | 5 failures in ui-sidebar, ui-theme, ui-deliverables; ALL FIVE fail with the change stashed | VERIFIED as pre-existing |
+| Branch pushed | origin has it | `8ce3ffe9ac..a28a606f4c` on `fix/composer-shortcut-modifier` | VERIFIED |
+| Electron chord probe, Ctrl+Shift | one keydown per chord | NO KEY EVENT REACHED THE RENDERER; the run focused a handle with an empty title and measured nothing | FAILED |
+| Headless one-chord proof, reworked | one chord, one prompt | could not drive the workspace picker: a plain `dsh web` home uses the `-auto` directory picker, so no dialog is raised in the page | NOT DONE |
+| Live keystroke in the INSTALLED app | one press, one turn | install pending, operator-gated | UNVERIFIED |
+
 ## 2026-09-09 - Alt+S / Alt+P root cause, fix, and the two update-survival guards
 
 | Check | Expected | Result | Status |

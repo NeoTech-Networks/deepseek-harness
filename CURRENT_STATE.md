@@ -4,6 +4,52 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+
+## 2026-09-11 - The operator chord sent it twice: latch added, installer rebuilt, install pending
+
+Steve reported the Alt+P shortcut "sending that command twice". It is real, and it
+is measured rather than inferred. Decoding every zstd frame of all 357 session
+logs under `~\.dsh\sessions` finds **181 promote-phrase submissions and 26
+doubles**: 22 pairs 3 to 10 ms apart and 4 pairs 86 to 184 ms apart, each pair
+carrying two DISTINCT client request ids, so two prompts really left the client
+rather than one being duplicated on the wire. Cleanest example:
+`--C-Projects-repos-sig-railway-services-services-youtube-creator--\session-e4467b58-...`
+at 2026-09-09T19:38:42.155Z, ids `51543c53...` and `5bfc565e...`, 4 ms apart.
+
+**Why it happened.** The handler's only guard was `if (locked || machineBusy)`,
+a value read from the last render. Three milliseconds later the composer still
+reads idle, so the duplicate passes the same stale check and submits again. A
+held chord auto-repeats on a keydown binding for the same reason.
+
+**Fix** (commit `a28a606f4c`, branch `fix/composer-shortcut-modifier`, pushed to
+origin): a module-scope 300 ms single-flight latch plus `if (event.repeat)
+return`. Module scope rather than a ref on purpose, because every mounted
+composer listens on the window and a per-instance latch cannot see its twin. Six
+cases in `packages/client/ui-conversation/tests/input-bar.client.spec.tsx` cover
+it. The RED RUN BEFORE THE FIX is the attribution evidence: a repeat submitted
+twice, the same-millisecond duplicate submitted twice, and two mounted composers
+each submitted from ONE chord.
+
+**Proven:** 98/98 in the focused spec, `pnpm run typecheck` exit 0, `pnpm run
+build` exit 0, installer rebuilt, and the guard read back out of the packaged
+seed `.tgz`. `test:gui` reports 5 failures in ui-sidebar (3 snapshots), ui-theme
+and ui-deliverables; all five fail identically with the change stashed, so they
+are pre-existing and belong to item 9.
+
+**Installer:** `apps\desktop\.desktop-build\targets\win-x64\artifacts\deepseek-harness-0.1.5-rc.1-win-x64.exe`,
+194,785,784 bytes, 2026-09-11 07:53, built with `DSH_DESKTOP_APP_ID=com.deepseek.harness`
+(the LIVE id: the installed 0.1.5-rc.1 owns uninstall key `7808434f-...`, so this
+build does not add a second Add/Remove entry), `DOWNLOAD_TEST_ORIGIN=https://download.neotech.biz`,
+`DSH_DESKTOP_ALLOW_UNSIGNED=1`.
+
+**INSTALL IS PENDING AND IS STEVE'S.** From a NEW PowerShell window:
+`powershell -ExecutionPolicy Bypass -File "C:\Projects\worktrees\dsh-shortcut-fix\finish-install.ps1"`.
+The version now matches the installed release (both 0.1.5-rc.1), so the derived
+installer path resolves. After SETUP COMPLETE: `py C:\Claude\bin\dsh_local_features_check.py`
+must exit 0 (11 rows now, the new one is `composer-shortcut-single-flight`), then
+one real Ctrl+Shift+P must send exactly one `deploy to production` and no Desktop
+Plugins window, and a two-second hold must send exactly one.
+
 ## 2026-09-09 - Alt+S / Alt+P: DONE, installed and confirmed working in the app
 
 0.1.5-alpha.2 installed at 14:29, profile re-extracted at 14:34. The keyup
