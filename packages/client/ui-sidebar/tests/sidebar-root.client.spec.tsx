@@ -204,6 +204,19 @@ describe('SidebarRoot shell', () => {
     expect(b.toggleSidebar).toHaveBeenCalledOnce()
   })
 
+  it('returns every seat to wide after a full rail round-trip', () => {
+    vi.useFakeTimers()
+    const b = mountShell()
+    b.rerender({ collapsed: true })
+    vi.advanceTimersByTime(500)
+    b.rerender({})
+    expect(b.allSessionsOwner().wide).toBe(false)
+    expect(b.regionOwner().wide).toBe(false)
+    b.rerender({ collapsed: false })
+    expect(b.allSessionsOwner().wide).toBe(true)
+    expect(b.regionOwner().wide).toBe(true)
+  })
+
   it('renders statically collapsed on a cold start (no crossfade classes)', () => {
     const b = mountShell({ collapsed: true })
     expect(b.regionOwner().wide).toBe(false)

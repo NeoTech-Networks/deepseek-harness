@@ -127,6 +127,32 @@ describe('ui-workspace apply', () => {
     expect(b.open).toHaveBeenCalledWith('session')
   })
 
+  it('re-registers the All Sessions section after its declaration collapses and returns', async () => {
+    const b = await bench()
+    const drop = declare(b.slots, 'sidebar.allSessions')
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    expect(b.slots.entries('sidebar.allSessions')[0]!.component).toBe(AllSessionsSection)
+
+    // The declaring child slot collapses, then comes back. The section must come
+    // back with it rather than stay gone until the app restarts.
+    drop()
+    expect(b.slots.entries('sidebar.allSessions')).toHaveLength(0)
+    const restore = declare(b.slots, 'sidebar.allSessions')
+    expect(b.slots.entries('sidebar.allSessions')[0]!.component).toBe(AllSessionsSection)
+
+    // The same round trip through the declaring PARENT entry: its children table
+    // is what declares the hole in the shipping app.
+    restore()
+    const dropRoot = b.slots.register({
+      name: 'root',
+      children: { 'sidebar.workspaces': { kind: 'single', scope: 'root' } },
+    } as never, () => null)
+    expect(b.slots.entries('sidebar.allSessions')).toHaveLength(0)
+    dropRoot()
+    declare(b.slots, 'sidebar.allSessions')
+    expect(b.slots.entries('sidebar.allSessions')[0]!.component).toBe(AllSessionsSection)
+  })
+
   it('routes browser actions and picker creation to the services', async () => {
     const b = await bench()
     declare(b.slots, 'sidebar.workspaces', 'conversation.hero.workspace')
