@@ -4,6 +4,69 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-11 - 0.1.5-rc.2 built and packaged, install pending; state files destroyed a FOURTH time mid-session
+
+Verdict at the start: `UPDATE AVAILABLE dsh-v0.1.5-rc.2` (upstream published
+2026-09-10T15:09:34Z). Upstream's part is cosmetic (feedback confirmed in a dialog
+before it is recorded, refined delivered-file cards and conversation spacing,
+refreshed code-file icons), so the reason to rebuild was the local work it carries.
+
+Built in a fresh worktree `C:/Projects/worktrees/dsh-update-v0.1.5-rc.2` on branch
+`update/v0.1.5-rc.2`, 31 commits ahead of `dsh-v0.1.5-rc.2`. `git reset --hard
+update/v0.1.5-rc.1` then `git rebase --onto dsh-v0.1.5-rc.2 dsh-v0.1.5-rc.1`
+replayed all 26 local commits with NO conflict, and the subject-list diff printed
+nothing. Folded in on top: the two built-but-never-installed composer commits
+cherry-picked from `fix/composer-shortcut-modifier` (`8ce3ffe9ac` moves the operator
+chord off Alt to Ctrl+Shift, `a28a606f4c` stops one press sending twice), the
+fork-local vision-routing default moved off the retired `deepseek-v4-flash-vision-exp`
+to `deepseek-flash`, and the eight fork-local packages bumped to 0.1.5-rc.2. The
+packaging environment is now recorded in-repo at `apps/desktop/PACKAGING.md`
+(`.env.example` is refused by the pre-commit hook, so that filename is not usable).
+
+Gates: host and client typecheck 0, build 0 (240 client artifacts), plan-mode 94/94,
+release family 273 members all at 0.1.5-rc.2, every catalog and path-alias gate
+current. Installer `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,762,388 bytes,
+built with `DSH_DESKTOP_APP_ID=com.deepseek.harness`, which yields the live NSIS
+uninstall key `7808434f-469e-5eba-848e-edf64d3b94ce` and therefore upgrades in
+place. The changed code was read back OUT of the packaged seed `.tgz` archives:
+`dsh-client-ui-conversation` carries the Ctrl+Shift keydown guard and `CHORD_LATCH_MS`
+with ZERO keyup listeners, and `dsh-vision-routing` carries `deepseek-flash` with
+zero occurrences of the retired id. Branch pushed to the fork. The install is the
+operator's step and is NOT YET CONFIRMED.
+
+**All Sessions rail defect: investigated, NOT root-caused, and NOTHING SHIPPED for
+it.** Two regression tests were added and both PASS, eliminating two candidate
+causes: the shell's `wide` flag does not latch across collapse, settle and expand
+(`packages/client/ui-sidebar/tests/sidebar-root.client.spec.tsx`), and the slot
+registry DOES re-register the section after both its declaring child slot and its
+declaring parent entry collapse and return
+(`packages/client/ui-workspace/tests/apply.client.spec.ts`). A read of the outlet
+dispatch (`scoped-slots.tsx` lines 801-805 and 484-505) shows owner props reach the
+entry component on every render, so there is no props-blind memoization. A
+speculative change in that code would be worse than the defect. The surviving
+candidate is the persisted fold store `dsh.workspace.allSessions.v1`, whose
+`expanded` default is `true`: a lost or stale persisted write hides the list while a
+restart restores the default, which fits the reported symptom.
+
+**The 17 failures in the touched suites are NOT from this build.** 13 fs-local
+symlink failures, 3 ui-sidebar snapshot mismatches and 1 packed-client PDF license
+failure are identical on the shipped 0.1.5-rc.1 line and on rc.2. The 13 were
+attributed the same day: Developer Mode is off (`AppModelUnlock` absent) and the
+shell is not elevated, so Windows refuses symlink creation with "Administrator
+privilege required". The playbook's fs-local 156/0 baseline is a property of the
+shell's privileges, not of the version.
+
+**STATE FILES WERE DESTROYED A FOURTH TIME, during this session.** At 09:42 local
+`CURRENT_STATE.md` in the PRIMARY checkout held 30 dated sections against 33 in
+HEAD, and the newest one, `2026-09-11 - V4.1-Flash model ids`, was GONE;
+`git diff --numstat` reported 4 insertions and 128 deletions against HEAD. The
+save-state hook had written at 13:23:50Z under session
+`1e4d8e94-8f5a-4ced-a6bb-7e447b8fba33`, which is not this session. Recovered with
+`git checkout HEAD -- CURRENT_STATE.md` (33 sections, 784 lines); the damaged copy is
+archived at `%TEMP%\deepseek-harness-CURRENT_STATE.damaged-2026-09-11-0942.md`.
+`VERIFICATION_RESULTS.md` was checked the same way and is INTACT at 28 sections,
+equal to HEAD. `state_file_cap.py` was deliberately NOT run (OPEN_ISSUES 25).
+
 ## 2026-09-11 - V4.1-Flash model ids; the installed app is 0.1.5-rc.1
 
 DeepSeek released V4.1-Flash on 2026-09-10 under the id `deepseek-flash` and

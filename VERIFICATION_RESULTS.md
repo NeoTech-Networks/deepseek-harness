@@ -1,3 +1,30 @@
+## 2026-09-11 - 0.1.5-rc.2 rebase, gates and packaged artifact (install pending)
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Upstream release read | newest tag | `dsh-v0.1.5-rc.2`, published 2026-09-10T15:09:34Z, prerelease | VERIFIED |
+| rc.2 touches the sidebar | expectation | 334 changed files; every sidebar/workspace/layout hit is a `package.json` version bump | VERIFIED |
+| Rebase onto the tag | 26 local commits replayed | `--onto dsh-v0.1.5-rc.2 dsh-v0.1.5-rc.1` clean, no conflict | VERIFIED |
+| No commit silently dropped | subject lists identical | 26 vs 26, comparison printed nothing | VERIFIED |
+| Composer chord cherry-picks | both present | `8ce3ffe9ac` then `a28a606f4c`, clean, no dirty-tree stop | VERIFIED |
+| Host + client typecheck | exit 0 | exit 0 | VERIFIED |
+| Full build | exit 0 | exit 0, 240 client artifacts | VERIFIED |
+| plan-mode baseline | 94 of 94 | 94 passed / 94 | VERIFIED |
+| Release family | one version | 273 members all at 0.1.5-rc.2, publish order resolved | VERIFIED |
+| Catalog and alias gates | current | client catalog, cordis catalog, cordis api, cordis-inspect, config catalog, tsconfig paths, package invariants: all exit 0 | VERIFIED |
+| Installer artifact | ~180-195 MB | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,762,388 bytes | VERIFIED |
+| Packaged seed version | 0.1.5-rc.2 | `resources\seed\desktop-release.json` reads `0.1.5-rc.2` | VERIFIED |
+| Ctrl+Shift chord in the packaged seed | keydown, Alt excluded, latch present | guard `!event.ctrlKey \|\| !event.shiftKey \|\| event.altKey \|\| event.metaKey`, 2 keydown listeners, 0 keyup listeners, `CHORD_LATCH_MS` present | VERIFIED |
+| Vision id in the packaged seed | `deepseek-flash` | 1 occurrence of `deepseek-flash`, 0 of `deepseek-v4-flash-vision-exp` | VERIFIED |
+| App id is not free choice | resolves per env | `resolveDesktopAppId()` throws when unset and has no default, so the build used `com.deepseek.harness` | VERIFIED |
+| Install helper resolves the artifact | path exists | derived version 0.1.5-rc.2, computed installer path exists | VERIFIED |
+| All Sessions `wide` flag across a rail round trip | does not latch | NEW TEST PASSES: collapse, settle, expand returns every seat to wide | VERIFIED |
+| Slot declaration collapse and restore | re-registers | NEW TEST PASSES: child-slot and parent-entry round trips both restore the section | VERIFIED |
+| fs-local symlink suites | 156 passed 0 failed | 13 FAILED, byte-identical on rc.1 and rc.2; Developer Mode off and shell not elevated, so Windows refuses symlinks | ENVIRONMENTAL, not a regression |
+| ui-sidebar snapshots + packed pdf license | pass | 3 snapshot mismatches + 1 license failure, identical on rc.1 and rc.2 | PRE-EXISTING on the fork |
+| State files intact | not truncated | `CURRENT_STATE.md` found at 30 sections against 33 in HEAD (newest gone); restored with `git checkout HEAD --`; `VERIFICATION_RESULTS.md` intact at 28 sections | RECOVERED, see OPEN_ISSUES 16 |
+| Installed app runs 0.1.5-rc.2 | version match | install NOT confirmed by Steve yet | UNVERIFIED |
+
 ## 2026-09-11 - V4.1-Flash model ids and the app version
 
 | Check | Expected | Result | Status |
