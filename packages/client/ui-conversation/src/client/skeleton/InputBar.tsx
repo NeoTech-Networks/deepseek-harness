@@ -47,6 +47,25 @@ const SAVE_STATE_SHORTCUT = '/save-state'
  */
 const DEPLOY_SHORTCUT = 'deploy to production'
 
+/**
+ * Single-flight window for the operator chords, in milliseconds.
+ *
+ * Measured 2026-09-11 against the installed build: of 181 promote-phrase
+ * submissions in the session logs, 26 were doubles, 22 of them 3 to 10 ms
+ * apart, each pair carrying two distinct client request ids (so two prompts
+ * really left the client). The handler's `locked || machineBusy` test cannot
+ * stop that: both are values from the last render, and 3 ms later the composer
+ * still reads idle, so the duplicate passes the same stale check. A held chord
+ * on a keydown binding repeats for the same reason.
+ *
+ * Module scope rather than a ref on purpose: every mounted composer listens on
+ * the window, so one chord reaches all of them and a per-instance latch cannot
+ * see its twin. Each Electron window is its own JavaScript realm, so this
+ * cannot leak between windows.
+ */
+const CHORD_LATCH_MS = 300
+let chordLatchUntil = 0
+
 export type InputBarProps = ComposerBarProps
 
 export const InputBar = memo(function InputBar({
@@ -340,6 +359,8 @@ export const InputBar = memo(function InputBar({
   useEffect(() => {
     if (inputActions === undefined) return
     const onShortcut = (event: WindowEventMap['keydown']): void => {
+      // A held chord auto-repeats; an OS repeat arrives with repeat: true.
+      if (event.repeat) return
       if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return
       if (event.code !== 'KeyS' && event.code !== 'KeyP') return
       // Refusing in silence is indistinguishable from a broken shortcut, so a
@@ -348,6 +369,11 @@ export const InputBar = memo(function InputBar({
         showToast(t('input.shortcutUnavailable'))
         return
       }
+      // The latch is armed only on the path that actually submits: a refusal is
+      // not a send, and arming it there would swallow the next real press.
+      const now = Date.now()
+      if (now < chordLatchUntil) return
+      chordLatchUntil = now + CHORD_LATCH_MS
       event.preventDefault()
       inputActions.setDraft(event.code === 'KeyS' ? SAVE_STATE_SHORTCUT : DEPLOY_SHORTCUT)
       inputActions.submit()
