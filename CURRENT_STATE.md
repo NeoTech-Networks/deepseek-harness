@@ -4,6 +4,330 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-11 - V4.1-Flash model ids; the installed app is 0.1.5-rc.1
+
+DeepSeek released V4.1-Flash on 2026-09-10 under the id `deepseek-flash` and
+retired V4-Flash and V4-Flash-Vision-Exp. A live `GET api.deepseek.com/models`
+returned exactly two ids, `deepseek-flash` and `deepseek-v4-pro`. Live probes the
+same day: `deepseek-flash` answers on both the OpenAI-format and the
+Anthropic-format surfaces, the `[1m]` suffix is still accepted there, and the
+model READS IMAGES (a 1x1 red PNG came back as "Red", 232 input / 579 output
+tokens).
+
+**The record was wrong about the app version.** The manifest in
+`C:\Projects\repos\dsh-config` said `0.1.5-alpha.2`, and this repo's
+`NEXT_SESSION_PROMPT.md` had been repeating an even older build. The RUNNING app
+is **0.1.5-rc.1**: the Windows uninstall entry reports `0.1.5-rc.1`, the exe
+`FileVersion` is `0.1.5-rc.1`, `~/.dsh/profiles/desktop/desktop-release.json`
+says `0.1.5-rc.1`, and every `@deepseek-ai/dsh-*` pack in
+`desktop-packages.json` is `0.1.5-rc.1`. Live state outranks the manifest.
+Upstream is at `dsh-v0.1.5-rc.2` (feedback-dialog and file-card polish only,
+nothing model-related), so no rebuild is needed for this.
+
+**rc.1 already carries V4.1-Flash.** `deepseek-ai-dsh-llm-deepseek-0.1.5-rc.1.tgz`
+in the installed profile contains `id: "deepseek-flash"`, name
+`DeepSeek-V41-Flash`, image modality and `systemPromptUpdate: in-history`, and
+the fork branch `update/v0.1.5-rc.1` matches upstream `dsh-v0.1.5-rc.1` on that
+file. What did NOT carry it was the CONFIG: `subagent-model-selection` listed the
+three retired ids and omitted `deepseek-flash`, and the `dsh-config` vault still
+pinned the default model to `deepseek-v4-pro`.
+
+**Fixed this session.** The vault and the live `settings.yaml` now default to
+`deepseek-flash` and offer `deepseek-flash` plus `deepseek-v4-pro` to subagents
+(the retired `deepseek-v4-flash` and `deepseek-v4-flash-vision-exp` entries are
+gone); the vault was re-snapshotted so restoring it can no longer undo the
+upgrade, and `MANIFEST.json` now reports `app_version: 0.1.5-rc.1`. One caveat
+found by probe: a session's subagent model gate is frozen at session start, so
+`list_subagent_models` still showed the old list and refused `deepseek-flash`
+inside the session that made the edit. A NEW session is the test.
+
+**Still stale, by decision.** The fork-local `vision-routing` plugin's
+`DEFAULT_ROUTE` is still `deepseek-v4-flash-vision-exp`. It is only reached from
+a text-only session model (`deepseek-v4-pro`), the retired id still answers at
+Flash price, and changing it costs a full rebuild, so it waits for the next
+planned update rather than triggering one.
+
+**Recovered while writing this.** This file and `VERIFICATION_RESULTS.md` were
+found TRUNCATED in the primary checkout: 38 lines against 728 in
+`origin/master`, the item-16 signature. Both were restored from `origin/master`
+and the damaged copies are in `%TEMP%` as
+`deepseek-harness-CURRENT_STATE.damaged-2026-09-11.md` and
+`deepseek-harness-VERIFICATION_RESULTS.damaged-2026-09-11.md`. NOTE: running
+`state_file_cap.py --repo` against this file then EVICTED 26 of its 42 sections
+and reordered the survivors, burying this very section at the end of the file
+instead of the top, so it was restored from `origin/master` a second time and
+the cap tool deliberately NOT run again. `CURRENT_STATE.md` is therefore over the
+32 KB ceiling (about 60 KB) until that eviction path is fixed; do not treat the
+cap tool as safe on this repo. Same class of fault as OPEN_ISSUES item 16b.
+
+## 2026-09-10 - All Sessions sidebar section: built and packaged, install pending
+
+New `sidebar.allSessions` slot (declared by ui-sidebar, filled by ui-workspace)
+adds a collapsible "All Sessions" section above the Workspace browser: every
+unarchived session newest-first, each row showing the live status mark, the
+session title, and the owning Workspace name; clicking a row opens the session.
+Fold state persisted in a new `dsh.workspace.allSessions.v1` store, default
+expanded, wide-only. Built on `feat/sidebar-all-sessions` (worktree
+`C:/Projects/worktrees/dsh-all-sessions`, commit `6eb1341b69`), one commit on
+top of `update/v0.1.5-alpha.2`.
+
+Gates green: client typecheck exit 0, 69 targeted tests pass (4 files), oxlint
+clean on changed files, client slot catalog regenerated, Agent Note plus
+bilingual READMEs pass format/classification/pairing gates. Installer
+`deepseek-harness-0.1.5-alpha.2-win-x64.exe` (194,723,910 bytes) packaged after
+seeding the Node runtime download cache and clearing a stale win-unpacked
+(EPERM, error-ledger row 14). Feature confirmed inside the packed
+`dsh-client-ui-workspace` tarball. Install handed to Steve via
+`finish-install.ps1`; NOT yet confirmed installed.
+
+## 2026-09-10 - 0.1.5-rc.1 is live with all 11 local features, and finish-install is hardened
+
+Installed build is 0.1.5-rc.1 (provision log 16:11:20Z to 16:15:21Z ends
+"applyRelease finished", "staging profile activated as 0.1.5-rc.1"). The 23
+local commits were replayed onto the rc.1 tag in this worktree; a 24th commit
+bumps the 8 fork-local packages to 0.1.5-rc.1 because the release family
+requires one version across every member.
+
+ONE COMMIT WAS SILENTLY DROPPED AND RECOVERED. `fix(session-status)`
+(121ab8e9dc) vanished from the replay: the pick stopped on a DIRTY TREE, not a
+conflict, so there was no CHERRY_PICK_HEAD and `--continue` stepped past it with
+no output. Caught by diffing commit subject lists, re-picked cleanly as
+3247cf6c1e. Branch now carries all 23 originals.
+
+8313ae9873 (console flash) was KEPT, not dropped. Upstream rc.1 added
+`windowsHide` in subprocess-local/spawn.ts, which is the Node child_process
+path; ours is the win32-process native path (STARTF_USESHOWWINDOW / SW_HIDE for
+the restricted-token Job launch). rc.1 has no CREATE_NO_WINDOW in win32-process
+at all, so the two are complementary.
+
+finish-install.ps1 gained three guards plus a wait (75022500af, cf682495c5).
+It refuses to run inside the app, refuses a second concurrent copy, refuses
+while a provision is in flight, clears a stale lock from a killed run, and now
+waits for "applyRelease finished" and prints the activated version. It also
+DERIVES its installer from its own folder plus this worktree's package.json
+version, and resolves machine paths from LOCALAPPDATA / USERPROFILE / DSH_HOME
+instead of a hardcoded profile.
+
+Branch `update/v0.1.5-rc.1` is pushed to origin at cf682495c5. Branch
+`feat/sidebar-all-sessions` is pushed at 6eb1341b69.
+
+NOT ON MASTER, DELIBERATELY. finish-install.ps1 and check-seed-integrity.py
+have never existed on master, and putting them there achieves nothing: update
+worktrees are branched from the upstream TAG, so master is never inherited.
+These files travel only by the local feature-stack replay. A scratch branch
+that tried it was abandoned and deleted; master is untouched at f84d6b8763.
+Master also cannot be built here at all: it is still 0.1.3-alpha.2, which needs
+the native module fs-ext and there is no Visual Studio toolchain on this box.
+
+Packaging needs four things, all now in the skill: DSH_DESKTOP_APP_ID
+com.deepseek.harness (derived from the NSIS uuid5, NOT recalled),
+DSH_DESKTOP_ALLOW_UNSIGNED=1, DOWNLOAD_TEST_ORIGIN, and PowerShell rather than
+Git Bash because GNU tar reads a C:\ output path as a remote host.
+
+Upstream published dsh-v0.1.5-rc.2 at 15:09Z, about an hour before this install
+finished. It is cosmetic (feedback dialog, delivered-file cards, icons,
+spacing) and touches ZERO sidebar or workspace source, so it does not fix the
+open sidebar defect below.
+## Last save-state (2026-09-10T16:40:13.537019+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `deddfeae-e84e-445b-84c5-f1a7c670cea5`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-2b58f034-4583-4670-ac9a-7461e7fead40
+
+<!-- claude-memory-actor:end -->
+
+## 2026-09-10 - Composer shortcut moved off Alt to Ctrl+Shift; installer built, install pending
+
+The Alt+P / Alt+S composer shortcuts were replaced with Ctrl+Shift+P /
+Ctrl+Shift+S. The 2026-09-09 keyup fix made the shortcut fire, but the Alt
+KEYDOWN still woke the native Windows menu bar, whose first item is "Desktop
+Plugins…", so Alt+P popped that window open. Ctrl+Shift is delivered to the
+renderer on keydown, so the menu bar is left alone.
+
+- Commit `8ce3ffe9ac` on branch `fix/composer-shortcut-modifier` (based on
+  update/v0.1.5-rc.1), pushed to origin.
+- InputBar.tsx chord + 5 tests in input-bar.client.spec.tsx; also updated
+  C:\Claude\bin\dsh_local_features.json (3 shortcut entries).
+- Proven: 93/93 input-bar tests, build exit 0, package exit 0 (after seeding
+  the cached Node 24.17.0 runtime from another worktree because nodejs.org
+  timed out). Fix confirmed in the packaged seed (keydown + Ctrl+Shift, no
+  Alt keyup).
+- Installer: apps/desktop/.desktop-build/targets/win-x64/artifacts/
+  deepseek-harness-0.1.5-rc.1-win-x64.exe (185.7 MB).
+- NOT installed yet (operator runs finish-install.ps1). Two new findings for
+  the playbook: (1) packaging needs the Node runtime and nodejs.org can time
+  out, seed the download cache; (2) the installer was built with
+  DSH_DESKTOP_APP_ID=com.neotechnetworks.deepseek-harness (per the skill), but
+  the live 0.1.5-rc.1 install uses com.deepseek.harness (uninstall key
+  7808434f-...); that mismatch will register a second uninstall entry.
+
+## 2026-09-09 - Right sidebar per-session width: ported, built, installed, verified
+
+The per-session panel-width fix (written 2026-09-09 but left uncommitted on the
+pre-0.1.5 line, branch fix/account-usage-remote-mount) is now LIVE in the
+running app. It was ported onto update/v0.1.5-alpha.2, resolving the
+0.1.3-to-0.1.5 store-shape conflicts (the single global `rightbar` became
+`layoutInfo.rightbarBySession`, keyed by session id), committed bf27396cf6,
+pushed, built, packaged (194,643,720 bytes), and installed by Steve at 19:13
+via a new INSTALL.cmd double-click wrapper (added because the pasted one-liner
+was failing silently again). The running profile's
+`dsh-client-ui-layout/lib/client.js` carries `rightbarBySession` (6 occurrences)
+and the old single `rightbar` value is gone. Install-log: seed integrity
+271/271 PASS, profile cleared, relaunched, dsh-config-vault 18 files all same.
+What is left is Steve's visual pass: resize the right sidebar in one session,
+switch to a second, and confirm the widths are independent.
+## 2026-09-09 - Alt+S / Alt+P: DONE, installed and confirmed working in the app
+
+0.1.5-alpha.2 installed at 14:29, profile re-extracted at 14:34. The keyup
+binding was read back out of the RUNNING profile, `dsh_local_features_check.py`
+reported 10 of 10 present (exit 0), `dsh_config_vault.py verify` reported 18
+files all same (exit 0) with a post-install snapshot of 0 changed, and Steve
+pressed Alt+S in the installed app and reported it worked. The section below is
+the record of how it was found and fixed.
+
+## 2026-09-09 - The Alt+S / Alt+P shortcuts: root cause found, fixed, packaged, install pending
+
+The shortcuts never worked in the desktop app, and the update did not break
+them. The code was in the installed 0.1.5-alpha.1 build the whole time.
+
+**Root cause: Electron on Windows never delivers the KEYDOWN of an Alt+letter
+chord to the renderer.** Only `Alt` arrives as a keydown; the letter arrives
+solely as a `keyup` carrying `altKey`. Measured with a stripped-down Electron
+window built from the packaged runtime and real `SendInput` scan-code
+keystrokes. `before-input-event` in the main process sees the same keyUp-only
+pair, a hidden `Alt+S` menu accelerator never fires, and removing the
+application menu changes nothing. A browser delivers both events, which is why
+93 unit tests and a real headless Chromium run both passed against the broken
+binding.
+
+**Fix** (commit `aca41e5f7b` on `update/v0.1.5-alpha.2`): bind to `keyup`, toast
+instead of refusing in silence when the composer is locked or mid-admission, and
+send the canonical lowercase `deploy to production`. Rebuilt and repackaged as
+`deepseek-harness-0.1.5-alpha.2-win-x64.exe` (194,655,398 bytes); the fix is
+confirmed inside the packaged seed archive. **Install is operator gated and has
+not happened yet**, so the running app is still 0.1.5-alpha.1.
+
+**Two survival guards now exist**, and they cover different halves:
+
+- `C:\Claude\bin\dsh_config_vault.py` with the vault at
+  `C:\Projects\repos\dsh-config` (local git, no remote) protects the operator's
+  `~/.dsh` configuration: `settings.yaml`, the `.agent-presets` preset that
+  mounts the desktop MCP servers, `cordis.patch.yml`, `AGENTS.md` and the 13
+  slash-command skill wrappers. 18 files. `.credentials.yaml` is denied by the
+  manifest and proven never to have entered the history. A hidden daily task
+  snapshots at 09:00.
+- `C:\Claude\bin\dsh_local_features_check.py` covers what a settings backup
+  cannot: it reads the EXTRACTED profile and reports any of the 10 local fork
+  features an update dropped. A dropped feature leaves a perfectly healthy app.
+
+`finish-install.ps1` now snapshots before it installs, verifies after, and
+prints the feature-check command.
+
+
+
+
+## Last save-state (2026-09-09T00:08:42.118722+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
+
+<!-- claude-memory-actor:end -->
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
+-->
+## 2026-09-09 - Why state files keep dying: two inherited upstream checks and a native build the fork cannot do
+
+Two independent, provable reasons no state-sync PR ever merges on this fork.
+Both were read live this session and together they explain every "diverged from
+origin/master" receipt going back to 2026-09-08.
+
+- **Reason 1, the required checks can never pass here.** `Issue policy` and
+  `Issue lifecycle` both call `actions/create-github-app-token` against
+  `owner: deepseek-harness` with a GitHub App credential that exists only in the
+  upstream organization. On `NeoTech-Networks/deepseek-harness` they fail in 9
+  seconds on every PR, verbatim: `Error: The 'client-id' (or deprecated
+  'app-id') input must be set to a non-empty string.` Everything else on the
+  live status PR #6 is green or pending (`node 26`, `node 24.9`, `Pack npm
+  tarballs`, the python matrix). The maintenance worker is behaving correctly by
+  refusing to merge; the gate is simply unpassable.
+- **Reason 2, the pre-push hook cannot build a native dependency.** Two receipts
+  (13:31Z and 12:19Z) show the PUSH failing, not the merge: lefthook's
+  `pre-push` typecheck runs `pnpm install` in the worker's throwaway worktree,
+  `fs-ext@2.1.1` needs `node-gyp`, and there is no Visual Studio C++ toolchain
+  here, so `Could not find any Visual Studio installation to use` kills it.
+  NOTE: upstream alpha.2 ships "Fix npm installations that previously required a
+  local `fs-ext` build", so installing alpha.2 should remove this half by itself.
+- **Consequence, measured.** `origin/master` never moves, every checkout drifts,
+  and 8 of the 10 checkouts on this machine holding `CURRENT_STATE.md` carry
+  short stale copies (80, 68, 106, 119, 135, 98, 98 lines) against 287 in git.
+  Any process that publishes one of those over the primary destroys real
+  history, which happened twice today (11:56 and 12:31 local, both recovered
+  from git, damaged copies kept in `%TEMP%`).
+- **The save-state writer is RULED OUT.** `apply_marker_block` in
+  `memory_save_state_actor.py` was re-read at lines 1030-1079: create-if-missing,
+  regex-replace one block in place, or append at the end. No branch can shorten a
+  file, and its read-failure branch skips rather than overwrites.
+- **The fix is a DECISION, not housekeeping**, because it changes what gates a
+  merge on `master`: stop those two inherited workflows running on this fork,
+  drop them from the required set, or point status PRs at a branch they do not
+  gate.
+
+## 2026-09-09 - 0.1.5-alpha.2 built, packaged and proven in the installer; INSTALL NOT YET RUN
+
+- **Upstream moved again the same day.** `dsh-v0.1.5-alpha.2` published
+  2026-09-09T14:23:10Z, one release past the installed 0.1.5-alpha.1. It brings
+  the right-sidebar document preview (Markdown, code, HTML, PDF, images),
+  model-delivered files in a session, `/feedback` detail, and seven fixes.
+  Session-data format is now V3 and the web plugin panel API moved the
+  `conversation` slot under `main`.
+- **Branch `update/v0.1.5-alpha.2`**, worktree
+  `C:/Projects/worktrees/dsh-update-v0.1.5-alpha.2`, pushed to the fork. The
+  local stack was rebased onto the tag (`git rebase --onto dsh-v0.1.5-alpha.2
+  dsh-v0.1.5-alpha.1`), 18 files conflicted and were resolved by hand; the
+  lockfile took the upstream side and `pnpm install` re-added the workspace.
+- **Four previously unshipped local fixes cherry-picked in**, so this build is
+  the first to carry them: session-status icons `e5146450e3`, first-run
+  provisioning `f82bb8df30` and `f291778191`, console-window suppression
+  `5e10c7c560`.
+- **Upstream removed two APIs the fork used**, which no conflict marker showed
+  and only the client typecheck caught: `SidebarRightGuideEntry.description` is
+  gone, and `DocumentFileIcon` was replaced by `FileTypeIcon` +
+  `classifyFileType`. The sessions panel and the explorer follow both, tests and
+  locale dictionaries included. `gen-tsconfig-paths` also needed a hand-written
+  alias for `@deepseek-ai/dsh-client-ui-sessions-panel`.
+- **Gates, all green:** client typecheck exit 0, full build exit 0, plan-mode
+  94/94, fs-local 156 passed 1 skipped 0 failed (the 13 documented Windows
+  failures are GONE upstream, so that baseline no longer applies), 594 tests
+  across 50 targeted files, packaging exit 0.
+- **Installer:** `deepseek-harness-0.1.5-alpha.2-win-x64.exe`, 194,655,398
+  bytes, app id `com.deepseek.harness`. Every fork package is in the packaged
+  seed at 0.1.5-alpha.2, and `SessionPanelPhase` was read back out of the
+  packaged `.tgz`'s built `client.js`, so the fix is in the artifact and not
+  just in the source.
+- **WHAT IS LEFT:** Steve runs `finish-install.ps1` from a separate PowerShell
+  window. Until then the running app is still 0.1.5-alpha.1 and NOTHING in this
+  section is live. After the install: the six verification rows, then
+  `dsh_update_check.py` must report `UP TO DATE`.
+## 2026-09-09 - Right sidebar panel width made per-session
+
+Fixed the right sidebar so each session keeps its own panel width instead of sharing one global value.
+
+- **Root cause.** The panel width lived in the root-scoped layout store as one `rightbar` number, so a panel dragged narrow in one session stayed narrow everywhere ("opens to minimize size no matter what session") and the width was shared across sessions ("the view stays the same no matter the session"). The tabs and expanded flag were already per-session; the width was the one shared piece.
+- **Fix.** Keyed the width by session id (`rightbarBySession`) in `ui-layout/src/client/stores.ts`; `openRightbar`/`setRightbar` now take a session id; `AppFrame.tsx` reads/writes the current session's key; the right sidebar seat passes its session id through `syncPresentation`; the `ctx.layout.openRightbar` face and the client api-catalog follow.
+- **Verified.** 220 tests pass across `ui-layout` and `ui-sidebar-right` (including two new per-session-width regression tests), client typecheck exit 0, `gen-client-catalog --check` and `gen-cordis-api --check` pass.
+- **Not shipped.** The fix is uncommitted service code in the primary checkout `C:\Projects\repos\deepseek-harness` (branch `fix/account-usage-remote-mount`). Next: commit on the right branch, then build and install via the ds-harness-update flow, then smoke-test that each session remembers its own panel width in the desktop app.
+
 ## 2026-09-09 - Both harness fixes CONFIRMED LIVE in the running app, and a state file lost and recovered in the same pass
 
 - **Installed and verified.** Steve installed at 08:35; the profile re-extracted
@@ -172,6 +496,95 @@ one command and is the regression check for everything below.
 - CONCURRENCY HAZARD, confirmed live. Sessions restored inside the desktop app resumed autonomous builds in the SAME primary checkout, stomping the packed tarball directory mid-run (count observed climbing 100 to 126 with no build of this session's running) and breaking two packaging attempts. One of those sessions also committed this session's staged files into an unrelated wip commit on this session's branch. The app had to be closed to finish. This is the One Worktree Per Session rule failing in practice.
 - Git left tidy: `fix/account-usage-remote-mount-only` = the isolated fix; `fix/account-usage-remote-mount` = the wip rebased on top of it (78d5d95934, tree identical to the pre-rebase commit so no file moved); `backup/wip-pre-rebase-87607362` = the pre-rebase copy. Nothing merged to master, nothing pushed.
 
+## Last save-state (2026-09-09T03:50:14.915068+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `321e7af0-b0ab-4a0b-9a4c-de8eea784e39`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-6d11ab26-811b-4500-899f-621252ea2c9a
+
+<!-- claude-memory-actor:end -->
+
+## Last save-state (2026-09-09T00:08:42.118722+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
+
+<!-- claude-memory-actor:end -->
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=f37650c8-6b34-48cf-9494-775af97db5b1 at=2026-09-09T16:43:42.809531+00:00
+-->
+## Last save-state (2026-09-09T16:43:42.809531+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `f37650c8-6b34-48cf-9494-775af97db5b1`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-c7aa133d-166b-4416-9f6e-6d4f76ca3e93
+
+<!-- claude-memory-actor:end -->
+
+## Last save-state (2026-09-09T00:08:42.118722+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
+
+<!-- claude-memory-actor:end -->
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=8f0a49c1-6187-4582-9bd1-d8700eea3158 at=2026-09-09T17:49:01.394307+00:00
+-->
+## Last save-state (2026-09-09T17:49:01.394307+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `8f0a49c1-6187-4582-9bd1-d8700eea3158`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-1c7a1a4a-b736-4790-9770-d82530ff0656
+
+<!-- claude-memory-actor:end -->
+
+## Last save-state (2026-09-09T23:35:44.128791+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `a463cfd2-49e3-4da7-b34c-e0db2cd09616`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-58e0688c-a243-41d8-9833-8412029663cc
+
+<!-- claude-memory-actor:end -->
+
+## Last save-state (2026-09-09T00:08:42.118722+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-08 - Live Claude Max usage readout in the composer footer
 
 - New package `packages/llm/account-usage` (`@deepseek-ai/dsh-account-usage`), both faces: a Host `TypertRemoteService` (`ctx.accountUsage.read()`) and a browser dock entry seated on `conversation.composer.dock` beside the stats line.
@@ -295,6 +708,39 @@ one command and is the regression check for everything below.
 
 - Committed `9a30a554e8` on branch `feat/open-session-in-subfolder`; pushed that branch and local `master` (`67ceb5406a`) to a new org fork `NeoTech-Networks/deepseek-harness` (`neotech` remote).
 
+## 2026-09-08 - Plan mode defaults on for every new session (model-agnostic)
+
+- Added `defaultActive?: boolean` to `@deepseek-ai/dsh-plan-mode` (`packages/plan/plan-mode/src/index.ts`): `resolveConfig` validates and defaults it, and a new `pinInitialPlanMode` appends `plan/mode { active: true }` at session creation (a `session/created` listener plus a one-time sweep of existing sessions), skipping subagents (`header.origin === 'subagent'`) and any session that already carries a `plan/mode` event, so forks and resumes keep their state.
+- Set `defaultActive: true` on all four plan-mode mounts: the standard/ptc/cordis agent presets and the base bundle (CLI/headless). The web-app bundle only disables the base mount, so it needed no change.
+- Plan mode is model-agnostic: the `plan:policy` section is injected into every model request's system prompt regardless of provider/model, so the default covers Claude, Kimi, DeepSeek and GLM.
+- Verified: 93/93 plan-mode tests (4 files); `tsc -b packages/plan/plan-mode/tsconfig.json` clean; `pnpm build:lib:host` exit 0.
+- Made it live without a full repackage: synced the rebuilt `@deepseek-ai/dsh-plan-mode/lib/` and the three preset YAMLs into `~/.dsh/profiles/desktop/node_modules/`; user restarted and confirmed "Appears to work".
+- Docs updated: README.md/.zh.md + README.i18n.yaml, docs/config-catalog.md/.zh.md. Committed on `feat/open-session-in-subfolder` (bundled into the bulk `feat(vision)` commit, whose message does not name plan mode) and pushed to the `NeoTech-Networks` fork.
+
+## 2026-09-08 - Repointed origin to the NeoTech fork, state auto-commit fixed
+
+`origin` was the upstream deepseek-ai repo, so every state push failed 403.
+Repointed to NeoTech-Networks/deepseek-harness (upstream kept as `upstream`),
+set `gh repo set-default`, and tracked the untracked state files. State now
+lands on the fork (PRs #2 and #3 merged).
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=321e7af0-b0ab-4a0b-9a4c-de8eea784e39 at=2026-09-09T03:50:14.915068+00:00
+-->
+## Last save-state (2026-09-08T17:47:04.847381+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `1af9c4e8-f7ce-40d6-8170-dd9119e4caf2`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-d236bdea-4e7a-4e0c-b761-552123f3da1d
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-07 - Session status icons in the sidebar
 
 - Added a durable, model-independent declared session status. New `packages/session-status/` group: domain (`session/status` event, `sessionStatus` projection, validated vocabulary, `ctx.sessionStatus`), `tool-session-status` (`set_session_status`), `command-session-status` (`/status`).
@@ -321,57 +767,18 @@ one command and is the regression check for everything below.
 
 - Open: `git push` denied (neotechnet has no access to the deepseek-ai org; no fork exists). Either fork to a chosen account and push, or keep the change local. Visual smoke test of the grouped sidebar still pending.
 
-## 2026-09-08 - Plan mode defaults on for every new session (model-agnostic)
-
-- Added `defaultActive?: boolean` to `@deepseek-ai/dsh-plan-mode` (`packages/plan/plan-mode/src/index.ts`): `resolveConfig` validates and defaults it, and a new `pinInitialPlanMode` appends `plan/mode { active: true }` at session creation (a `session/created` listener plus a one-time sweep of existing sessions), skipping subagents (`header.origin === 'subagent'`) and any session that already carries a `plan/mode` event, so forks and resumes keep their state.
-- Set `defaultActive: true` on all four plan-mode mounts: the standard/ptc/cordis agent presets and the base bundle (CLI/headless). The web-app bundle only disables the base mount, so it needed no change.
-- Plan mode is model-agnostic: the `plan:policy` section is injected into every model request's system prompt regardless of provider/model, so the default covers Claude, Kimi, DeepSeek and GLM.
-- Verified: 93/93 plan-mode tests (4 files); `tsc -b packages/plan/plan-mode/tsconfig.json` clean; `pnpm build:lib:host` exit 0.
-- Made it live without a full repackage: synced the rebuilt `@deepseek-ai/dsh-plan-mode/lib/` and the three preset YAMLs into `~/.dsh/profiles/desktop/node_modules/`; user restarted and confirmed "Appears to work".
-- Docs updated: README.md/.zh.md + README.i18n.yaml, docs/config-catalog.md/.zh.md. Committed on `feat/open-session-in-subfolder` (bundled into the bulk `feat(vision)` commit, whose message does not name plan mode) and pushed to the `NeoTech-Networks` fork.
-
-## 2026-09-08 - Repointed origin to the NeoTech fork, state auto-commit fixed
-
-`origin` was the upstream deepseek-ai repo, so every state push failed 403.
-Repointed to NeoTech-Networks/deepseek-harness (upstream kept as `upstream`),
-set `gh repo set-default`, and tracked the untracked state files. State now
-lands on the fork (PRs #2 and #3 merged).
+<!-- claude-memory-actor:end -->
 
 <!-- claude-memory-actor:begin
   Auto-managed by the claude-memory save-state hook.
   Anything between :begin and :end is overwritten on every save-state.
   Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=321e7af0-b0ab-4a0b-9a4c-de8eea784e39 at=2026-09-09T03:50:14.915068+00:00
+  Last write: actor=claude-code:steve session=a463cfd2-49e3-4da7-b34c-e0db2cd09616 at=2026-09-09T23:35:44.128791+00:00
 -->
-## Last save-state (2026-09-09T03:50:14.915068+00:00)
 
-- Trigger: `save_state`
-- Actor: `claude-code:steve`
-- Session id: `321e7af0-b0ab-4a0b-9a4c-de8eea784e39`
-- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
-- Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-6d11ab26-811b-4500-899f-621252ea2c9a
-
-<!-- claude-memory-actor:end -->
-
-## Last save-state (2026-09-09T00:08:42.118722+00:00)
-
-- Trigger: `save_state`
-- Actor: `claude-code:steve`
-- Session id: `e9882722-4aa9-476d-a750-3fff8a9e8b51`
-- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
-- Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-4a177f59-8ce0-4b1c-b9e9-675e49f71b98
-
-<!-- claude-memory-actor:end -->
-
-## Last save-state (2026-09-08T17:47:04.847381+00:00)
-
-- Trigger: `save_state`
-- Actor: `claude-code:steve`
-- Session id: `1af9c4e8-f7ce-40d6-8170-dd9119e4caf2`
-- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
-- Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-d236bdea-4e7a-4e0c-b761-552123f3da1d
-
-<!-- claude-memory-actor:end -->
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=deddfeae-e84e-445b-84c5-f1a7c670cea5 at=2026-09-10T16:40:13.537019+00:00
+-->
