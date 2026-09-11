@@ -9,7 +9,7 @@
 // the shell (jsdom's beforeinput lacks the ranges Lexical needs).
 
 import type { GlobalStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
-import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { $getRoot, $isTextNode } from 'lexical'
 import {
@@ -561,6 +561,67 @@ describe('operator shortcuts', () => {
     fireEvent(window, chord('KeyS'))
     expect(sink).not.toHaveBeenCalled()
     expect(view.getByRole('alert').textContent).toBeTruthy()
+  })
+
+  // Measured 2026-09-11 against the installed build: 26 of 181 promote-phrase
+  // submissions in the session logs were doubles, 22 of them 3 to 10 ms apart,
+  // each pair carrying two client request ids. A held chord on a keydown
+  // binding auto-repeats, and an OS repeat arrives with repeat: true.
+  //
+  // Only Date is faked: the latch reads Date.now(), and stepping the clock past
+  // it per case is what keeps the module-scope latch from leaking between
+  // tests. Real timers are left alone so Lexical and React schedule normally.
+  let clock = Date.parse('2026-09-11T12:00:00.000Z')
+
+  beforeEach(() => {
+    clock += 60_000
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(clock)
+  })
+
+  afterEach(() => { vi.useRealTimers() })
+
+  it('ignores an auto-repeat of the held chord', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('KeyP', { repeat: true }))
+    fireEvent(window, chord('KeyS', { repeat: true }))
+    expect(sink).not.toHaveBeenCalled()
+  })
+
+  it('submits once when the same chord arrives twice in the same millisecond', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('KeyP'))
+    fireEvent(window, chord('KeyP'))
+    expect(sink).toHaveBeenCalledTimes(1)
+  })
+
+  it('still submits a deliberate second chord after the latch window', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('KeyP'))
+    vi.setSystemTime(clock + 400)
+    fireEvent(window, chord('KeyP'))
+    expect(sink).toHaveBeenCalledTimes(2)
+  })
+
+  // A refusal is not a send: the inert toast must not arm the latch, or a press
+  // during a takeover would swallow the operator's next real press.
+  it('does not arm the latch when it refuses an inert composer', () => {
+    const inert = bench({ inert: true })
+    fireEvent(window, chord('KeyS'))
+    expect(inert.sink).not.toHaveBeenCalled()
+    const live = bench({})
+    fireEvent(window, chord('KeyS'))
+    expect(live.sink).toHaveBeenCalledTimes(1)
+  })
+
+  // The two-listener mechanism, reproduced: every mounted composer listens on
+  // the window, so one chord reaches all of them. The latch is module scope
+  // rather than a per-instance ref precisely because a ref cannot see its twin.
+  it('submits once when two composers are mounted in one window', () => {
+    const first = bench({})
+    const second = bench({})
+    fireEvent(window, chord('KeyP'))
+    expect(first.sink.mock.calls.length + second.sink.mock.calls.length).toBe(1)
   })
 })
 
