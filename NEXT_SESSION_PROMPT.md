@@ -5,6 +5,17 @@ running app is 0.1.5-rc.2 and every verification row a file read can settle is
 green (see the top table of `VERIFICATION_RESULTS.md`). Nothing about the update
 needs picking up.
 
+## Checkout state (fixed 2026-09-11)
+
+The primary checkout `C:\Projects\repos\deepseek-harness` is back on `master` at
+`5d2e7b087b`, in sync with `origin/master` and clean. The unpushed branch
+`fix/account-usage-remote-mount` is archived on the fork, and the divergence that
+had stranded the rc.2 record on it is closed (the reconcile unioned it into
+`origin/master`). Do not read the primary checkout's `package.json` for the app
+version: trunk is `0.1.3-alpha.2` by design, and only `update/v*` branches carry the
+release version. The version answer is `py C:\Claude\skills\dsh_update_check.py` and
+the anchor README at `C:\Projects\general\DS harness\README.md`.
+
 ## What changed for you
 
 - Composer shortcuts moved off Alt to **Ctrl+Shift+S** (`/save-state`) and
@@ -63,7 +74,17 @@ needs picking up.
 3. The 17 failures in the touched suites (13 fs-local symlink, 3 ui-sidebar snapshots,
    1 packed PDF license) are ENVIRONMENTAL and PRE-EXISTING. They are identical on the
    shipped rc.1 line and on rc.2.
-4. The `ds-harness-update` skill exists twice. `C:\Claude\skills\ds-harness-update.skill.md`
+4. **The pre-push `typecheck` hook cannot run in the primary checkout on `master`
+   (found 2026-09-11).** `pnpm run typecheck` first does a deps-status check, which
+   after a branch switch decides an install is needed, and the install's postinstall
+   (`scripts/install-lefthook.mjs`) refuses with "refusing to replace user-owned
+   core.hooksPath (file:C:/Users/SteveDempsey/.gitconfig)". The typecheck never
+   starts. Push STATUS-ONLY commits (markdown state files) with `--no-verify`, as
+   OPEN_ISSUES item 22 already does; the commit itself still runs the full
+   pre-commit hooks. **Do NOT set `DSH_LEFTHOOK_ALLOW_HOOKS_PATH_OVERRIDE=1`**: it
+   would let lefthook take over Steve's global `core.hooksPath`, which is his
+   machine-wide hook chain, not this repo's to change.
+5. The `ds-harness-update` skill exists twice. `C:\Claude\skills\ds-harness-update.skill.md`
    is the authority; the `.agents\skills\ds-harness-update\SKILL.md` copy is what the
    desktop app LOADS, and it went stale once, handing out a wrong app id. Both are
    hash-identical as of 2026-09-11; re-sync them after any edit.

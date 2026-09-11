@@ -4,6 +4,53 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-11 - version trap fixed: trunk checkout, branch archived, state files reconciled
+
+The harness version question had one misleading answer: the shared checkout
+`C:\Projects\repos\deepseek-harness` was parked on the unpushed branch
+`fix/account-usage-remote-mount` (26 commits above `origin/master`), and its
+`package.json` reads `0.1.3-alpha.2` while the running app is `0.1.5-rc.2`. Reading
+that file was the trap. Fixed in three parts, each verified the same session:
+
+1. THE BRANCH IS ARCHIVED. Pushed to `origin/fix/account-usage-remote-mount` at
+   `d77def1b70`. The 12 uncommitted files sitting in the tree (the per-session right
+   panel width change) were saved first to
+   `~\.claude\Exports\2026-09-11_dsh-primary-checkout-uncommitted-delta.patch`
+   (47,852 bytes, 12 files) and then discarded, because the same change is already
+   commit `55c15a6af4` on `update/v0.1.5-rc.2` and is live: `rightbarBySession`
+   occurs 6 times in the RUNNING profile's `dsh-client-ui-layout` client.js.
+
+2. THE PRIMARY CHECKOUT IS BACK ON TRUNK. `master` fast-forwarded to `5d2e7b087b`
+   and re-pointed at `origin/master` (it had been tracking `upstream/master`, which
+   is why it reported "behind 852"). 484 untracked compiled `.js`/`.d.ts`/`.map`
+   files under `packages/` and `vendor/` were removed with a path-limited
+   `git clean -fd` (no `-x`), so ignored files and the state archive survived.
+   Expected consequence: `finish-install.ps1` and `check-seed-integrity.py` are not
+   on `master`, so they are no longer in the primary checkout. The installer helper
+   is run from the update worktree that built the release.
+
+3. THE STATE DIVERGENCE IS CLOSED. The rc.2 record existed only on the parked
+   branch: `origin/master` was 99 lines behind `CURRENT_STATE.md` and had no
+   `0.1.5-rc.2 INSTALLED` section. `state_file_reconcile.py` was run as a dry run
+   first, then `--apply`: `CURRENT_STATE.md` 43 to 46 sections (719 lines), the
+   state archive 26 to 29 sections (279 lines), and all five state files now
+   identical between the working tree and `origin/master` at `5d2e7b087b`. Nothing
+   was dropped; the union also recovered 25 archive sections and 1 CURRENT_STATE
+   section that only `origin/master` had.
+
+THE VERSION ANSWER NOW LIVES IN ONE PLACE.
+`C:\Projects\general\DS harness\README.md` carries a Version section: installed
+`0.1.5-rc.2`, newest upstream `dsh-v0.1.5-rc.2`, the authoritative check
+`py C:\Claude\skills\dsh_update_check.py`, the branch that matches the installed
+build (`update/v0.1.5-rc.2` in `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`), and
+the explicit warning never to infer the harness version from the primary checkout's
+`package.json`. Trunk is CORRECT at `0.1.3-alpha.2`: do not "fix" it by bumping the
+version, because the release family requires one version across all members and
+only an `update/v*` branch may carry that bump.
+
+STILL STEVE'S EYES, unchanged by this work: the Ctrl+Shift+S / Ctrl+Shift+P
+keystrokes and the All Sessions rail round trip (OPEN_ISSUES 27).
+
 ## 2026-09-11 - 0.1.5-rc.2 INSTALLED and verified in the running code
 
 Steve ran `finish-install.ps1` and the app relaunched. Every verification row a
