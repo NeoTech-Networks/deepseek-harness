@@ -4,6 +4,37 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-11 - 0.1.5-rc.2 INSTALLED and verified in the running code
+
+Steve ran `finish-install.ps1` and the app relaunched. Every verification row a
+file read can settle is green; the check table is at the top of
+`VERIFICATION_RESULTS.md`. In one line: the seed and the re-extracted profile both
+read `0.1.5-rc.2`, there is exactly ONE uninstall entry (key
+`7808434f-469e-5eba-848e-edf64d3b94ce`), so it upgraded IN PLACE rather than
+installing a parallel copy; the provision log ends `staged health check passed` /
+`staging profile activated as 0.1.5-rc.2` / `applyRelease finished`; 4 processes
+are running from 09:48 and 09:51; the RUNNING client carries the Ctrl+Shift chord
+with the Alt exclusion, `CHORD_LATCH_MS`, 2 keydown listeners and ZERO keyup
+listeners, and the RUNNING vision-routing package carries `deepseek-flash` with
+zero occurrences of the retired id; `dsh_local_features_check.py` exits 0 with ALL
+12 features present, including `composer-shortcut-single-flight` which was MISSING
+before this build; and `dsh_config_vault.py verify` exits 0 with 18 files all same.
+
+The `dsh-config` vault was re-snapshotted at `app_version: 0.1.5-rc.2` (commit
+b27ea09) and still verifies.
+
+WHAT IS STILL UNPROVEN, and it is only Steve's eyes now: press Ctrl+Shift+S and
+Ctrl+Shift+P in the installed app and confirm each sends exactly ONE message with
+no native menu bar opening, and collapse then re-expand the 56px rail and confirm
+the All Sessions section returns without a restart (OPEN_ISSUES 27).
+
+THE BOOT LINE WAS NOT RE-CAPTURED, deliberately. The skill asks for a launch with
+`ELECTRON_ENABLE_LOGGING=1` and a read of the `web boot:` line, but a second launch
+now hits the single-instance lock and only focuses the running window, so it cannot
+produce a fresh one. The provision log's health check and `applyRelease finished`,
+the 4 live processes, and this session answering inside the relaunched app are the
+boot proof for this install.
+
 ## 2026-09-11 - 0.1.5-rc.2 built and packaged, install pending; state files destroyed a FOURTH time mid-session
 
 Verdict at the start: `UPDATE AVAILABLE dsh-v0.1.5-rc.2` (upstream published

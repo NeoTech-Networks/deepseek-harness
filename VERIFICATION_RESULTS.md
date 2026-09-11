@@ -1,3 +1,24 @@
+## 2026-09-11 - 0.1.5-rc.2 INSTALLED: post-install verification
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Installed seed version | 0.1.5-rc.2 | `resources\seed\desktop-release.json` reads `0.1.5-rc.2` | VERIFIED |
+| Profile release file | 0.1.5-rc.2 | `~\.dsh\profiles\desktop\desktop-release.json` reads `0.1.5-rc.2` | VERIFIED |
+| Upgrade in place | exactly one uninstall entry | one entry, key `7808434f-469e-5eba-848e-edf64d3b94ce`, DisplayVersion `0.1.5-rc.2`; no second parallel copy | VERIFIED |
+| Profile re-extracted | fresh, post-install | 249 packages under `node_modules\@deepseek-ai`, newest mtimes 09:51 | VERIFIED |
+| Activation | staging activated | provision log `provision-2026-09-11T13-48-15-264Z.log`: pnpm exit 0, `staged health check passed`, `staging profile activated as 0.1.5-rc.2`, `applyRelease finished` | VERIFIED |
+| Ctrl+Shift chord in the RUNNING code | keydown, Alt excluded | guard `!event.ctrlKey \|\| !event.shiftKey \|\| event.altKey \|\| event.metaKey` present, 2 keydown listeners, `CHORD_LATCH_MS` x2, `deploy to production` present | VERIFIED |
+| Old Alt binding gone from the RUNNING code | zero keyup listeners | 0 keyup listeners | VERIFIED |
+| Vision id in the RUNNING code | `deepseek-flash` | 1 occurrence of `deepseek-flash`, 0 of `deepseek-v4-flash-vision-exp` | VERIFIED |
+| Processes | 4 or more, post-install | 4 processes, started 09:48 and 09:51 | VERIFIED |
+| A session works | answers | this session is running inside the relaunched app and answering | VERIFIED |
+| All 12 local features | exit 0, none missing | `dsh_local_features_check.py` exit 0, 12 ok rows, `composer-shortcut-single-flight` now present | VERIFIED |
+| Steve's settings survived | exit 0 | `dsh_config_vault.py verify` exit 0, 18 files all same | VERIFIED |
+| Vault manifest | records the running version | re-snapshotted at `app_version: 0.1.5-rc.2` (dsh-config commit b27ea09), verify still exit 0 | VERIFIED |
+| `web boot:` line from a fresh logged launch | clean | NOT RE-CAPTURED: a second launch hits the single-instance lock and only focuses the running window. Provision health check, 4 processes and a live session are the boot proof | NOT APPLICABLE |
+| Ctrl+Shift+S / Ctrl+Shift+P on screen | one message each, no menu bar | needs Steve's keystrokes | UNVERIFIED, operator-gated |
+| All Sessions survives a rail round-trip on screen | section returns | needs Steve's eyes (OPEN_ISSUES 27) | UNVERIFIED, operator-gated |
+
 ## 2026-09-11 - 0.1.5-rc.2 rebase, gates and packaged artifact (install pending)
 
 | Check | Expected | Result | Status |
