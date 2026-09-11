@@ -46,7 +46,9 @@ build does not add a second Add/Remove entry), `DOWNLOAD_TEST_ORIGIN=https://dow
 `powershell -ExecutionPolicy Bypass -File "C:\Projects\worktrees\dsh-shortcut-fix\finish-install.ps1"`.
 The version now matches the installed release (both 0.1.5-rc.1), so the derived
 installer path resolves. After SETUP COMPLETE: `py C:\Claude\bin\dsh_local_features_check.py`
-must exit 0 (11 rows now, the new one is `composer-shortcut-single-flight`), then
+must exit 0 (12 rows now: 11 already present, and the new
+`composer-shortcut-single-flight`, which the checker reports MISSING from the
+running build today as expected), then
 one real Ctrl+Shift+P must send exactly one `deploy to production` and no Desktop
 Plugins window, and a two-second hold must send exactly one.
 
