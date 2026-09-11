@@ -1104,14 +1104,18 @@ Replace the frozen call configuration. `await next()` yields the config the mach
  * @param payload.agent - the agent making the model call.
  * @param payload.turn - the open turn number.
  * @param payload.step - the step whose request this is.
+ * @param payload.tools - the assembled tool schemas this step will send. They
+ * travel here, and not only in the header built afterwards, so a route policy
+ * can size them and return a different route BEFORE the header is logged; the
+ * route this waterfall returns is the route the log then records.
  * @param payload.signal - the current turn's explicit abort signal.
  * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
  * @mode waterfall
 */
-'agent/request'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; signal: AbortSignal }, next: () => Promise<LlmCallConfig>): Promise<LlmCallConfig>
+'agent/request'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; tools: readonly ToolSchema[]; signal: AbortSignal }, next: () => Promise<LlmCallConfig>): Promise<LlmCallConfig>
 ```
 
-Types: [LlmCallConfig](llm-streaming.md) · [Scoped](scope.md)
+Types: [LlmCallConfig](llm-streaming.md) · [Scoped](scope.md) · [ToolSchema](tools.md)
 
 Source: [`packages/core/agent/src/runtime-types.ts`](../../packages/core/agent/src/runtime-types.ts)
 

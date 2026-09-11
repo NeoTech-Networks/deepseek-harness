@@ -1465,6 +1465,36 @@ export type Config = Readonly<Record<string, never>>
 
 来源：[`packages/llm/llm-retry/src/index.ts:25`](../packages/llm/llm-retry/src/index.ts)
 
+<a id="deepseek-aidsh-llm-route-fallback"></a>
+
+## `@deepseek-ai/dsh-llm-route-fallback`
+
+```ts config-catalog
+/**
+ * Plugin configuration. Every field is optional and defaulted; a value that
+ * cannot be honored fails plugin load rather than silently disabling the guard
+ * (see {@link resolveConfig}).
+ */
+export interface Config {
+  /** Master switch. `false` leaves every request exactly as the agent declared it. */
+  enabled?: boolean
+  /** Provider route the fallback applies to; requests on any other provider are untouched. */
+  provider?: string
+  /**
+   * Models the fallback moves a request OFF. A list, not one id, because a
+   * provider can serve the same underlying model under a current id and a
+   * legacy alias, and a request pinned to either must still be protected.
+   */
+  from?: string[]
+  /** Model the fallback moves a qualifying request ONTO. */
+  to?: string
+  /** Combined UTF-8 byte size of the tools' `function.parameters` above which the route moves. */
+  limitBytes?: number
+}
+```
+
+来源：[`packages/llm/llm-route-fallback/src/index.ts:40`](../packages/llm/llm-route-fallback/src/index.ts)
+
 <a id="deepseek-aidsh-lsp-stdio"></a>
 
 ## `@deepseek-ai/dsh-lsp-stdio`
