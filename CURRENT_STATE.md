@@ -4,16 +4,155 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
-## Last save-state (2026-09-11T14:32:31.035934+00:00)
+## 2026-09-11 - 0.1.5-rc.2 INSTALLED and verified in the running code
 
-- Trigger: `save_state`
-- Actor: `claude-code:steve`
-- Session id: `4e5d3c40-3d3e-4fb0-ab06-3fa1f582fc3e`
-- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
-- Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-3ee23e44-26b5-406d-afb8-6877a8a9dbb9
+Steve ran `finish-install.ps1` and the app relaunched. Every verification row a
+file read can settle is green; the check table is at the top of
+`VERIFICATION_RESULTS.md`. In one line: the seed and the re-extracted profile both
+read `0.1.5-rc.2`, there is exactly ONE uninstall entry (key
+`7808434f-469e-5eba-848e-edf64d3b94ce`), so it upgraded IN PLACE rather than
+installing a parallel copy; the provision log ends `staged health check passed` /
+`staging profile activated as 0.1.5-rc.2` / `applyRelease finished`; 4 processes
+are running from 09:48 and 09:51; the RUNNING client carries the Ctrl+Shift chord
+with the Alt exclusion, `CHORD_LATCH_MS`, 2 keydown listeners and ZERO keyup
+listeners, and the RUNNING vision-routing package carries `deepseek-flash` with
+zero occurrences of the retired id; `dsh_local_features_check.py` exits 0 with ALL
+12 features present, including `composer-shortcut-single-flight` which was MISSING
+before this build; and `dsh_config_vault.py verify` exits 0 with 18 files all same.
 
-<!-- claude-memory-actor:end -->
+The `dsh-config` vault was re-snapshotted at `app_version: 0.1.5-rc.2` (commit
+b27ea09) and still verifies.
+
+WHAT IS STILL UNPROVEN, and it is only Steve's eyes now: press Ctrl+Shift+S and
+Ctrl+Shift+P in the installed app and confirm each sends exactly ONE message with
+no native menu bar opening, and collapse then re-expand the 56px rail and confirm
+the All Sessions section returns without a restart (OPEN_ISSUES 27).
+
+THE BOOT LINE WAS NOT RE-CAPTURED, deliberately. The skill asks for a launch with
+`ELECTRON_ENABLE_LOGGING=1` and a read of the `web boot:` line, but a second launch
+now hits the single-instance lock and only focuses the running window, so it cannot
+produce a fresh one. The provision log's health check and `applyRelease finished`,
+the 4 live processes, and this session answering inside the relaunched app are the
+boot proof for this install.
+
+## 2026-09-11 - 0.1.5-rc.2 built and packaged, install pending; state files destroyed a FOURTH time mid-session
+
+Verdict at the start: `UPDATE AVAILABLE dsh-v0.1.5-rc.2` (upstream published
+2026-09-10T15:09:34Z). Upstream's part is cosmetic (feedback confirmed in a dialog
+before it is recorded, refined delivered-file cards and conversation spacing,
+refreshed code-file icons), so the reason to rebuild was the local work it carries.
+
+Built in a fresh worktree `C:/Projects/worktrees/dsh-update-v0.1.5-rc.2` on branch
+`update/v0.1.5-rc.2`, 31 commits ahead of `dsh-v0.1.5-rc.2`. `git reset --hard
+update/v0.1.5-rc.1` then `git rebase --onto dsh-v0.1.5-rc.2 dsh-v0.1.5-rc.1`
+replayed all 26 local commits with NO conflict, and the subject-list diff printed
+nothing. Folded in on top: the two built-but-never-installed composer commits
+cherry-picked from `fix/composer-shortcut-modifier` (`8ce3ffe9ac` moves the operator
+chord off Alt to Ctrl+Shift, `a28a606f4c` stops one press sending twice), the
+fork-local vision-routing default moved off the retired `deepseek-v4-flash-vision-exp`
+to `deepseek-flash`, and the eight fork-local packages bumped to 0.1.5-rc.2. The
+packaging environment is now recorded in-repo at `apps/desktop/PACKAGING.md`
+(`.env.example` is refused by the pre-commit hook, so that filename is not usable).
+
+Gates: host and client typecheck 0, build 0 (240 client artifacts), plan-mode 94/94,
+release family 273 members all at 0.1.5-rc.2, every catalog and path-alias gate
+current. Installer `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,762,388 bytes,
+built with `DSH_DESKTOP_APP_ID=com.deepseek.harness`, which yields the live NSIS
+uninstall key `7808434f-469e-5eba-848e-edf64d3b94ce` and therefore upgrades in
+place. The changed code was read back OUT of the packaged seed `.tgz` archives:
+`dsh-client-ui-conversation` carries the Ctrl+Shift keydown guard and `CHORD_LATCH_MS`
+with ZERO keyup listeners, and `dsh-vision-routing` carries `deepseek-flash` with
+zero occurrences of the retired id. Branch pushed to the fork. The install is the
+operator's step and is NOT YET CONFIRMED.
+
+**All Sessions rail defect: investigated, NOT root-caused, and NOTHING SHIPPED for
+it.** Two regression tests were added and both PASS, eliminating two candidate
+causes: the shell's `wide` flag does not latch across collapse, settle and expand
+(`packages/client/ui-sidebar/tests/sidebar-root.client.spec.tsx`), and the slot
+registry DOES re-register the section after both its declaring child slot and its
+declaring parent entry collapse and return
+(`packages/client/ui-workspace/tests/apply.client.spec.ts`). A read of the outlet
+dispatch (`scoped-slots.tsx` lines 801-805 and 484-505) shows owner props reach the
+entry component on every render, so there is no props-blind memoization. A
+speculative change in that code would be worse than the defect. The surviving
+candidate is the persisted fold store `dsh.workspace.allSessions.v1`, whose
+`expanded` default is `true`: a lost or stale persisted write hides the list while a
+restart restores the default, which fits the reported symptom.
+
+**The 17 failures in the touched suites are NOT from this build.** 13 fs-local
+symlink failures, 3 ui-sidebar snapshot mismatches and 1 packed-client PDF license
+failure are identical on the shipped 0.1.5-rc.1 line and on rc.2. The 13 were
+attributed the same day: Developer Mode is off (`AppModelUnlock` absent) and the
+shell is not elevated, so Windows refuses symlink creation with "Administrator
+privilege required". The playbook's fs-local 156/0 baseline is a property of the
+shell's privileges, not of the version.
+
+**STATE FILES WERE DESTROYED A FOURTH TIME, during this session.** At 09:42 local
+`CURRENT_STATE.md` in the PRIMARY checkout held 30 dated sections against 33 in
+HEAD, and the newest one, `2026-09-11 - V4.1-Flash model ids`, was GONE;
+`git diff --numstat` reported 4 insertions and 128 deletions against HEAD. The
+save-state hook had written at 13:23:50Z under session
+`1e4d8e94-8f5a-4ced-a6bb-7e447b8fba33`, which is not this session. Recovered with
+`git checkout HEAD -- CURRENT_STATE.md` (33 sections, 784 lines); the damaged copy is
+archived at `%TEMP%\deepseek-harness-CURRENT_STATE.damaged-2026-09-11-0942.md`.
+`VERIFICATION_RESULTS.md` was checked the same way and is INTACT at 28 sections,
+equal to HEAD. `state_file_cap.py` was deliberately NOT run (OPEN_ISSUES 25).
+
+## 2026-09-11 - V4.1-Flash model ids; the installed app is 0.1.5-rc.1
+
+DeepSeek released V4.1-Flash on 2026-09-10 under the id `deepseek-flash` and
+retired V4-Flash and V4-Flash-Vision-Exp. A live `GET api.deepseek.com/models`
+returned exactly two ids, `deepseek-flash` and `deepseek-v4-pro`. Live probes the
+same day: `deepseek-flash` answers on both the OpenAI-format and the
+Anthropic-format surfaces, the `[1m]` suffix is still accepted there, and the
+model READS IMAGES (a 1x1 red PNG came back as "Red", 232 input / 579 output
+tokens).
+
+**The record was wrong about the app version.** The manifest in
+`C:\Projects\repos\dsh-config` said `0.1.5-alpha.2`, and this repo's
+`NEXT_SESSION_PROMPT.md` had been repeating an even older build. The RUNNING app
+is **0.1.5-rc.1**: the Windows uninstall entry reports `0.1.5-rc.1`, the exe
+`FileVersion` is `0.1.5-rc.1`, `~/.dsh/profiles/desktop/desktop-release.json`
+says `0.1.5-rc.1`, and every `@deepseek-ai/dsh-*` pack in
+`desktop-packages.json` is `0.1.5-rc.1`. Live state outranks the manifest.
+Upstream is at `dsh-v0.1.5-rc.2` (feedback-dialog and file-card polish only,
+nothing model-related), so no rebuild is needed for this.
+
+**rc.1 already carries V4.1-Flash.** `deepseek-ai-dsh-llm-deepseek-0.1.5-rc.1.tgz`
+in the installed profile contains `id: "deepseek-flash"`, name
+`DeepSeek-V41-Flash`, image modality and `systemPromptUpdate: in-history`, and
+the fork branch `update/v0.1.5-rc.1` matches upstream `dsh-v0.1.5-rc.1` on that
+file. What did NOT carry it was the CONFIG: `subagent-model-selection` listed the
+three retired ids and omitted `deepseek-flash`, and the `dsh-config` vault still
+pinned the default model to `deepseek-v4-pro`.
+
+**Fixed this session.** The vault and the live `settings.yaml` now default to
+`deepseek-flash` and offer `deepseek-flash` plus `deepseek-v4-pro` to subagents
+(the retired `deepseek-v4-flash` and `deepseek-v4-flash-vision-exp` entries are
+gone); the vault was re-snapshotted so restoring it can no longer undo the
+upgrade, and `MANIFEST.json` now reports `app_version: 0.1.5-rc.1`. One caveat
+found by probe: a session's subagent model gate is frozen at session start, so
+`list_subagent_models` still showed the old list and refused `deepseek-flash`
+inside the session that made the edit. A NEW session is the test.
+
+**Still stale, by decision.** The fork-local `vision-routing` plugin's
+`DEFAULT_ROUTE` is still `deepseek-v4-flash-vision-exp`. It is only reached from
+a text-only session model (`deepseek-v4-pro`), the retired id still answers at
+Flash price, and changing it costs a full rebuild, so it waits for the next
+planned update rather than triggering one.
+
+**Recovered while writing this.** This file and `VERIFICATION_RESULTS.md` were
+found TRUNCATED in the primary checkout: 38 lines against 728 in
+`origin/master`, the item-16 signature. Both were restored from `origin/master`
+and the damaged copies are in `%TEMP%` as
+`deepseek-harness-CURRENT_STATE.damaged-2026-09-11.md` and
+`deepseek-harness-VERIFICATION_RESULTS.damaged-2026-09-11.md`. NOTE: running
+`state_file_cap.py --repo` against this file then EVICTED 26 of its 42 sections
+and reordered the survivors, burying this very section at the end of the file
+instead of the top, so it was restored from `origin/master` a second time and
+the cap tool deliberately NOT run again. `CURRENT_STATE.md` is therefore over the
+32 KB ceiling (about 60 KB) until that eviction path is fixed; do not treat the
+cap tool as safe on this repo. Same class of fault as OPEN_ISSUES item 16b.
 
 ## 2026-09-10 - All Sessions sidebar section: built and packaged, install pending
 
@@ -737,34 +876,13 @@ lands on the fork (PRs #2 and #3 merged).
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=deddfeae-e84e-445b-84c5-f1a7c670cea5 at=2026-09-10T16:40:13.537019+00:00
 -->
-<!-- claude-memory-actor:begin
-  Auto-managed by the claude-memory save-state hook.
-  Anything between :begin and :end is overwritten on every save-state.
-  Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=4e5d3c40-3d3e-4fb0-ab06-3fa1f582fc3e at=2026-09-11T14:32:31.035934+00:00
--->
-## 2026-09-07 - Workspace grouping implemented and committed
+## Last save-state (2026-09-11T14:32:31.035934+00:00)
 
-- Implemented workspace grouping end-to-end: `group` field on the workspace domain record, `setGroup` in the API controller + typert wire codec, two-level group/workspace/sessions tree in the sidebar, and a "Set group…" dialog on the workspace row menu.
-
-- Verified: host + client tsc typecheck clean; typert host + client bundles built; 257 tests pass (2 failures are pre-existing symlink EPERM under the Windows sandbox, not this change).
-
-- Committed: `67ceb5406a` on local `master`, rebased cleanly onto `c389f96bf3`.
-
-- Open: `git push` denied (neotechnet has no access to the deepseek-ai org; no fork exists). Either fork to a chosen account and push, or keep the change local. Visual smoke test of the grouped sidebar still pending.
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `4e5d3c40-3d3e-4fb0-ab06-3fa1f582fc3e`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-3ee23e44-26b5-406d-afb8-6877a8a9dbb9
 
 <!-- claude-memory-actor:end -->
-
-<!-- claude-memory-actor:begin
-  Auto-managed by the claude-memory save-state hook.
-  Anything between :begin and :end is overwritten on every save-state.
-  Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=a463cfd2-49e3-4da7-b34c-e0db2cd09616 at=2026-09-09T23:35:44.128791+00:00
--->
-
-<!-- claude-memory-actor:begin
-  Auto-managed by the claude-memory save-state hook.
-  Anything between :begin and :end is overwritten on every save-state.
-  Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=deddfeae-e84e-445b-84c5-f1a7c670cea5 at=2026-09-10T16:40:13.537019+00:00
--->

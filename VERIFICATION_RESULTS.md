@@ -1,5 +1,62 @@
-## 2026-09-10 - All Sessions sidebar section
+## 2026-09-11 - 0.1.5-rc.2 INSTALLED: post-install verification
 
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Installed seed version | 0.1.5-rc.2 | `resources\seed\desktop-release.json` reads `0.1.5-rc.2` | VERIFIED |
+| Profile release file | 0.1.5-rc.2 | `~\.dsh\profiles\desktop\desktop-release.json` reads `0.1.5-rc.2` | VERIFIED |
+| Upgrade in place | exactly one uninstall entry | one entry, key `7808434f-469e-5eba-848e-edf64d3b94ce`, DisplayVersion `0.1.5-rc.2`; no second parallel copy | VERIFIED |
+| Profile re-extracted | fresh, post-install | 249 packages under `node_modules\@deepseek-ai`, newest mtimes 09:51 | VERIFIED |
+| Activation | staging activated | provision log `provision-2026-09-11T13-48-15-264Z.log`: pnpm exit 0, `staged health check passed`, `staging profile activated as 0.1.5-rc.2`, `applyRelease finished` | VERIFIED |
+| Ctrl+Shift chord in the RUNNING code | keydown, Alt excluded | guard `!event.ctrlKey \|\| !event.shiftKey \|\| event.altKey \|\| event.metaKey` present, 2 keydown listeners, `CHORD_LATCH_MS` x2, `deploy to production` present | VERIFIED |
+| Old Alt binding gone from the RUNNING code | zero keyup listeners | 0 keyup listeners | VERIFIED |
+| Vision id in the RUNNING code | `deepseek-flash` | 1 occurrence of `deepseek-flash`, 0 of `deepseek-v4-flash-vision-exp` | VERIFIED |
+| Processes | 4 or more, post-install | 4 processes, started 09:48 and 09:51 | VERIFIED |
+| A session works | answers | this session is running inside the relaunched app and answering | VERIFIED |
+| All 12 local features | exit 0, none missing | `dsh_local_features_check.py` exit 0, 12 ok rows, `composer-shortcut-single-flight` now present | VERIFIED |
+| Steve's settings survived | exit 0 | `dsh_config_vault.py verify` exit 0, 18 files all same | VERIFIED |
+| Vault manifest | records the running version | re-snapshotted at `app_version: 0.1.5-rc.2` (dsh-config commit b27ea09), verify still exit 0 | VERIFIED |
+| `web boot:` line from a fresh logged launch | clean | NOT RE-CAPTURED: a second launch hits the single-instance lock and only focuses the running window. Provision health check, 4 processes and a live session are the boot proof | NOT APPLICABLE |
+| Ctrl+Shift+S / Ctrl+Shift+P on screen | one message each, no menu bar | needs Steve's keystrokes | UNVERIFIED, operator-gated |
+| All Sessions survives a rail round-trip on screen | section returns | needs Steve's eyes (OPEN_ISSUES 27) | UNVERIFIED, operator-gated |
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Upstream release read | newest tag | `dsh-v0.1.5-rc.2`, published 2026-09-10T15:09:34Z, prerelease | VERIFIED |
+| rc.2 touches the sidebar | expectation | 334 changed files; every sidebar/workspace/layout hit is a `package.json` version bump | VERIFIED |
+| Rebase onto the tag | 26 local commits replayed | `--onto dsh-v0.1.5-rc.2 dsh-v0.1.5-rc.1` clean, no conflict | VERIFIED |
+| No commit silently dropped | subject lists identical | 26 vs 26, comparison printed nothing | VERIFIED |
+| Composer chord cherry-picks | both present | `8ce3ffe9ac` then `a28a606f4c`, clean, no dirty-tree stop | VERIFIED |
+| Host + client typecheck | exit 0 | exit 0 | VERIFIED |
+| Full build | exit 0 | exit 0, 240 client artifacts | VERIFIED |
+| plan-mode baseline | 94 of 94 | 94 passed / 94 | VERIFIED |
+| Release family | one version | 273 members all at 0.1.5-rc.2, publish order resolved | VERIFIED |
+| Catalog and alias gates | current | client catalog, cordis catalog, cordis api, cordis-inspect, config catalog, tsconfig paths, package invariants: all exit 0 | VERIFIED |
+| Installer artifact | ~180-195 MB | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,762,388 bytes | VERIFIED |
+| Packaged seed version | 0.1.5-rc.2 | `resources\seed\desktop-release.json` reads `0.1.5-rc.2` | VERIFIED |
+| Ctrl+Shift chord in the packaged seed | keydown, Alt excluded, latch present | guard `!event.ctrlKey \|\| !event.shiftKey \|\| event.altKey \|\| event.metaKey`, 2 keydown listeners, 0 keyup listeners, `CHORD_LATCH_MS` present | VERIFIED |
+| Vision id in the packaged seed | `deepseek-flash` | 1 occurrence of `deepseek-flash`, 0 of `deepseek-v4-flash-vision-exp` | VERIFIED |
+| App id is not free choice | resolves per env | `resolveDesktopAppId()` throws when unset and has no default, so the build used `com.deepseek.harness` | VERIFIED |
+| Install helper resolves the artifact | path exists | derived version 0.1.5-rc.2, computed installer path exists | VERIFIED |
+| All Sessions `wide` flag across a rail round trip | does not latch | NEW TEST PASSES: collapse, settle, expand returns every seat to wide | VERIFIED |
+| Slot declaration collapse and restore | re-registers | NEW TEST PASSES: child-slot and parent-entry round trips both restore the section | VERIFIED |
+| fs-local symlink suites | 156 passed 0 failed | 13 FAILED, byte-identical on rc.1 and rc.2; Developer Mode off and shell not elevated, so Windows refuses symlinks | ENVIRONMENTAL, not a regression |
+| ui-sidebar snapshots + packed pdf license | pass | 3 snapshot mismatches + 1 license failure, identical on rc.1 and rc.2 | PRE-EXISTING on the fork |
+| State files intact | not truncated | `CURRENT_STATE.md` found at 30 sections against 33 in HEAD (newest gone); restored with `git checkout HEAD --`; `VERIFICATION_RESULTS.md` intact at 28 sections | RECOVERED, see OPEN_ISSUES 16 |
+| Installed app runs 0.1.5-rc.2 | version match | install NOT confirmed by Steve yet | UNVERIFIED |
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Live model catalogue | current ids | `GET api.deepseek.com/models` returned `deepseek-flash` and `deepseek-v4-pro` only | VERIFIED |
+| Installed app version | matches the record | registry DisplayVersion, exe FileVersion, `desktop-release.json` and every `dsh-*` pack all read `0.1.5-rc.1` | VERIFIED |
+| V4.1-Flash in the installed harness | catalogue entry present | `deepseek-ai-dsh-llm-deepseek-0.1.5-rc.1.tgz` carries id `deepseek-flash`, name `DeepSeek-V41-Flash`, image modality, `systemPromptUpdate: in-history` | VERIFIED |
+| `deepseek-flash` on the chat route | answers | `model=deepseek-flash` returned | VERIFIED |
+| `deepseek-flash` on the Anthropic route | answers | `model=deepseek-flash` echoed, and `deepseek-flash[1m]` also accepted | VERIFIED |
+| `deepseek-flash` reads an image | describes it | 1x1 red PNG returned "Red", `stop_reason=end_turn`, 232 in / 579 out | VERIFIED |
+| Retired ids | still routed | `deepseek-v4-flash-vision-exp` answered as a compatibility route at Flash price | VERIFIED |
+| Config default model | `deepseek-flash` | dsh-config vault and live `settings.yaml` both name it | VERIFIED |
+| Subagent model gate, in-session | `deepseek-flash` allowed | REFUSED in the session that made the edit: `child LLM route "deepseek-official/deepseek-flash" is not allowed for this Session`. The gate is frozen at session start, so this needs a NEW session | UNVERIFIED |
+| Vault equals live | all same | `dsh_config_vault.py verify`: 18 files, all same; manifest `app_version` now `0.1.5-rc.1` | VERIFIED |
+| Damaged state files | recovered | `CURRENT_STATE.md` was 38 lines in the working tree against 728 in `origin/master`; restored, as was `VERIFICATION_RESULTS.md` | VERIFIED |
+| `state_file_cap.py --repo` on this repo | trims safely | EVICTED 26 of 42 sections and reordered the survivors, burying the newest section mid-file. Restored from `origin/master` a second time and the tool deliberately not re-run | FAILED in this repo, see OPEN_ISSUES 25 |
+| Fork-local `vision-routing` default | current id | installed `dsh-vision-routing-0.1.5-rc.1` still defaults to `deepseek-v4-flash-vision-exp` | KNOWN STALE, no live impact |
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | Client typecheck | exit 0 | tsc -b tsconfig.client.json exit 0 | VERIFIED |
@@ -10,9 +67,6 @@
 | Feature in the packed package | AllSessionsSection present | found in dsh-client-ui-workspace .tgz lib/client.js | VERIFIED |
 | Installer artifact | ~185 MB | 194,723,910 bytes, packaged exit 0 | VERIFIED |
 | Installed app shows the section | renders above Workspaces | install NOT confirmed by Steve | UNVERIFIED |
-
-## 2026-09-10 - rc.1 install and the local stack, verified
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | First-run provisioning | log ends "applyRelease finished" | 16:11:20Z to 16:15:21Z, all six milestones in order | VERIFIED |
@@ -37,8 +91,6 @@
 | Guard: inside Harness | true from a DSH descendant | walk found DeepSeek Harness.exe 2 hops up | VERIFIED |
 | Guard: provision in flight | reads the provision log | reported "finished" correctly | VERIFIED |
 | rc.2 touches the sidebar | expected some overlap | ZERO sidebar/workspace source files changed | VERIFIED |
-## 2026-09-10 - Composer shortcut Ctrl+Shift fix
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | Ctrl+Shift chord in InputBar.tsx | ctrl+shift, no alt/meta | `!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey`, keydown binding | VERIFIED |
@@ -48,9 +100,6 @@
 | Package | installer | `deepseek-harness-0.1.5-rc.1-win-x64.exe`, 185.7 MB, exit 0 | VERIFIED |
 | Fix in packaged seed | keydown + Ctrl+Shift, no Alt keyup | keydown present, keyup absent, deploy phrase present | VERIFIED |
 | Real Ctrl+Shift+P keystroke in installed app | sends deploy phrase, no window | NOT YET; install is operator-gated | UNVERIFIED |
-
-## 2026-09-09 - Right sidebar per-session width port and install
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | ui-layout + ui-sidebar-right suites | pass | 249/249 across 16 files | VERIFIED |
@@ -64,8 +113,6 @@
 | Fix in RUNNING profile | rightbarBySession present, old rightbar gone | 6 occurrences, no legacy rightbar | VERIFIED |
 | Settings survived | unchanged | dsh-config-vault 18 files all same | VERIFIED |
 | Per-session width on screen | independent widths | not yet eyeballed | UNVERIFIED |
-## 2026-09-09 - Alt+S / Alt+P root cause, fix, and the two update-survival guards
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | Shortcut code in the running 0.1.5-alpha.1 build | present or absent | PRESENT, `SAVE_STATE_SHORTCUT` at line 15794 of the profile's `dsh-client-ui-conversation/lib/client.js`; not a lost commit | VERIFIED |
@@ -93,10 +140,6 @@
 | Local features after the update | none dropped | `dsh_local_features_check.py` 10 of 10 ok, exit 0 | VERIFIED |
 | Settings after the update | untouched | `dsh_config_vault.py verify` 18 files all same exit 0; post-install snapshot 0 changed | VERIFIED |
 | Alt+S in the INSTALLED app | works | WORKS; confirmed by the operator after the install | VERIFIED |
-
-
-## 2026-09-09 - Why no state-sync PR can merge on this fork
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | Status PR exists | worker opened one | #6, `chore/state-sync-2026-09-09-163027`, opened 16:31:48Z | VERIFIED |
@@ -108,12 +151,6 @@
 | Save-state writer as suspect | ruled in or out | RULED OUT; `apply_marker_block` L1030-1079 has no shortening branch | VERIFIED |
 | Stale copies on this machine | counted | 8 of 10 checkouts hold short copies against 287 in git | VERIFIED |
 | Who publishes the stale copy | named | not identified; worker and /save-state remain the candidates | UNVERIFIED |
-
-## 2026-09-09 - 0.1.5-alpha.2 build gates and installer proof (PRE-install; nothing here is live yet)
-
-Worktree `C:/Projects/worktrees/dsh-update-v0.1.5-alpha.2`, branch
-`update/v0.1.5-alpha.2`, rebased onto `dsh-v0.1.5-alpha.2` plus four cherry-picks.
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | Client typecheck | exit 0 | exit 0 after following two upstream API removals | VERIFIED |
@@ -128,8 +165,6 @@ Worktree `C:/Projects/worktrees/dsh-update-v0.1.5-alpha.2`, branch
 | Session-status fix IS in the artifact | new symbol in built code | `SessionPanelPhase` found in the packaged `.tgz`'s `client.js` and `active.d.ts` | VERIFIED |
 | Installed app updated | 0.1.5-alpha.2 | still 0.1.5-alpha.1; operator has not run the installer | NOT YET RUN |
 | The six post-install rows | all pass | cannot be run before the install | UNVERIFIED |
-## 2026-09-09 - Right sidebar per-session width fix
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | A session's drag does not leak into another | per-session width | layout-store test `keeps one session's width from leaking into another` passes | VERIFIED |
@@ -138,12 +173,6 @@ Worktree `C:/Projects/worktrees/dsh-update-v0.1.5-alpha.2`, branch
 | Client typecheck | exit 0 | exit 0 | VERIFIED |
 | Client/cordis catalog gates | up to date | `gen-client-catalog --check` and `gen-cordis-api --check` pass | VERIFIED |
 | Live desktop smoke test | panel width independent per session | not run, needs a build and install | UNVERIFIED |
-
-## 2026-09-09 - Post-install: both fixes confirmed LIVE in the running profile
-
-Installed 08:35, app relaunched 08:36, read back from
-`~/.dsh/profiles/desktop/node_modules/@deepseek-ai/`.
-
 | Check | Expected | Result | Status |
 |---|---|---|---|
 | fs-local retry fix running | `publishOverExisting` present | `PUBLISH_RETRY_DELAYS_MS` L137, `publishOverExisting` L181 + L652 | VERIFIED |
@@ -338,6 +367,43 @@ Installed 08:35, app relaunched 08:36, read back from
 | remote origin | NeoTech fork | read back correct | VERIFIED |
 | state worker | exit 0 | PR #2/#3 merged | VERIFIED |
 
+## 2026-09-11 - 0.1.5-rc.2 rebase, gates and packaged artifact (install pending)
+
+
+## 2026-09-11 - V4.1-Flash model ids and the app version
+
+
+## 2026-09-10 - All Sessions sidebar section
+
+
+## 2026-09-10 - rc.1 install and the local stack, verified
+
+## 2026-09-10 - Composer shortcut Ctrl+Shift fix
+
+
+## 2026-09-09 - Right sidebar per-session width port and install
+
+## 2026-09-09 - Alt+S / Alt+P root cause, fix, and the two update-survival guards
+
+
+
+## 2026-09-09 - Why no state-sync PR can merge on this fork
+
+
+## 2026-09-09 - 0.1.5-alpha.2 build gates and installer proof (PRE-install; nothing here is live yet)
+
+Worktree `C:/Projects/worktrees/dsh-update-v0.1.5-alpha.2`, branch
+`update/v0.1.5-alpha.2`, rebased onto `dsh-v0.1.5-alpha.2` plus four cherry-picks.
+
+## 2026-09-09 - Right sidebar per-session width fix
+
+
+## 2026-09-09 - Post-install: both fixes confirmed LIVE in the running profile
+
+Installed 08:35, app relaunched 08:36, read back from
+`~/.dsh/profiles/desktop/node_modules/@deepseek-ai/`.
+
+
 ## 2026-09-09 - Two harness fixes ported to the 0.1.5 line and packaged
 
 Worktree `C:/Projects/worktrees/dsh-update-v015`, branch `update/v0.1.5-alpha.1`,
@@ -391,4 +457,3 @@ cherry-pick `7c577fb6fe` (was `92e043bf4d` on the 0.1.3 line).
 
 
 ## 2026-09-07 - Session status icons
-
