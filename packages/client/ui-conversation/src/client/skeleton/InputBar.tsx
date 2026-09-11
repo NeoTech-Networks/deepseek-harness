@@ -66,6 +66,25 @@ const DEPLOY_SHORTCUT = 'deploy to production'
 const CHORD_LATCH_MS = 300
 let chordLatchUntil = 0
 
+/**
+ * The operator chord's letter, resolved from the physical code first and the
+ * typed character second.
+ *
+ * `code` is the faithful signal and stays first. But Chromium derives `code`
+ * from the hardware scan code, so a keyboard, KVM or remote session that
+ * carries no scan code delivers the letter with an EMPTY code and the chord
+ * dies with no event, no toast and no trace. `key` is the fallback that keeps
+ * it working there. Measured 2026-09-11: that portability gap is invisible to
+ * both the unit tests and a real headless browser run.
+ */
+function chordLetter(event: WindowEventMap['keydown']): 'save' | 'deploy' | null {
+  if (event.code === 'KeyS') return 'save'
+  if (event.code === 'KeyP') return 'deploy'
+  if (event.key === 's' || event.key === 'S') return 'save'
+  if (event.key === 'p' || event.key === 'P') return 'deploy'
+  return null
+}
+
 export type InputBarProps = ComposerBarProps
 
 export const InputBar = memo(function InputBar({
@@ -357,15 +376,21 @@ export const InputBar = memo(function InputBar({
   // normally on both keydown and keyup, so we bind keydown and leave the menu
   // bar alone.
   useEffect(() => {
-    if (inputActions === undefined) return
+    // Registered even while no Session is current. The bar renders the same DOM
+    // inert in that state, and a chord that is simply not listened for there is
+    // indistinguishable from a broken shortcut. Measured 2026-09-11: the
+    // operator lost hours to exactly that silence after the chord moved off
+    // Alt, and the previous version returned on this line before listening.
     const onShortcut = (event: WindowEventMap['keydown']): void => {
       // A held chord auto-repeats; an OS repeat arrives with repeat: true.
       if (event.repeat) return
       if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return
-      if (event.code !== 'KeyS' && event.code !== 'KeyP') return
-      // Refusing in silence is indistinguishable from a broken shortcut, so a
-      // locked or mid-admission composer says so rather than swallowing it.
-      if (locked || machineBusy) {
+      const target = chordLetter(event)
+      if (target === null) return
+      // Refusing in silence is indistinguishable from a broken shortcut, so an
+      // absent machine (no current Session), a locked composer, and a
+      // mid-admission one all say so rather than swallowing the press.
+      if (inputActions === undefined || locked || machineBusy) {
         showToast(t('input.shortcutUnavailable'))
         return
       }
@@ -375,12 +400,32 @@ export const InputBar = memo(function InputBar({
       if (now < chordLatchUntil) return
       chordLatchUntil = now + CHORD_LATCH_MS
       event.preventDefault()
-      inputActions.setDraft(event.code === 'KeyS' ? SAVE_STATE_SHORTCUT : DEPLOY_SHORTCUT)
+      inputActions.setDraft(target === 'save' ? SAVE_STATE_SHORTCUT : DEPLOY_SHORTCUT)
       inputActions.submit()
     }
     window.addEventListener('keydown', onShortcut)
     return () => { window.removeEventListener('keydown', onShortcut) }
   }, [inputActions, locked, machineBusy, showToast, t])
+
+  // The chord moved off Alt in 0.1.5-rc.2 and nothing told the operator, so his
+  // old keys produced no event at all: on Windows Electron never delivers the
+  // keydown of an Alt+letter chord, only a keyup carrying altKey, and nothing
+  // matches that keyup any more. Answering it costs one listener and turns a
+  // dead press into the keys he should be using.
+  //
+  // It NEVER submits. The Alt chord cannot be bound on keydown here, and
+  // binding it on keyup is exactly what popped the "Desktop Plugins" window
+  // open through the native menu bar the Alt keydown wakes.
+  useEffect(() => {
+    const onLegacyChord = (event: WindowEventMap['keyup']): void => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+      if (chordLetter(event) === null) return
+      event.preventDefault()
+      showToast(t('input.shortcutMoved'))
+    }
+    window.addEventListener('keyup', onLegacyChord)
+    return () => { window.removeEventListener('keyup', onLegacyChord) }
+  }, [showToast, t])
 
   // Button presses steal focus from the editor; suppress at mousedown so
   // typing continues seamlessly. Lexical's focus() carries preventScroll and
@@ -614,7 +659,15 @@ export const InputBar = memo(function InputBar({
                 </button>
               </Tooltip>
             )}
-            <Tooltip label={primaryLabel} side="top" delayMs={500} disabled={primaryDisabled}>
+            {/* The chord is named on the control that performs it: the one
+                discoverable surface the composer has, and the reason the move
+                off Alt can never again be invisible to the operator. */}
+            <Tooltip
+              label={primaryStops ? primaryLabel : `${primaryLabel} · ${t('input.chordHint')}`}
+              side="top"
+              delayMs={500}
+              disabled={primaryDisabled}
+            >
               <button
                 type="button"
                 className={css.primary}

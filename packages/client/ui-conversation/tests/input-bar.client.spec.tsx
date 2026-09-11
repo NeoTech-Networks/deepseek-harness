@@ -75,6 +75,8 @@ interface BenchOptions {
   subagent?: Exclude<SessionSnapshot['subagent'], null>
   disabled?: boolean
   inert?: boolean
+  /** Drop the machine faces entirely, the bar's no-current-Session state. */
+  noMachine?: boolean
   blocked?: { readonly reason: string }
   workspacePickerOpen?: boolean
   onRequestWorkspace?: () => void
@@ -185,7 +187,7 @@ function bench(over?: BenchOptions) {
           : key === 'goal' ? over?.goal
             : key === 'imageLimits' ? over?.imageLimits : undefined)),
     useInput: bindSnapshotSelector(shell.state),
-    inputActions: shell.actions,
+    inputActions: over?.noMachine === true ? undefined : shell.actions,
     keyboard: shell,
     addFiles: over?.addFiles ?? (() => null),
     useFileUploads: bindSnapshotSelector(createSnapshotStore<DraftFileUploads>(over?.fileUploads ?? {})),
@@ -622,6 +624,55 @@ describe('operator shortcuts', () => {
     const second = bench({})
     fireEvent(window, chord('KeyP'))
     expect(first.sink.mock.calls.length + second.sink.mock.calls.length).toBe(1)
+  })
+
+  // The bar renders the same DOM inert while no Session is current. The chord
+  // listener used to be absent in that state, which is indistinguishable from a
+  // broken shortcut. Measured 2026-09-11: that silence is what the operator
+  // spent hours on after the chord moved off Alt.
+  it('answers the chord out loud when the machine faces are absent (no live session)', () => {
+    const { sink, view } = bench({ noMachine: true })
+    fireEvent(window, chord('KeyS'))
+    expect(sink).not.toHaveBeenCalled()
+    expect(view.getByRole('alert').textContent).toBe('当前会话无法接受输入，快捷键暂不可用')
+  })
+
+  // Chromium derives `code` from the hardware scan code, so a keyboard, KVM or
+  // remote session that carries none delivers the letter with an EMPTY code and
+  // the chord would otherwise die silently.
+  it('resolves the chord from the typed character when the scan code is missing', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('', { key: 's' }))
+    expect(sink).toHaveBeenLastCalledWith('/save-state', [], 'queue', expect.any(AbortSignal))
+    vi.setSystemTime(clock + 400)
+    fireEvent(window, chord('', { key: 'p' }))
+    expect(sink).toHaveBeenLastCalledWith('deploy to production', [], 'queue', expect.any(AbortSignal))
+  })
+
+  // The chord moved off Alt in 0.1.5-rc.2. Alt+letter is delivered as a keyup
+  // carrying altKey on Windows, so the old keys are answerable there without
+  // touching the menu bar the Alt keydown wakes.
+  it('names the new keys when the old Alt chord is released, and never submits', () => {
+    const { sink, view } = bench({})
+    fireEvent(window, new window.KeyboardEvent('keyup', {
+      code: 'KeyP', key: 'p', altKey: true, bubbles: true, cancelable: true,
+    }))
+    expect(sink).not.toHaveBeenCalled()
+    expect(view.getByRole('alert').textContent).toContain('Ctrl+Shift+P')
+  })
+
+  it('stays quiet for a bare Alt release, another Alt letter, and the current chord', () => {
+    const { view } = bench({})
+    fireEvent(window, new window.KeyboardEvent('keyup', {
+      code: 'AltLeft', key: 'Alt', bubbles: true, cancelable: true,
+    }))
+    fireEvent(window, new window.KeyboardEvent('keyup', {
+      code: 'KeyA', key: 'a', altKey: true, bubbles: true, cancelable: true,
+    }))
+    fireEvent(window, new window.KeyboardEvent('keyup', {
+      code: 'KeyS', key: 's', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true,
+    }))
+    expect(view.queryByRole('alert')).toBeNull()
   })
 })
 
