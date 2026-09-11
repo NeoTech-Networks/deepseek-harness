@@ -4,6 +4,49 @@
   Edits outside this block are preserved.
   Last write: actor=claude-code:steve session=e9882722-4aa9-476d-a750-3fff8a9e8b51 at=2026-09-09T00:08:42.118722+00:00
 -->
+## 2026-09-11 - The operator's composer shortcuts "stopped working": the chord moved off Alt, and a global AutoHotkey layer was found
+
+**The shortcut was never broken.** Steve pressed Ctrl+Shift+S at 11:14 ET and a
+`/save-state` user message landed at `2026-09-11T15:14:25.963Z` in session
+`e0b8a4a0-b590-4d02-8eea-cb813f5d13cb`, read back by decoding
+`~\.dsh\sessions\**\session.v3.jsonl.zstd` (the logs are concatenated zstd
+frames; `zstdDecompressSync` stops at the first frame, so every frame offset has
+to be walked). One press, one submission.
+
+**What actually happened:** 0.1.5-rc.2 (installed 09:47 today) binds
+Ctrl+Shift+S / Ctrl+Shift+P on keydown, and the Alt pair was confirmed working
+on 2026-09-09. Nothing told the operator, and an Alt+letter press reaches the
+renderer as a KEYUP only on Windows, so his presses produced no event, no toast
+and no trace. `dsh-client-ui-conversation/lib/client.js` holds the only
+`KeyS`/`KeyP` handler in the whole running profile.
+
+**A second layer nobody had recorded: a global AutoHotkey script is running.**
+`C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe` (PID 30304, launched from
+Startup) runs `C:\Claude\bin\global-hotkeys.ahk`, which maps `!s` and `!p` with
+NO window condition to `SendInput` of the two command strings plus Enter. It
+fires in every app. Measured with the probe app driven directly (menu bar
+present, real Alt chord): its payload DOES reach an Electron renderer as plain
+keydowns plus Enter, for both letters. Why it does not work for the operator in
+the Harness is NOT established; his live sessions were deliberately not typed
+into.
+
+**Shipped** (branch `update/v0.1.5-rc.2`, `016d1048c2`, pushed): the chord
+listener now registers even while no Session is current and answers that state
+with the existing toast, the chord resolves from `event.key` when the scan code
+is missing, the retired Alt keyup is answered with a toast naming the new keys
+(never submits), and the chord is named on the send control's tooltip. Packaged
+as `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,745,776 bytes (previous build
+of the same version 194,762,388). **Install NOT taken**: the operator asked why
+an installer was needed, was told the shortcut already works, and the guards
+ride the next upstream update otherwise.
+
+**State-file divergence, again:** this worktree's copies are the 2026-09-09 set
+(283 lines) while the primary checkout holds the 2026-09-11 set (878 lines), and
+a state PR for the primary merged at 15:42Z today (#19). The state commit for
+this session was made on this branch instead of dispatched through the worker,
+because applying this tree's stale files onto a master that just received the
+newer set can conflict or revert. See OPEN_ISSUES 21-24.
+
 ## 2026-09-09 - Alt+S / Alt+P: DONE, installed and confirmed working in the app
 
 0.1.5-alpha.2 installed at 14:29, profile re-extracted at 14:34. The keyup

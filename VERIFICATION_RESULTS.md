@@ -1,3 +1,24 @@
+## 2026-09-11 - Composer shortcut silence fix: built, packaged, installer not taken
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Installed app version and processes | 0.1.5-rc.2 live | `resources\seed\desktop-release.json` 0.1.5-rc.2; 4 processes from 10:45; provision log ends `active profile already at 0.1.5-rc.2: nothing to do` / `applyRelease finished` | VERIFIED |
+| The chord in the RUNNING client | Ctrl+Shift keydown, no Alt | `~\.dsh\profiles\desktop\...\dsh-client-ui-conversation\lib\client.js` L16034-16061, `CHORD_LATCH_MS` 300, `event.repeat` guard, lowercase phrase, `shortcutUnavailable` toast | VERIFIED |
+| Alt bound anywhere in the running build | nothing | No `altKey` + `KeyS`/`KeyP` binding; the only `KeyS`/`KeyP` handler in any running client bundle is the Ctrl+Shift one | VERIFIED |
+| Platform delivery of the chord | keydown, code populated | Probe (rebuilt against the installed runtime) with `-WithMenu 0 -ChordSet CtrlShift` exit 0: `KEYDOWN code=KeyS/KeyP ctrl=true shift=true` | VERIFIED |
+| Operator press of Ctrl+Shift+S | one submission | `/save-state` user message at `2026-09-11T15:14:25.963Z`, session e0b8a4a0 | VERIFIED |
+| Global AutoHotkey layer | present and global | `AutoHotkey64.exe` PID 30304 runs `global-hotkeys.ahk`; `!s`/`!p` type the two strings plus Enter, no window condition | VERIFIED |
+| Its payload against a menu-bearing Electron window | reaches the renderer | Lab run exit 0, payload arrived as plain keydowns for S and P; menu accelerator did not fire | VERIFIED |
+| Fix: input-bar spec | pass | 102 of 102 (baseline 98 on the untouched line) | VERIFIED |
+| Client typecheck | exit 0 | exit 0 | VERIFIED |
+| Build | exit 0 | exit 0 | VERIFIED |
+| Packaging | installer produced | exit 0, 194,745,776 bytes; previous same-version build 194,762,388 | VERIFIED |
+| Fix inside the packaged seed | all four markers | `shortcutMoved`, `chordHint`, `inputActions === void 0 || locked`, `key === "s"` all present in the seed tgz `lib/client.js` | VERIFIED |
+| Client i18n gate | pass | FAILS with 2 hard-coded strings in `ui-sidebar-explorer`, a package this session did not touch; pre-existing | UNVERIFIED |
+| Install and live verification | one submission after install | NOT TAKEN; installer handed over, operator elected to skip it | UNVERIFIED |
+| `run-probe.ps1 -WithMenu 1` positive control | passes | FAILS: its own focus Alt tap activates the menu bar and the bare `X` control is eaten, so it exits 3 and sends no chord | VERIFIED |
+| `count-submits.mjs` against rc.2 | one chord, one prompt | FAILS at the "Select Workspace Directory" dialog, so the composer never goes live; has never passed | VERIFIED |
+
 ## 2026-09-09 - Alt+S / Alt+P root cause, fix, and the two update-survival guards
 
 | Check | Expected | Result | Status |
