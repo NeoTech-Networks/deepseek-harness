@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/vision/vision-routing/README.md
-README.md: 261791a2a2c881b09c54a7f8b761be14c94164e1
-README.zh.md: b594fac017594c99bc0fd23aaa348fb0978e6f87
+README.md: 843d140eae96d9602c8c795ff8d5b272bea008eb
+README.zh.md: 34fa6050aa26181c595716556ba7f27a88d7f336

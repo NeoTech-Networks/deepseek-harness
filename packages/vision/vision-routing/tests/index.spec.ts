@@ -98,7 +98,7 @@ describe('VisionRouting.describe', () => {
     expect(stream).toHaveBeenCalledOnce()
     const request = stream.mock.calls[0]?.[0] as { provider: string; model: string; messages: unknown[] }
     expect(request.provider).toBe('deepseek-official')
-    expect(request.model).toBe('deepseek-v4-flash-vision-exp')
+    expect(request.model).toBe('deepseek-flash')
   })
 
   it('prefers the first image-capable allowed route', async () => {
@@ -120,14 +120,14 @@ describe('VisionRouting.describe', () => {
     await ctx.visionRouting.describe([image('sha256:a1b2c3d4')])
     const request = stream.mock.calls[0]?.[0] as { provider: string; model: string }
     expect(request.provider).toBe('deepseek-official')
-    expect(request.model).toBe('deepseek-v4-flash-vision-exp')
+    expect(request.model).toBe('deepseek-flash')
   })
 
   it('throws NO_IMAGE_CAPABLE_ROUTE when the fallback route cannot see images', async () => {
     const { ctx } = await boot({
       models: {
         'alpha\0text': { inputModalities: ['text'] },
-        'deepseek-official\0deepseek-v4-flash-vision-exp': { inputModalities: ['text'] },
+        'deepseek-official\0deepseek-flash': { inputModalities: ['text'] },
       },
       preference: { enabled: true, allowedModels: [{ provider: 'alpha', model: 'text' }] },
     })

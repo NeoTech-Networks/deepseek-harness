@@ -6,11 +6,11 @@ Automatic image description for text-only model sessions.
 
 ## What it does
 
-A text-only model (`deepseek-v4-pro` or `deepseek-v4-flash`) cannot accept image
+A text-only model (`deepseek-v4-pro`) cannot accept image
 input. When the user attaches an image to such a session, prompt admission would
 otherwise reject the message ("Model does not support image input"). This Host
 plugin instead describes the attached image with an image-capable vision model
-(`deepseek-v4-flash-vision-exp` by default) and returns model-facing text, so the
+(`deepseek-flash` by default) and returns model-facing text, so the
 main model can act on the image content.
 
 ## Gating
@@ -29,7 +29,7 @@ All fields are optional.
 | Field | Default | Meaning |
 | --- | --- | --- |
 | `visionRoute.provider` | `deepseek-official` | Vision-model provider |
-| `visionRoute.model` | `deepseek-v4-flash-vision-exp` | Vision-model id |
+| `visionRoute.model` | `deepseek-flash` | Vision-model id |
 | `prompt` | describe rubric | Instruction sent with the images |
 | `maxTokens` | 4096 | Output-token cap for one description |
 | `timeoutMs` | 60000 | End-to-end deadline for one description |

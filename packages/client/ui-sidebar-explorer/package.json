@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-client-ui-sidebar-explorer",
   "description": "Pinned-directory file explorer tab type for the right Sidebar: operator-owned roots anywhere on the Host, listed lazily over the pinnedFiles Remote namespace",
-  "version": "0.1.5-rc.1",
+  "version": "0.1.5-rc.2",
   "publishConfig": {
     "access": "public"
   },

@@ -6,7 +6,7 @@
 
 ## 作用
 
-纯文本模型（`deepseek-v4-pro` 或 `deepseek-v4-flash`）无法接受图像输入。当用户向此类会话附加图像时，提示接纳原本会拒绝该消息（"Model does not support image input"）。此宿主插件改用可接受图像的视觉模型（默认 `deepseek-v4-flash-vision-exp`）描述所附图像并返回模型可见文本，让主模型能基于图像内容行动。
+纯文本模型（`deepseek-v4-pro`）无法接受图像输入。当用户向此类会话附加图像时，提示接纳原本会拒绝该消息（"Model does not support image input"）。此宿主插件改用可接受图像的视觉模型（默认 `deepseek-flash`）描述所附图像并返回模型可见文本，让主模型能基于图像内容行动。
 
 ## 门控
 
@@ -19,7 +19,7 @@
 | 字段 | 默认值 | 含义 |
 | --- | --- | --- |
 | `visionRoute.provider` | `deepseek-official` | 视觉模型提供方 |
-| `visionRoute.model` | `deepseek-v4-flash-vision-exp` | 视觉模型 id |
+| `visionRoute.model` | `deepseek-flash` | 视觉模型 id |
 | `prompt` | 描述要点 | 随图像发送的指令 |
 | `maxTokens` | 4096 | 单次描述的输出 token 上限 |
 | `timeoutMs` | 60000 | 单次描述的端到端截止时间 |

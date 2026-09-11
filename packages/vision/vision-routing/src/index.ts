@@ -58,7 +58,7 @@ export interface Config {
 /** Timeout reason code for an automatic vision description call. */
 export const VISION_DESCRIBE_TIMEOUT_CODE = 'VISION_DESCRIBE_TIMEOUT'
 
-const DEFAULT_ROUTE: VisionRoute = { provider: 'deepseek-official', model: 'deepseek-v4-flash-vision-exp' }
+const DEFAULT_ROUTE: VisionRoute = { provider: 'deepseek-official', model: 'deepseek-flash' }
 const DEFAULT_MAX_TOKENS = 4096
 const DEFAULT_TIMEOUT_MS = 60_000
 
