@@ -37,6 +37,18 @@
 | Guard: inside Harness | true from a DSH descendant | walk found DeepSeek Harness.exe 2 hops up | VERIFIED |
 | Guard: provision in flight | reads the provision log | reported "finished" correctly | VERIFIED |
 | rc.2 touches the sidebar | expected some overlap | ZERO sidebar/workspace source files changed | VERIFIED |
+## 2026-09-10 - Composer shortcut Ctrl+Shift fix
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Ctrl+Shift chord in InputBar.tsx | ctrl+shift, no alt/meta | `!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey`, keydown binding | VERIFIED |
+| Deploy phrase casing | lowercase verbatim | `DEPLOY_SHORTCUT = "deploy to production"` | VERIFIED |
+| input-bar tests | pass | 93/93 | VERIFIED |
+| Build | exit 0 | exit 0, 240 client artifacts | VERIFIED |
+| Package | installer | `deepseek-harness-0.1.5-rc.1-win-x64.exe`, 185.7 MB, exit 0 | VERIFIED |
+| Fix in packaged seed | keydown + Ctrl+Shift, no Alt keyup | keydown present, keyup absent, deploy phrase present | VERIFIED |
+| Real Ctrl+Shift+P keystroke in installed app | sends deploy phrase, no window | NOT YET; install is operator-gated | UNVERIFIED |
+
 ## 2026-09-09 - Right sidebar per-session width port and install
 
 | Check | Expected | Result | Status |

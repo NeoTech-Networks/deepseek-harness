@@ -83,6 +83,31 @@ open sidebar defect below.
 
 <!-- claude-memory-actor:end -->
 
+## 2026-09-10 - Composer shortcut moved off Alt to Ctrl+Shift; installer built, install pending
+
+The Alt+P / Alt+S composer shortcuts were replaced with Ctrl+Shift+P /
+Ctrl+Shift+S. The 2026-09-09 keyup fix made the shortcut fire, but the Alt
+KEYDOWN still woke the native Windows menu bar, whose first item is "Desktop
+Plugins…", so Alt+P popped that window open. Ctrl+Shift is delivered to the
+renderer on keydown, so the menu bar is left alone.
+
+- Commit `8ce3ffe9ac` on branch `fix/composer-shortcut-modifier` (based on
+  update/v0.1.5-rc.1), pushed to origin.
+- InputBar.tsx chord + 5 tests in input-bar.client.spec.tsx; also updated
+  C:\Claude\bin\dsh_local_features.json (3 shortcut entries).
+- Proven: 93/93 input-bar tests, build exit 0, package exit 0 (after seeding
+  the cached Node 24.17.0 runtime from another worktree because nodejs.org
+  timed out). Fix confirmed in the packaged seed (keydown + Ctrl+Shift, no
+  Alt keyup).
+- Installer: apps/desktop/.desktop-build/targets/win-x64/artifacts/
+  deepseek-harness-0.1.5-rc.1-win-x64.exe (185.7 MB).
+- NOT installed yet (operator runs finish-install.ps1). Two new findings for
+  the playbook: (1) packaging needs the Node runtime and nodejs.org can time
+  out, seed the download cache; (2) the installer was built with
+  DSH_DESKTOP_APP_ID=com.neotechnetworks.deepseek-harness (per the skill), but
+  the live 0.1.5-rc.1 install uses com.deepseek.harness (uninstall key
+  7808434f-...); that mismatch will register a second uninstall entry.
+
 ## 2026-09-09 - Right sidebar per-session width: ported, built, installed, verified
 
 The per-session panel-width fix (written 2026-09-09 but left uncommitted on the
@@ -98,7 +123,6 @@ and the old single `rightbar` value is gone. Install-log: seed integrity
 271/271 PASS, profile cleared, relaunched, dsh-config-vault 18 files all same.
 What is left is Steve's visual pass: resize the right sidebar in one session,
 switch to a second, and confirm the widths are independent.
-
 ## 2026-09-09 - Alt+S / Alt+P: DONE, installed and confirmed working in the app
 
 0.1.5-alpha.2 installed at 14:29, profile re-extracted at 14:34. The keyup
