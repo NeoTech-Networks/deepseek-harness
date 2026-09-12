@@ -359,7 +359,7 @@ export class ReactLoopAgent implements Agent {
     const renderedPrompt = renderPrompt(assembly)
     let firstAttempt = true
     while (true) {
-      const { config, preparedCall } = await this.prepareRequest(turn, step, signal)
+      const { config, preparedCall } = await this.prepareRequest(turn, step, assembly.tools, signal)
       const startsRequestSeries = firstAttempt && decision.startsRequestSeries === true
       const commits = this.systemPrompt.project(renderedPrompt, {
         inHistory: preparedCall?.systemPromptUpdate === 'in-history',
@@ -497,10 +497,16 @@ export class ReactLoopAgent implements Agent {
     }
   }
 
-  /** Resolve request config and bind its adapter before admitting model-visible input. */
+  /**
+   * Resolve request config and bind its adapter before admitting model-visible
+   * input. The assembled tool schemas travel with the waterfall payload so a
+   * route policy can size them before the header is logged; nothing else on this
+   * path reads them.
+   */
   private async prepareRequest(
     turn: number,
     step: number,
+    tools: PromptAssembly['tools'],
     signal: AbortSignal,
   ): Promise<{ config: LlmCallConfig; preparedCall?: PreparedLlmCall }> {
     const { session } = this
@@ -528,7 +534,7 @@ export class ReactLoopAgent implements Agent {
         },
     ))
     const proposedConfig = await this.dispatch.waterfall(
-      'agent/request', { turn, step, signal },
+      'agent/request', { turn, step, tools, signal },
       () => Promise.resolve(seedConfig),
     )
     signal.throwIfAborted()

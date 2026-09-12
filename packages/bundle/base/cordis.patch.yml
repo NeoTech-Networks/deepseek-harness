@@ -304,6 +304,24 @@
     - id: command-session-status
       name: '@deepseek-ai/dsh-command-session-status'
 
+    # Tool-schema route fallback: a request whose assembled tool parameters
+    # exceed `limitBytes` on a `from` route goes out on `to` instead, so a
+    # schema is never truncated. The decision is taken on the agent/request
+    # waterfall, before the loop logs its request header, so the session log
+    # records the route that actually ran. `from` lists the live flash id and
+    # the legacy alias the provider still serves for the same underlying model,
+    # because the requirement named the alias. See the package README before
+    # changing the threshold: the provider documents no tool-schema limit, so
+    # `limitBytes` is this deployment's own budget.
+    - id: llm-route-fallback
+      name: '@deepseek-ai/dsh-llm-route-fallback'
+      config:
+        enabled: true
+        provider: deepseek-official
+        from: [deepseek-flash, deepseek-v4-flash]
+        to: deepseek-v4-pro
+        limitBytes: 3000
+
     - id: plan-mode
       name: '@deepseek-ai/dsh-plan-mode'
       config:

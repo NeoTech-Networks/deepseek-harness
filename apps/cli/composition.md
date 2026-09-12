@@ -118,6 +118,8 @@ flowchart LR
   cfg --> plugin_dsh_base_session_status
   plugin_dsh_base_command_session_status["command-session-status<br/>@deepseek-ai/dsh-command-session-status"]
   cfg --> plugin_dsh_base_command_session_status
+  plugin_dsh_base_llm_route_fallback["llm-route-fallback<br/>@deepseek-ai/dsh-llm-route-fallback"]
+  cfg --> plugin_dsh_base_llm_route_fallback
   plugin_dsh_base_plan_mode["plan-mode<br/>@deepseek-ai/dsh-plan-mode"]
   cfg --> plugin_dsh_base_plan_mode
   plugin_dsh_base_token_meter["token-meter<br/>@deepseek-ai/dsh-token-meter"]
@@ -241,6 +243,7 @@ flowchart LR
 | `command-goal` | `@deepseek-ai/dsh-command-goal` |
 | `session-status` | `@deepseek-ai/dsh-session-status` |
 | `command-session-status` | `@deepseek-ai/dsh-command-session-status` |
+| `llm-route-fallback` | `@deepseek-ai/dsh-llm-route-fallback` |
 | `plan-mode` | `@deepseek-ai/dsh-plan-mode` |
 | `token-meter` | `@deepseek-ai/dsh-token-meter` |
 | `compaction-basic` | `@deepseek-ai/dsh-compaction-basic` |

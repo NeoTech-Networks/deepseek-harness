@@ -710,12 +710,14 @@ Source: [`packages/core/session/src/types.ts:400`](../packages/core/session/src/
  * Whole-value session status. `status: null` clears the status; otherwise
  * the event carries the complete post-change value plus an optional note.
  * Last write wins on replay, and any human-authored `user/message` clears
- * the status, so a prompt answers the hold the status described.
+ * the status, so a prompt answers the hold the status described. A durable
+ * goal phase transition declares the matching status through the same
+ * fold and is cleared by the same rule.
  */
 'session/status': { status: SessionStatusValue | null; note?: string }
 ```
 
-Source: [`packages/session-status/session-status/src/types.ts:71`](../packages/session-status/session-status/src/types.ts)
+Source: [`packages/session-status/session-status/src/types.ts:96`](../packages/session-status/session-status/src/types.ts)
 
 <a id="sessiontitle--log-only"></a>
 
