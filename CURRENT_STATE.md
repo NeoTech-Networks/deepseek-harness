@@ -1,5 +1,13 @@
 
 
+## 2026-09-12 - llm-route-fallback disabled: sessions were silently running on pro
+
+- The `llm-route-fallback` plugin merged earlier today was moving EVERY request from `deepseek-flash` to `deepseek-v4-pro`: its `limitBytes` (3000) sits below the real tool-catalog size, so the "tools assembled" gate never kept a request. Every new session started on flash and flipped to pro on its first request.
+- Fixed by setting `enabled: false` in `packages/bundle/base/cordis.patch.yml` on `feat/llm-route-fallback` (commit `9f8261490a`), then rebuilding and reinstalling.
+- Verified live: the running profile's `dsh-base/cordis.patch.yml` reads `enabled: false`, and this session's request headers show four pre-fix requests on `deepseek-v4-pro` followed by the first post-install request on `deepseek-flash` (23:20:53Z, 18s after `applyRelease finished`).
+- Installer: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,826,890 bytes.
+- Landed on the release line the same day: replayed as `1e89100c7f` on top of the PR #20 squash-merge (`ba3644927a`) and pushed to `update/v0.1.5-rc.2`.
+
 ## 2026-09-12 - session footer, workspace indent/count, route fallback shipped
 
 - Installed 0.1.5-rc.2 with all 15 local features verified (`dsh_local_features_check.py`).

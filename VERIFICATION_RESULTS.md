@@ -1,5 +1,15 @@
 
 
+## 2026-09-12 - llm-route-fallback disabled, verified
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Change in running code | `enabled: false` | running profile's `dsh-base/cordis.patch.yml` reads `enabled: false` (was `true`) | VERIFIED |
+| Boot after reinstall | applyRelease finished | provision log ends `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished` | VERIFIED |
+| Post-fix request stays on flash | model = `deepseek-flash` | this session's 5th `request/header` (23:20:53Z) is `deepseek-flash`; the four before the install were `deepseek-v4-pro` | VERIFIED |
+| Processes running | 4+ | 4 `DeepSeek Harness` processes | VERIFIED |
+| Installer packaged | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe` 194,826,890 bytes | VERIFIED |
+
 ## 2026-09-12 - session footer + workspace UI shipped and installed
 
 | Check | Expected | Result | Status |
