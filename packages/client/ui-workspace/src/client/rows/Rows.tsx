@@ -116,8 +116,10 @@ function rowHalf(e: { clientY: number; currentTarget: HTMLElement }): 'before' |
  * @param props.t - the browser root's locale seat.
  * @returns the row element.
  */
-export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home, t }: {
+export function ProjectRowItem({ group, count = 0, onToggle, onCreate, actions, drag, home, t }: {
   group: GroupNode
+  /** Unarchived (visible) session count for the group, for the colour and count badge. */
+  count?: number
   onToggle: () => void
   onCreate: () => void
   /** Real-Workspace actions; absent for the ungrouped bucket (no menu shown). */
@@ -154,7 +156,7 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
         }}
       onDragEnd={drag?.end}
     >
-      <span className={clsx(css.slot, css.folder, active && css.folderActive)}>
+      <span className={clsx(css.slot, css.folder, active && css.folderActive, count > 0 && css.folderHasSessions)}>
         {row.expanded ? <IconFolderOpen16 /> : <IconFolderClose16 />}
       </span>
       <span className={clsx(css.slot, css.chevron)}>
@@ -163,6 +165,15 @@ export function ProjectRowItem({ group, onToggle, onCreate, actions, drag, home,
       <span className={css.projectText}>
         <span className={css.title}>{label}</span>
       </span>
+      {count > 0 && (
+        <span
+          className={css.countBadge}
+          data-session-count={count}
+          title={t('sessions.count.other', { n: count })}
+        >
+          {count}
+        </span>
+      )}
       <span className={css.rowActions}>
         {actions !== undefined && (
           <Menu
