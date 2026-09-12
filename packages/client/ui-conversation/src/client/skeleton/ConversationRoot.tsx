@@ -144,6 +144,8 @@ export function ConversationRoot({
   const inputState = useInput(s => s)
   const cwd = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.cwd)
   const summaryBlank = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.blank)
+  const footerTitle = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.displayTitle)
+  const dashboardUrl = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.dashboardUrl)
   const workspaces = useWorkspaces(s => s)
   // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
@@ -349,6 +351,23 @@ export function ConversationRoot({
       {hero && heroWorkspaceRow}
       {zone !== undefined && renderSlot('conversation.input.dock', zone)}
       {inputBar}
+      {!hero && sessionId !== undefined && (footerTitle !== undefined || dashboardUrl !== undefined) && (
+        <div className={css.sessionFooter} data-session-footer="">
+          {footerTitle !== undefined && (
+            <span className={css.sessionFooterSummary}>{footerTitle}</span>
+          )}
+          {dashboardUrl !== undefined && (
+            <a
+              className={css.sessionFooterDashboard}
+              href={dashboardUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t('footer.dashboard')}
+            </a>
+          )}
+        </div>
+      )}
     </div>
   )
 
