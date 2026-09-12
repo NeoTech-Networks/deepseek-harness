@@ -316,7 +316,11 @@
     - id: llm-route-fallback
       name: '@deepseek-ai/dsh-llm-route-fallback'
       config:
-        enabled: true
+        # Disabled 2026-09-12: the 3000-byte threshold sits below the real
+        # tool-catalog size, so every flash request was silently moved to pro.
+        # Pro is the manual escalation tier only; re-enable with a realistic
+        # limitBytes if an oversized schema ever actually needs the guard.
+        enabled: false
         provider: deepseek-official
         from: [deepseek-flash, deepseek-v4-flash]
         to: deepseek-v4-pro
