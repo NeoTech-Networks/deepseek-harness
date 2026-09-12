@@ -144,6 +144,29 @@
   color: var(--dsw-alias-state-business-primary);
 }
 
+/* A Workspace with unarchived (visible) sessions colours its folder and shows
+   a count badge; an empty Workspace stays neutral. */
+.folderHasSessions {
+  color: var(--dsw-alias-state-business-primary);
+}
+
+.countBadge {
+  flex: none;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--dsw-alias-state-business-primary);
+  background: color-mix(in srgb, var(--dsw-alias-state-business-primary) 10%, transparent);
+}
+
 
 /* Project leading slot: folder by default, expand arrow on row hover. */
 .projectRow .chevron { display: none; }

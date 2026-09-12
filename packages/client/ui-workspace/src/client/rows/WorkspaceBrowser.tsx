@@ -538,6 +538,7 @@ function SessionTree({
                 >
                   <ProjectRowItem
                     group={group}
+                    count={group.sessionCount}
                     home={home}
                     t={t}
                     onToggle={() => {
@@ -569,67 +570,69 @@ function SessionTree({
                         },
                       }}
                   />
-                  {(sessionsExpanded
-                    ? group.sessions
-                    : collapsed.rows
-                  ).map((node) => {
+                  <div className={css.sessionRun}>
+                    {(sessionsExpanded
+                      ? group.sessions
+                      : collapsed.rows
+                    ).map((node) => {
                     // Session drag never leaves its group. Ungrouped writes only the
                     // browser-local account; real Workspaces may also write Host order.
-                    const sameGroupDrag = drag !== null && drag.accountKey === group.key
-                    const dragProps = {
-                      start: () => {
-                        sessionDropCommitted.current = false
-                        setDrag({ accountKey: group.key, sessionId: node.id, over: null })
-                      },
-                      active: sameGroupDrag,
-                      marker: sameGroupDrag && drag.over?.id === node.id ? drag.over.half : null,
-                      hover: (half: 'before' | 'after') => {
+                      const sameGroupDrag = drag !== null && drag.accountKey === group.key
+                      const dragProps = {
+                        start: () => {
+                          sessionDropCommitted.current = false
+                          setDrag({ accountKey: group.key, sessionId: node.id, over: null })
+                        },
+                        active: sameGroupDrag,
+                        marker: sameGroupDrag && drag.over?.id === node.id ? drag.over.half : null,
+                        hover: (half: 'before' | 'after') => {
                         /* v8 ignore next -- narrowing guard: Rows gates hover on `active`, which is false while the drag state is null. */
-                        setDrag(d => (d === null ? d : { ...d, over: { id: node.id, half } }))
-                      },
-                      drop: (half: 'before' | 'after') => {
+                          setDrag(d => (d === null ? d : { ...d, over: { id: node.id, half } }))
+                        },
+                        drop: (half: 'before' | 'after') => {
                         /* v8 ignore next -- narrowing guard: Rows gates drop on `active`, which is false while the drag state is null. */
-                        if (drag === null) return
-                        commitSessionDrag(drag, { id: node.id, half })
-                      },
-                      end: () => {
-                        if (drag?.over !== null && drag?.over !== undefined) commitSessionDrag(drag, drag.over)
-                        else setDrag(null)
-                        sessionDropCommitted.current = false
-                      },
-                    }
-                    return (
-                      <SessionNodeItem
-                        key={node.id}
-                        node={node}
-                        currentId={current}
-                        now={now}
-                        onOpen={open}
-                        onRename={onSessionRename}
-                        onFork={forkSession}
-                        onArchive={onSessionArchive}
-                        onSetStatus={onSessionSetStatus}
-                        onClearStatus={onSessionClearStatus}
-                        onReveal={node.id === revealSessionId && group.key === revealGroup
-                          ? () => { onSessionRevealed(node.id) }
-                          : undefined}
-                        drag={dragProps}
-                        t={t}
-                      />
-                    )
-                  })}
-                  {collapsed.hiddenCount > 0 && (
-                    <button
-                      type="button"
-                      className={css.sessionOverflowButton}
-                      aria-expanded={sessionsExpanded}
-                      onClick={() => { setExpandedSessionGroups(keys => toggled(keys, group.key)) }}
-                    >
-                      {sessionsExpanded
-                        ? t('sessions.collapse')
-                        : t('sessions.expand', { n: collapsed.hiddenCount })}
-                    </button>
-                  )}
+                          if (drag === null) return
+                          commitSessionDrag(drag, { id: node.id, half })
+                        },
+                        end: () => {
+                          if (drag?.over !== null && drag?.over !== undefined) commitSessionDrag(drag, drag.over)
+                          else setDrag(null)
+                          sessionDropCommitted.current = false
+                        },
+                      }
+                      return (
+                        <SessionNodeItem
+                          key={node.id}
+                          node={node}
+                          currentId={current}
+                          now={now}
+                          onOpen={open}
+                          onRename={onSessionRename}
+                          onFork={forkSession}
+                          onArchive={onSessionArchive}
+                          onSetStatus={onSessionSetStatus}
+                          onClearStatus={onSessionClearStatus}
+                          onReveal={node.id === revealSessionId && group.key === revealGroup
+                            ? () => { onSessionRevealed(node.id) }
+                            : undefined}
+                          drag={dragProps}
+                          t={t}
+                        />
+                      )
+                    })}
+                    {collapsed.hiddenCount > 0 && (
+                      <button
+                        type="button"
+                        className={css.sessionOverflowButton}
+                        aria-expanded={sessionsExpanded}
+                        onClick={() => { setExpandedSessionGroups(keys => toggled(keys, group.key)) }}
+                      >
+                        {sessionsExpanded
+                          ? t('sessions.collapse')
+                          : t('sessions.expand', { n: collapsed.hiddenCount })}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}

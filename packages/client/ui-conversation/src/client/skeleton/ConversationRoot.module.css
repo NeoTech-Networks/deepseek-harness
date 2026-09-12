@@ -474,3 +474,35 @@
 .root[data-phase='settling'] .composerSeat {
   visibility: hidden;
 }
+
+/* Session footer: read-only summary plus the optional dashboard link, shown
+   under the message box for an open session only. */
+.sessionFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 2px;
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 17px;
+}
+
+.sessionFooterSummary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.sessionFooterDashboard {
+  flex: none;
+  color: var(--dsw-alias-state-business-primary);
+  text-decoration: none;
+}
+
+.sessionFooterDashboard:hover {
+  text-decoration: underline;
+}

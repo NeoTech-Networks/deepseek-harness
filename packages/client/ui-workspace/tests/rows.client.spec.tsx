@@ -168,6 +168,21 @@ describe('workspace browser rows', () => {
     expect(onToggle).toHaveBeenCalledOnce()
   })
 
+  it('shows a count badge only when the Workspace has unarchived sessions', () => {
+    const group: GroupNode = {
+      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project', group: '',
+      sessionCount: 3, expanded: false, containsCurrent: false, sessions: [],
+    }
+    const { container, rerender } = render(
+      <ProjectRowItem group={group} count={3} onToggle={vi.fn()} onCreate={vi.fn()} t={t} />,
+    )
+    expect(container.querySelector('[data-session-count="3"]')).toBeTruthy()
+    rerender(
+      <ProjectRowItem group={group} count={0} onToggle={vi.fn()} onCreate={vi.fn()} t={t} />,
+    )
+    expect(container.querySelector('[data-session-count]')).toBeNull()
+  })
+
   it('renders and opens a selected running Session row', () => {
     const node = sessionRow({ id: sid('session'), title: 'Session', running: true })
     const onOpen = vi.fn()

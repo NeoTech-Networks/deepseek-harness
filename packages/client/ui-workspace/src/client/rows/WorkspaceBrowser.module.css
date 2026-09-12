@@ -373,6 +373,11 @@
   position: relative;
 }
 
+/* Session rows nest under their Workspace folder with a left indent. */
+.sessionRun {
+  padding-left: 20px;
+}
+
 .groupSection + .groupSection {
   margin-top: 4px;
 }
