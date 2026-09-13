@@ -169,6 +169,8 @@ export interface SessionSummary {
   readonly parentSessionId?: SessionId
   readonly origin?: 'subagent'
   readonly cwd?: string
+  /** Front-door URL of the dashboard this Session's workspace is associated with; absent when there is no association. */
+  readonly dashboardUrl?: string
   readonly projections?: SessionProjectionHints
 }
 
