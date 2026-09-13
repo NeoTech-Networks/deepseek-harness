@@ -24,7 +24,10 @@ Installer: `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2\apps\desktop\.desktop-b
 
 ## What is left
 
-- (operator) install it, then fill the skill's Step 7 table.
+- (operator) install it, then fill the skill's Step 7 table. `finish-install.ps1`
+  now enforces settings retention (`471e72742e`): it refuses to install without a
+  fresh snapshot, restores while the app is closed, and repairs any post-setup
+  drift by itself, ending on `REPAIRED` or `STILL DRIFTED`.
 - After install: `py C:\Claude\bin\dsh_local_features_check.py` must read 18/18
   (15 original plus `question-card-scroll`, `all-sessions-recovery`,
   `pwsh-param-led`).

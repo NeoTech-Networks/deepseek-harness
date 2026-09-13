@@ -12,6 +12,9 @@
 - Installer built: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,784,998 bytes, 2026-09-13 11:08. NOT INSTALLED: the operator runs `finish-install.ps1`, which force-closes the app hosting the session that built it.
 - Feature markers added to `C:\Claude\bin\dsh_local_features.json`: `question-card-scroll` (`headingInBody`), `all-sessions-recovery` (`data-all-sessions-error`), `pwsh-param-led` (`commandText`).
 - Evidence and the two read-only scan scripts live in `C:\Projects\logs\2026-09-13\dsh-ui-fixes\` (`EVIDENCE.md`, `scan-pwsh-errors.mjs`, `dump-parser-errors.mjs`, `pwsh-error-scan.txt`, `parser-error-dump.txt`).
+- SETTINGS RETENTION, found broken and fixed the same day: the config vault (`C:\Projects\repos\dsh-config`) was AHEAD 4 / BEHIND 1 against its origin, so nothing had published since 2026-09-11 while every scheduled snapshot printed a failure nobody reads. Reconciled and published (`origin/main` `70b2552`), and `push_vault` in `C:\Claude\bin\dsh_config_vault.py` now fetches and replays the local snapshots on top of `origin/<branch>` so a diverged remote heals itself.
+- `finish-install.ps1` now GUARANTEES retention instead of reporting drift: the pre-install snapshot is a hard gate (no fresh copy, no install), a verify+restore runs while the app is closed before the first launch, and after first-run setup a drift is repaired by closing the app, restoring every protected file, relaunching and re-verifying. Commit `471e72742e` on `update/v0.1.5-rc.2`. Isolated end-to-end proof (temp home, temp vault, bare remote) in `C:\Projects\logs\2026-09-13\dsh-settings-retention\`.
+- NOTE: `471e72742e` changes the helper script only, NOT the installer, so the packaged `deepseek-harness-0.1.5-rc.2-win-x64.exe` (194,784,998 bytes) is still current; the operator re-runs the same `finish-install.ps1` command and gets the retention guarantee.
 
 ## 2026-09-12 - llm-route-fallback disabled: sessions were silently running on pro
 
