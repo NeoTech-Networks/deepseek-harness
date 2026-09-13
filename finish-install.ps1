@@ -185,20 +185,43 @@ if (Test-Path $dshLock) {
 #    settings.yaml, the agent preset that mounts the MCP servers, AGENTS.md and
 #    the slash-command skill wrappers all live under .dsh and have been lost to
 #    an update before. This must run while they are still on disk.
-#    It can never fail the install: a lost snapshot is bad, a half install worse.
+#
+#    THIS IS A HARD GATE, changed 2026-09-13. It used to warn and continue, which
+#    traded the one copy that can repair a loss for a finished install. An
+#    install with no fresh snapshot is the only way a customisation can be lost
+#    FOR GOOD, so the script now stops here instead. -Force overrides, and the
+#    override is announced.
 $VaultTool = 'C:\Claude\bin\dsh_config_vault.py'
+$snapshotOk = $false
 if (Test-Path $VaultTool) {
   Write-Host "[dsh-config-vault] snapshotting your custom settings before install..."
   try {
     & py $VaultTool snapshot --reason "pre-install" 2>&1 | ForEach-Object { Write-Host "  $_" }
-    if ($LASTEXITCODE -ne 0) {
-      Write-Warning "[dsh-config-vault] pre-install snapshot exited $LASTEXITCODE; install continues, check with: py $VaultTool list"
+    $snapshotOk = ($LASTEXITCODE -eq 0)
+    if (-not $snapshotOk) {
+      Write-Host "[dsh-config-vault] pre-install snapshot exited $LASTEXITCODE" -ForegroundColor Red
     }
   } catch {
-    Write-Warning "[dsh-config-vault] pre-install snapshot could not run: $($_.Exception.Message). Install continues."
+    Write-Host "[dsh-config-vault] pre-install snapshot could not run: $($_.Exception.Message)" -ForegroundColor Red
   }
 } else {
-  Write-Warning "[dsh-config-vault] vault tool not found at $VaultTool; your custom settings are NOT backed up for this install."
+  Write-Host "[dsh-config-vault] vault tool not found at $VaultTool" -ForegroundColor Red
+}
+if (-not $snapshotOk) {
+  if ($Force) {
+    Write-Warning "GUARD OVERRIDDEN: no fresh settings snapshot was taken. Anything this install drops cannot be repaired from this run."
+  } else {
+    Stop-Guard "your custom settings could not be snapshotted." @"
+  The snapshot is the only copy that can put a customisation back after an
+  update drops it, so the install stops here rather than risk losing one.
+
+  Check the vault by hand, fix what it reports, then run this script again:
+    py $VaultTool verify
+    py $VaultTool list
+
+  -Force installs anyway, with no fresh snapshot to repair from.
+"@
+  }
 }
 
 # 1. Close the app.
@@ -287,6 +310,21 @@ Remove-Item -Recurse -Force "$dshHome\profiles\desktop" -ErrorAction SilentlyCon
 Remove-Item -Recurse -Force "$dshHome\desktop\staging" -ErrorAction SilentlyContinue
 Write-Host "profile cleared (rollback and pnpm store kept)"
 
+# 5b. The app is closed, and this is the ONLY window in which every protected
+#     file can be put back without a running session overwriting it again. In a
+#     healthy run nothing has touched them yet, so this is a no-op; it exists so
+#     that a step above which DID clobber one is repaired BEFORE the first
+#     launch, not reported after it.
+if (Test-Path $VaultTool) {
+  Write-Host ""
+  Write-Host "[dsh-config-vault] checking your settings survived the install (app is closed)..."
+  & py $VaultTool verify 2>&1 | ForEach-Object { Write-Host "  $_" }
+  if ($LASTEXITCODE -eq 3) {
+    Write-Warning "[dsh-config-vault] drift before first launch; restoring from the pre-install snapshot"
+    & py $VaultTool restore --all 2>&1 | ForEach-Object { Write-Host "  $_" }
+  }
+}
+
 # 6. Relaunch. The first launch runs a full offline pnpm install into a fresh
 #    profile and takes minutes, not seconds.
 #
@@ -352,23 +390,38 @@ if ($NoWait) {
   }
 }
 
-# 7. Say whether the install touched any of the operator's own settings, and
-#    hand back the exact command to undo it if it did.
+# 7. GUARANTEE the customisations are still there, and REPAIR them if they are
+#    not. The first-run provisioning in step 6 is what has dropped settings
+#    before, so the check runs AFTER it, and a drift is no longer merely
+#    reported: settings.yaml is hot reloaded and safe to put back live, but the
+#    agent preset and the home patch file are read once at agent start and need
+#    the app closed. So on drift the app is closed, everything is restored from
+#    the pre-install snapshot, and the app is relaunched and re-checked. A
+#    restore writes a .bak beside each file, so this is itself undoable.
 if (Test-Path $VaultTool) {
   Write-Host ""
   Write-Host "[dsh-config-vault] checking whether the install changed any of your settings..."
-  $VaultVerify = & py $VaultTool verify 2>&1
+  & py $VaultTool verify 2>&1 | ForEach-Object { Write-Host "  $_" }
   $VaultCode = $LASTEXITCODE
-  $VaultVerify | ForEach-Object { Write-Host "  $_" }
   if ($VaultCode -eq 3) {
     Write-Host ""
-    Write-Warning "DRIFT: this install changed or removed some of your custom settings."
+    Write-Warning "DRIFT: this install changed or removed some of your custom settings. Repairing from the snapshot."
     Write-Host "  CHANGED means the installer overwrote it. MISSING FROM LIVE means it deleted it."
-    Write-Host "  Your originals are safe in C:\Projects\repos\dsh-config. Nothing is lost."
-    Write-Host "  To put everything back, close DeepSeek Harness and run:"
-    Write-Host "    py C:\Claude\bin\dsh_config_vault.py restore --all"
+    Write-Host "  A .bak is written beside each repaired file, so this is itself undoable."
+    taskkill /F /IM "DeepSeek Harness.exe" /T 2>$null | Out-Null
+    Start-Sleep -Seconds 3
+    & py $VaultTool restore --all 2>&1 | ForEach-Object { Write-Host "  $_" }
+    Start-Process $exe
+    Start-Sleep -Seconds 15
+    & py $VaultTool verify 2>&1 | ForEach-Object { Write-Host "  $_" }
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "[dsh-config-vault] REPAIRED: every protected file matches the snapshot again, and the app is running." -ForegroundColor Green
+    } else {
+      Write-Host "[dsh-config-vault] STILL DRIFTED after a repair. Do not use the app until this is clean." -ForegroundColor Red
+      Write-Host "    Close DeepSeek Harness, then run: py $VaultTool restore --all" -ForegroundColor Yellow
+    }
   } elseif ($VaultCode -eq 0) {
-    Write-Host "[dsh-config-vault] all of your custom settings survived the install."
+    Write-Host "[dsh-config-vault] all of your custom settings survived the install (18 files, all same)." -ForegroundColor Green
   } else {
     Write-Warning "[dsh-config-vault] could not check (exit $VaultCode). Run: py $VaultTool verify"
   }
