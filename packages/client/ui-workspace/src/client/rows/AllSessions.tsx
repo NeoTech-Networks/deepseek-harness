@@ -7,7 +7,7 @@
  * 56px rail already carries its own search/add icons, so this section renders
  * nothing there.
  */
-import { useMemo } from 'react'
+import { Component, useMemo, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { AllSessionsProps } from '../contract/slots.ts'
@@ -49,11 +49,66 @@ function AllSessionRow({ node, currentId, onOpen, t }: {
 }
 
 /**
+ * Section-scoped error boundary. An exception anywhere in the section's own
+ * render (a store slice that is momentarily absent, a projection value the
+ * client does not know) would otherwise be caught by the shared per-slot
+ * boundary, which renders an empty div and logs one console line. Nothing
+ * remounts that boundary until the entry's identity changes, so the section
+ * stayed blank until the next app start. This keeps the failure visible, and
+ * one retry re-reads the current snapshots, which is enough for a transient
+ * cause.
+ */
+class AllSessionsBoundary extends Component<
+  { t: AllSessionsProps['t']; children: ReactNode },
+  { message: string | null }
+> {
+  override state: { message: string | null } = { message: null }
+
+  static getDerivedStateFromError(error: unknown): { message: string } {
+    return { message: error instanceof Error ? error.message : String(error) }
+  }
+
+  override componentDidCatch(error: unknown): void {
+    console.error('all sessions section crashed:', error)
+  }
+
+  override render(): ReactNode {
+    if (this.state.message === null) return this.props.children
+    return (
+      <div className={css.crash} role="alert" data-all-sessions-error="">
+        <div className={css.crashTitle}>{this.props.t('error.sectionCrashed')}</div>
+        <div className={css.crashDetail}>{this.state.message}</div>
+        <button
+          type="button" className={css.crashRetry}
+          onClick={() => { this.setState({ message: null }) }}
+        >
+          {this.props.t('error.sectionRetry')}
+        </button>
+      </div>
+    )
+  }
+}
+
+/**
+ * Render the "All Sessions" quick-nav section, inside its own recovery
+ * boundary so a crash in this section can never blank it silently.
+ * @param props - composed slot props (shell owner share + fold store + injected open + locale).
+ * @returns the section element tree, or the section's recovery row.
+ */
+export function AllSessionsSection(props: AllSessionsProps) {
+  return (
+    <AllSessionsBoundary t={props.t}>
+      <AllSessionsInner {...props} />
+    </AllSessionsBoundary>
+  )
+}
+
+/**
  * Render the "All Sessions" quick-nav section.
  * @param props - composed slot props (shell owner share + fold store + injected open + locale).
  * @returns the section element tree, or null on the collapsed rail.
  */
-export function AllSessionsSection({
+function AllSessionsInner({
   wide,
   useSessions,
   useWorkspaces,

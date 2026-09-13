@@ -14,7 +14,9 @@ export const name = 'tool-ask-user'
 export const inject = ['tools', 'userQuestions']
 
 const description = 'Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. '
-  + 'Send one or more questions, each with a stable id that will be echoed in the answer.'
+  + 'Send one or more questions, each with a stable id that will be echoed in the answer. '
+  + 'Keep each paragraph to at most two sentences and separate paragraphs with a blank line; '
+  + 'put background, tradeoffs and lists in `detail` instead of lengthening the question line.'
 
 export function apply(ctx: Context): void {
   ctx.tools.register(defineTool({
@@ -30,7 +32,15 @@ export function apply(ctx: Context): void {
           additionalProperties: true,
           properties: {
             id: { type: 'string', required: true, description: 'Stable id for this question; echoed in the answer.' },
-            question: { type: 'string', required: true, description: 'The specific question to ask the user.' },
+            question: {
+              type: 'string',
+              required: true,
+              description: 'The question itself, written as short paragraphs of at most two sentences each.',
+            },
+            detail: {
+              type: 'string',
+              description: 'Optional markdown rendered under the question. Use it for background, tradeoffs and lists rather than lengthening the question line.',
+            },
             header: {
               type: 'string',
               description: 'Optional short heading for the question, such as "Confirm" or "Choose Mode".',
@@ -82,6 +92,7 @@ export function apply(ctx: Context): void {
         questions: args.questions.map(question => ({
           id: question.id,
           question: question.question,
+          ...question.detail !== undefined ? { detail: question.detail } : {},
           ...question.header !== undefined ? { header: question.header } : {},
           ...question.options !== undefined ? { options: question.options } : {},
           ...question.multi_select !== undefined ? { multiSelect: question.multi_select } : {},

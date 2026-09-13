@@ -127,4 +127,33 @@ describe('AllSessionsSection', () => {
     const b = mount({ wide: false, useSessions: hook(sessionState([summary('one', 1)])) })
     expect(b.view.container.textContent).toBe('')
   })
+
+  it('keeps a crashing section visible, and lets one retry recover it', () => {
+    const sessions = sessionState([summary('one', 1)])
+    let broken = true
+    const useSessions: AllSessionsProps['useSessions'] = (selector) => {
+      if (broken) throw new Error('transient vanish')
+      return selector(sessions)
+    }
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      mount({ useSessions })
+
+      // The failure is visible, with its reason, instead of the shared slot
+      // boundary's empty div and a console line nobody sees.
+      const alert = screen.getByRole('alert')
+      expect(alert.textContent).toContain('本栏未能绘制。')
+      expect(alert.textContent).toContain('transient vanish')
+      expect(screen.queryByRole('tree')).toBeNull()
+
+      // One retry re-reads the current snapshot, so a transient cause recovers
+      // without an app restart.
+      broken = false
+      fireEvent.click(screen.getByRole('button', { name: '重试' }))
+      expect(screen.getByRole('tree')).toBeTruthy()
+      expect(screen.getByRole('treeitem').textContent).toContain('one')
+    } finally {
+      quiet.mockRestore()
+    }
+  })
 })
