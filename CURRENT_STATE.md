@@ -1,5 +1,18 @@
 
 
+## 2026-09-13 - four app fixes built: question scroll, All Sessions recovery, param-led pwsh, PR #21 landed
+
+- Merged PR #21 (`feat/ui-session-footer`) into `update/v0.1.5-rc.2` as `5512545eac`. The last install had been packaged from that line WITHOUT it, which is exactly why `workspace-unarchived-count` and `session-footer` read MISSING at 13/15.
+- Four fixes built on top as `e39f7bf01e`, pushed to `update/v0.1.5-rc.2`:
+  - the whole question card (title, detail, options) now rides ONE scrollport, with the action row and the footer pinned, so a long question can no longer push its choices out of view;
+  - `ask_user_question` gained the optional `detail` markdown field and the at-most-two-sentences-per-paragraph rule;
+  - a section-scoped error boundary in `AllSessionsSection` shows the crash reason plus one retry, instead of the shared slot boundary's silent empty div that needed an app restart;
+  - `pwsh-local` wraps a `param(...)`-led command in a script block, so the UTF-8 encoding preamble can no longer turn `param` into an unknown command.
+- The recurring PowerShell failure is NAMED: 107 of 2,195 failing pwsh calls since 2026-08-01 are the same `ParserError: Variable reference is not valid. '$' was not followed by a valid variable name character`, caused by a regex such as `^\$script:` inside a DOUBLE-quoted `-Pattern`. The `pwsh` tool description now teaches single-quoted patterns.
+- Installer built: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,784,998 bytes, 2026-09-13 11:08. NOT INSTALLED: the operator runs `finish-install.ps1`, which force-closes the app hosting the session that built it.
+- Feature markers added to `C:\Claude\bin\dsh_local_features.json`: `question-card-scroll` (`headingInBody`), `all-sessions-recovery` (`data-all-sessions-error`), `pwsh-param-led` (`commandText`).
+- Evidence and the two read-only scan scripts live in `C:\Projects\logs\2026-09-13\dsh-ui-fixes\` (`EVIDENCE.md`, `scan-pwsh-errors.mjs`, `dump-parser-errors.mjs`, `pwsh-error-scan.txt`, `parser-error-dump.txt`).
+
 ## 2026-09-12 - llm-route-fallback disabled: sessions were silently running on pro
 
 - The `llm-route-fallback` plugin merged earlier today was moving EVERY request from `deepseek-flash` to `deepseek-v4-pro`: its `limitBytes` (3000) sits below the real tool-catalog size, so the "tools assembled" gate never kept a request. Every new session started on flash and flipped to pro on its first request.

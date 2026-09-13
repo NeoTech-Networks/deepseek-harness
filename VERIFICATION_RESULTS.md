@@ -1,5 +1,23 @@
 
 
+## 2026-09-13 - four DSH app fixes: tests, build, package (install pending)
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| ui-user-questions tests | pass | 53 passed, including the whole-question scrollport case | VERIFIED |
+| tool-ask-user tests | pass | 11 passed, including `detail` pass-through and the description rule | VERIFIED |
+| pwsh-local tests | pass | 47 passed; 1 pre-existing EPERM symlink failure (no symlink privilege, environmental) | VERIFIED |
+| tool-pwsh tests | pass | 61 passed | VERIFIED |
+| ui-workspace + ui-renderer tests | pass | 310 passed, including the crash/retry recovery case | VERIFIED |
+| typecheck | exit 0 | `pnpm run typecheck` exit 0; the pre-push hook ran it again in 24.8s | VERIFIED |
+| lint, changed sources | clean | oxlint 0 warnings 0 errors on the 6 changed files | VERIFIED |
+| tool catalog | up to date | `verify-tool-catalog` up to date; the zh pair updated and re-recorded | VERIFIED |
+| Installer packaged | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,784,998 bytes, 11:08:32 | VERIFIED |
+| PR #21 landed | merged | GitHub reports MERGED, merge commit `5512545eac` | VERIFIED |
+| Built bundles carry every change | all markers present | `SINGLE-quoted`, `param(...)` wrap, `at most two sentences`, `headingInBody`, `data-all-sessions-error`, `data-session-count`, `commandText` all found in `lib/` | VERIFIED |
+| Running build carries all changes | 18/18 markers | NOT DONE: install pending | UNVERIFIED |
+| All Sessions root cause | named | NOT CAPTURED: the recovery row ships; the crash message is now on screen | UNVERIFIED |
+
 ## 2026-09-12 - llm-route-fallback disabled, verified
 
 | Check | Expected | Result | Status |
