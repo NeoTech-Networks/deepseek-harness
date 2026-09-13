@@ -1,3 +1,9 @@
+## 2026-09-13 - pruned by dsh-settings-retention save
+
+Moved out of OPEN_ISSUES.md. Original wording preserved verbatim.
+
+29. [RESOLVED 2026-09-13] ds-harness-update Step 8 housekeeping for the 0.1.5-rc.2 UI build: the session-footer / workspace-indent / unarchived-count work, plus the four 2026-09-13 fixes, are recorded in the playbook and the state files. See the 2026-09-13 sections of CURRENT_STATE.md and VERIFICATION_RESULTS.md.
+
 ## 2026-09-12 - pruned by dsh-session-footer-ui save
 
 13. [RESOLVED 2026-09-11] Windows packaging needs two release settings that were stored nowhere in the repo: DSH_DESKTOP_APP_ID and DOWNLOAD_TEST_ORIGIN (https://download.neotech.biz). Without them electron-builder fails before it builds. THE APP ID RECORDED HERE WAS WRONG: it said com.neotechnetworks.deepseek-harness; the installed 0.1.5-alpha.1 was built with **com.deepseek.harness**. Settled by derivation, not by memory: electron-builder computes the NSIS uninstall key as uuid5(appId) in namespace 50e065bc-3134-11e6-9bab-38c9862bdaf3 (NsisTarget.js, ELECTRON_BUILDER_NS_UUID). com.deepseek.harness gives 7808434f-469e-5eba-848e-edf64d3b94ce, which is the live 0.1.5 uninstall entry; com.neotechnetworks.deepseek-harness gives 7260a3eb-fb49-5c0a-a594-ea7b31e1d959, the stale 0.1.3 entry. A wrong app id does NOT fail the build: it installs a second parallel copy and leaves the running app untouched. RESOLVED 2026-09-11: both are now recorded in-repo at `apps/desktop/PACKAGING.md`, together with the uuid5 derivation that makes the app id non-optional and the live uninstall key it must match. A checked-in `.env.example` is NOT possible on this repo: the pre-commit hook refuses that filename ("refusing to commit credential/settings files"), and `--no-verify` is not an acceptable trade for a documentation file.
