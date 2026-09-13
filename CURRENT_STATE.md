@@ -139,16 +139,16 @@ prints the feature-check command.
   Auto-managed by the claude-memory save-state hook.
   Anything between :begin and :end is overwritten on every save-state.
   Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=dd3eb24a-072f-4502-be92-345254a45e0a at=2026-09-13T18:04:20.410912+00:00
+  Last write: actor=claude-code:steve session=3c753b1f-a7a1-43dc-af2d-7de4a98636a8 at=2026-09-13T18:09:04.273569+00:00
 -->
-## Last save-state (2026-09-13T18:04:20.410912+00:00)
+## Last save-state (2026-09-13T18:09:04.273569+00:00)
 
 - Trigger: `save_state`
 - Actor: `claude-code:steve`
-- Session id: `dd3eb24a-072f-4502-be92-345254a45e0a`
+- Session id: `3c753b1f-a7a1-43dc-af2d-7de4a98636a8`
 - Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
 - Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-c016dd40-9130-4612-a526-ee9acca0383b
+- Transcript: C:\Users\SteveDempsey\.claude\projects\C--Projects-general-DS-harness\4413ee89-1bd6-4f9e-bc9a-f40d5b576315.jsonl
 
 <!-- claude-memory-actor:end -->
 
