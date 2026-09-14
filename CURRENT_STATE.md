@@ -10,6 +10,7 @@
 - Mock server gained a `keepalive_stall` behavior so the shape is reproducible offline.
 - WHY IT SURFACED NOW: the 2026-09-13 install carries `1e89100c7f`, which disabled `llm-route-fallback`. That plugin had been diverting every flash request over 3000 tool-parameter bytes to `deepseek-v4-pro`, and the real catalog is 69029 bytes, so it diverted all of them. Disabling it put traffic back on flash on the day DeepSeek's flash route went bad. The harness change did not cause the fault; it removed an accidental shield.
 - Installed and verified the same day. Evidence: `C:\Projects\exports\2026-09-14-dsh-sse-stall\`.
+- MERGED the same day: `fix/deepseek-stream-stall` fast-forwarded into `update/v0.1.5-rc.2` (`471e72742e` to `3fdc254989`) and pushed, with the pre-push typecheck green in 53s. Both refs read back equal from the remote, and the release line's `adapter.ts` and `cordis.patch.yml` carry the fix. The five modified state files sitting in the rc.2 worktree were left untouched by the fast-forward, deliberately: they are stale copies of the item-16 kind.
 
 ## 2026-09-13 - four app fixes built: question scroll, All Sessions recovery, param-led pwsh, PR #21 landed
 

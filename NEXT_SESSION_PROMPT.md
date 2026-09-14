@@ -5,8 +5,11 @@ Continue deepseek-harness. The stream-stall fix is BUILT, INSTALLED AND VERIFIED
 
 ## What shipped 2026-09-14
 
-Branch `fix/deepseek-stream-stall` off `update/v0.1.5-rc.2`, pushed to the fork,
-worktree `C:\Projects\worktrees\dsh-stream-stall`, two commits:
+Branch `fix/deepseek-stream-stall` off `update/v0.1.5-rc.2`, worktree
+`C:\Projects\worktrees\dsh-stream-stall`, two commits, **fast-forward merged into
+`update/v0.1.5-rc.2` and pushed the same day** (both refs now at `3fdc254989`,
+read back from the remote), so the next rebase onto an upstream tag carries them
+with the rest of the local stack:
 
 - `4929fed9fe` adds `streamFirstPayloadTimeoutMs` (default 120000, `0` disables).
   A keep-alive comment no longer rearms the idle watchdog BEFORE the stream's
@@ -29,9 +32,6 @@ Full write-up and raw captures: `C:\Projects\exports\2026-09-14-dsh-sse-stall\`.
 
 ## What is left
 
-- MERGE DECISION, not housekeeping: `fix/deepseek-stream-stall` is installed and
-  proven but has not been merged into `update/v0.1.5-rc.2`. Decide whether it
-  lands there or waits for the next version bump.
 - `deepseek-flash` was still dead at 16:50 on 2026-09-14 (OPEN_ISSUES item 29).
   Re-probe before running anything on it, and decide whether to send DeepSeek the
   trace id `47725ea260636ad4556acd718262e2b1`.
@@ -48,4 +48,14 @@ Full write-up and raw captures: `C:\Projects\exports\2026-09-14-dsh-sse-stall\`.
 `update/v0.1.5-rc.2` in worktree `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`.
 The fix line is `fix/deepseek-stream-stall` in worktree
 `C:\Projects\worktrees\dsh-stream-stall`, clean and equal to origin, and it is
-what the installed app was built from.
+what the installed app was built from. It is now identical to
+`update/v0.1.5-rc.2`; the branch and its worktree are kept only as the build
+provenance for the installed 2026-09-14 binary.
+
+NOTE for whoever works in `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`: that
+worktree carries five MODIFIED state files left by an earlier session
+(`CURRENT_STATE.md`, `OPEN_ISSUES.md`, `VERIFICATION_RESULTS.md`,
+`NEXT_SESSION_PROMPT.md`, `state-archive/OPEN_ISSUES_resolved.md`). They are
+stale copies of the kind OPEN_ISSUES item 16 is about. The fast-forward left
+them untouched on purpose. Do not commit or publish them; compare against
+`git show origin/master:<file>` first.
