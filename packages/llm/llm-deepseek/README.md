@@ -58,7 +58,7 @@ A request selects the route with `provider: deepseek-official`; the model id pas
 | `defaultContextWindow` | `1,000,000` | Capacity fallback for models without an exact value |
 | `models` | V41 Flash + V4 Flash + V4 Pro + V4 Flash Vision Exp | Advisory catalog shown by discovery consumers |
 | `streamIdleTimeoutMs` | `300,000` | Maximum provider idle time per outstanding stream read |
-| `streamFirstPayloadTimeoutMs` | `120,000` | Maximum wait for the stream's FIRST data payload; keep-alive comments do not extend it, and `0` disables the bound |
+| `streamFirstPayloadTimeoutMs` | `25,000` | Maximum wait for the stream's FIRST data payload; keep-alive comments do not extend it, and `0` disables the bound |
 | `maxRequestFilesBytes` | `128 MiB` | High watermark for retained request-image bytes before oldest-first offload |
 | `maxInlineRequestImageBytes` | `20 MiB` | Independent base64 fallback high watermark |
 | `maxImagesPerRequest` | `600` | High watermark for retained request-image count |

@@ -155,11 +155,19 @@ export const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300_000
 /**
  * Default maximum wait for the first data payload of a stream.
  *
- * Measured 2026-09-14 against a `deepseek-flash` outage: the route returned
- * HTTP 200 and then only `: keep-alive` comments, and the call was held open
- * for about fifteen minutes before the provider closed it without `[DONE]`.
+ * Grounded in measurement, not guessed. First-payload latency on
+ * `deepseek-flash`, 2026-09-14: 797-1336 ms over six runs of a 156 KB request
+ * carrying 112 tools, and 1526-2330 ms for contexts from 25k to 250k tokens on
+ * requests up to 1.1 MB. The slowest honest first token was 2.33 s, so this
+ * default carries roughly ten times that headroom.
+ *
+ * The failure it bounds looks nothing like slow: the route returns HTTP 200 and
+ * then emits only `: keep-alive` until the provider's own ten-minute
+ * no-inference cut-off, which the protocol reports as the non-retryable
+ * `STREAM_CLOSED`. Expiry here is `TIMEOUT` instead, which the default retry
+ * policy recovers, so an over-tight value costs one retry rather than a turn.
  */
-export const DEFAULT_STREAM_FIRST_PAYLOAD_TIMEOUT_MS = 120_000
+export const DEFAULT_STREAM_FIRST_PAYLOAD_TIMEOUT_MS = 25_000
 /** Default combined request/response context capacity. */
 export const DEFAULT_CONTEXT_WINDOW = 1_000_000
 /** Default per-request output-token cap. */

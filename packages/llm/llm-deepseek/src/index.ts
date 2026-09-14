@@ -152,7 +152,7 @@ export interface Config {
   streamIdleTimeoutMs?: number
   /**
    * Maximum wait from request send to the stream's FIRST data payload
-   * (default two minutes). Keep-alive comments do not extend it, so a provider
+   * (default 25 seconds). Keep-alive comments do not extend it, so a provider
    * that accepts the request and produces nothing fails as a retryable
    * `TIMEOUT` here instead of hanging until the provider's own cut-off. Set to
    * `0` to disable the bound and rely on `streamIdleTimeoutMs` alone.
