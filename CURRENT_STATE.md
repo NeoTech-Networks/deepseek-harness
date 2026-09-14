@@ -1,5 +1,16 @@
 
 
+## 2026-09-14 - a keep-alive stall no longer costs fifteen minutes and a dead turn
+
+- SYMPTOM: "This turn failed SSE stream ended without [DONE]". A decode of all 535 saved session logs found 14 `STREAM_CLOSED` turn deaths, every one dated 2026-09-14, every one on `deepseek-official / deepseek-flash`, across 5 sessions, and ZERO on any earlier day. Each burned about fifteen minutes and recorded exactly one chunk: the finish error. No content ever arrived.
+- ROOT CAUSE, provider side: `deepseek-flash` is not starting inference at all. An 8-token "hi" with no tools returns HTTP 200 and then 98 bytes in 90 seconds, all of them `: keep-alive`, zero data payloads. `deepseek-v4-pro` on the same key answers in about a second. Confirmed four times between 16:20 and 16:50. DeepSeek trace id `47725ea260636ad4556acd718262e2b1`.
+- ROOT CAUSE, our side (two defects, both fixed): `adapter.ts` passed the idle watchdog's `pulse()` to `parseSse` as its COMMENT callback, so every keep-alive rearmed the 300s stall timer and the watchdog could never fire; and `STREAM_CLOSED` is the one transport-class code `retry-policy.ts` excludes by default, so the turn died rather than retrying (the same scan shows 603 TRANSPORT and 373 TIMEOUT failures absorbed silently that week).
+- The DeepSeek playbook already documented the provider behaviour (`AGENT.md` hard rule 6: keep-alive comments while inference has not started, connection closed at ten minutes, "your parser must tolerate both"). The harness was not tolerating it.
+- FIX, branch `fix/deepseek-stream-stall` (`4929fed9fe`, `3fdc254989`), pushed to the fork: new `streamFirstPayloadTimeoutMs` (default 120000, `0` disables) bounds send-to-first-payload only; a comment no longer rearms the idle watchdog BEFORE the first payload and counts exactly as before after it; expiry is `TIMEOUT`, already retryable. The bundle patch now gives the DeepSeek route its own `retryPolicy`: `maxRetries: 3` and the full six-code list including `STREAM_CLOSED` (the list REPLACES the defaults, so it is spelled out).
+- Mock server gained a `keepalive_stall` behavior so the shape is reproducible offline.
+- WHY IT SURFACED NOW: the 2026-09-13 install carries `1e89100c7f`, which disabled `llm-route-fallback`. That plugin had been diverting every flash request over 3000 tool-parameter bytes to `deepseek-v4-pro`, and the real catalog is 69029 bytes, so it diverted all of them. Disabling it put traffic back on flash on the day DeepSeek's flash route went bad. The harness change did not cause the fault; it removed an accidental shield.
+- Installed and verified the same day. Evidence: `C:\Projects\exports\2026-09-14-dsh-sse-stall\`.
+
 ## 2026-09-13 - four app fixes built: question scroll, All Sessions recovery, param-led pwsh, PR #21 landed
 
 - Merged PR #21 (`feat/ui-session-footer`) into `update/v0.1.5-rc.2` as `5512545eac`. The last install had been packaged from that line WITHOUT it, which is exactly why `workspace-unarchived-count` and `session-footer` read MISSING at 13/15.

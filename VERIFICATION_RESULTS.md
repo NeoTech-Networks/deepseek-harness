@@ -1,5 +1,26 @@
 
 
+## 2026-09-14 - stream-stall fix: built, installed, and proven against the live broken route
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Provider fault reproduced | flash stalls, pro does not | flash: HTTP 200 then 0 bytes in 45s, twice; streaming gave 98 bytes in 90s, all `: keep-alive`. pro: full completion, twice | VERIFIED |
+| Historical scope | which turns died and when | 14 `STREAM_CLOSED` turn deaths, all 2026-09-14, all `deepseek-flash`, 5 sessions, 0 on any earlier day (535 session logs decoded) | VERIFIED |
+| Request shape ruled out | unchanged across good and bad days | 112 tools, ~68.8 KB tool parameters on 2026-09-10 through 2026-09-14 alike | VERIFIED |
+| New unit tests | pass | 8 passed in `first-payload.spec.ts`, including the no-unhandled-rejection guard | VERIFIED |
+| New wire test | retries instead of hanging | `keepalive_stall` recovers in 345ms with idle timeout set to 30s, so comments provably no longer count | VERIFIED |
+| Touched suites | pass | 536 passed across llm-deepseek, llm-retry, llm-mock-server | VERIFIED |
+| Typecheck | exit 0 | `pnpm run typecheck` exit 0 | VERIFIED |
+| Lint, changed paths | clean | oxlint 0 warnings 0 errors on the 4 changed source/test dirs | VERIFIED |
+| Pre-existing failures separated | not caused here | `plugin-package-inventory-deepseek` fails identically on the untouched `update/v0.1.5-rc.2` worktree; `llm-pi-ai` idle test passes in isolation (parallel-load flake) | VERIFIED |
+| Config gates | pass | `verify-cordis-config` 142 files passed; config catalog regenerated and up to date; both translation pairs re-recorded | VERIFIED |
+| Fix inside the installer payload | present | extracted `deepseek-ai-dsh-llm-deepseek-0.1.5-rc.2.tgz` from `win-unpacked`, found the new code in `package/lib/index.js` | VERIFIED |
+| Installed build is the new one | matches | app exe 2026-09-14 16:49:20 (artifact 16:49:24); 4 processes from 16:57:58; provision log ends `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished` | VERIFIED |
+| Fix in the RUNNING profile | present | `~\.dsh\profiles\desktop\...\dsh-llm-deepseek\lib\index.js` (16:58:28) carries `boundFirstPayload`, the gated comment callback (`if (sawPayload) onActivity()`), and the new config field | VERIFIED |
+| Retry policy shipped | present | installed `dsh-base\cordis.patch.yml` carries `retryPolicy`, `maxRetries: 3`, `STREAM_CLOSED` | VERIFIED |
+| LIVE: stalled route is bounded and retried | fails fast, retries | real `deepseek-flash`, 20s bound, 1 retry: 41.1s total, `llm/retry` `TIMEOUT`, ended "DeepSeek accepted the request and sent no stream payload within 20000ms". Before the fix the same fault took ~15 minutes, no retry, `STREAM_CLOSED` | VERIFIED |
+| LIVE: healthy route unaffected | completes, no retries | same probe on `deepseek-v4-pro`: completed in 13.6s with zero retries | VERIFIED |
+
 ## 2026-09-13 - four DSH app fixes: tests, build, package (install pending)
 
 | Check | Expected | Result | Status |
