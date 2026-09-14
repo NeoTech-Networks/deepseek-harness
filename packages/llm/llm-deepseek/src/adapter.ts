@@ -98,6 +98,15 @@ export interface DeepSeekConnectionOptions {
   models: readonly DeepSeekCatalogModel[]
   /** Maximum provider idle time while one stream read is outstanding. */
   streamIdleTimeoutMs: number
+  /**
+   * Maximum time from request send to the stream's FIRST data payload.
+   *
+   * Separate from {@link streamIdleTimeoutMs} because keep-alive comments are
+   * transport activity but not progress: a provider that accepts the request
+   * and then emits nothing but `: keep-alive` would otherwise rearm the idle
+   * watchdog forever and hold the call open until the provider's own cut-off.
+   */
+  streamFirstPayloadTimeoutMs: number
   /** Maximum accumulated file-referenced image bytes in one request. */
   maxRequestFilesBytes: number
   /** Maximum accumulated base64 image payload after Files API fallback. */
@@ -143,6 +152,14 @@ export interface DeepSeekAdapterOptions {
 
 /** Default maximum idle interval while an adapter stream read is outstanding. */
 export const DEFAULT_STREAM_IDLE_TIMEOUT_MS = 300_000
+/**
+ * Default maximum wait for the first data payload of a stream.
+ *
+ * Measured 2026-09-14 against a `deepseek-flash` outage: the route returned
+ * HTTP 200 and then only `: keep-alive` comments, and the call was held open
+ * for about fifteen minutes before the provider closed it without `[DONE]`.
+ */
+export const DEFAULT_STREAM_FIRST_PAYLOAD_TIMEOUT_MS = 120_000
 /** Default combined request/response context capacity. */
 export const DEFAULT_CONTEXT_WINDOW = 1_000_000
 /** Default per-request output-token cap. */
@@ -348,6 +365,62 @@ export function httpErrorCode(status: number, error?: WireError['error']): strin
   }
   if (status >= 500) return 'SERVER'
   return `HTTP_${status}`
+}
+
+/**
+ * Bound the wait for a stream's FIRST data payload, then get out of the way.
+ *
+ * The idle watchdog upstream of this cannot do the job alone: it is rearmed by
+ * transport activity, and a keep-alive comment is transport activity. A
+ * provider that returns HTTP 200 and then emits only `: keep-alive` therefore
+ * keeps that watchdog perpetually fresh (observed 2026-09-14 on
+ * `deepseek-flash`: fifteen minutes, zero payloads, then EOF without `[DONE]`,
+ * which the protocol reports as the non-retryable `STREAM_CLOSED`). This
+ * deadline covers exactly the window the watchdog cannot see, and expiry is
+ * reported as `TIMEOUT`, which every default retry policy already recovers.
+ *
+ * Only the first payload is bounded. Once the stream is producing, pacing is
+ * the idle watchdog's business again and this generator adds nothing.
+ *
+ * @param payloads - SSE data payloads from {@link parseSse}.
+ * @param timeoutMs - first-payload deadline; `<= 0` disables the bound.
+ * @param onFirstPayload - called once, when the first payload arrives.
+ * @returns the same payloads, unchanged and in order.
+ * @throws {LlmError} `TIMEOUT` when no payload arrives within `timeoutMs`.
+ */
+export async function* boundFirstPayload(
+  payloads: AsyncGenerator<string>,
+  timeoutMs: number,
+  onFirstPayload: () => void,
+): AsyncGenerator<string> {
+  if (timeoutMs <= 0) {
+    yield* payloads
+    return
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const expiry = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new LlmError(
+        `DeepSeek accepted the request and sent no stream payload within ${timeoutMs}ms`,
+        'TIMEOUT',
+      ))
+    }, timeoutMs)
+  })
+  // The loser of the race is never awaited again. Marking both handled keeps a
+  // late settlement from surfacing as an unhandled rejection; the transport
+  // itself is torn down by the consumer abort the caller already owns.
+  expiry.catch(() => {})
+  try {
+    const pending = payloads.next()
+    pending.catch(() => {})
+    const first = await Promise.race([pending, expiry])
+    if (first.done === true) return
+    onFirstPayload()
+    yield first.value
+    yield* payloads
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /**
@@ -708,7 +781,16 @@ export class DeepSeekAdapter extends LlmAdapter {
         throw new LlmError('DeepSeek API returned no response body', 'EMPTY_RESPONSE')
       }
 
-      yield* translate(parseSse(response.body, onActivity))
+      // `sawPayload` splits transport activity from progress for the rest of
+      // this stream: before the first data payload a keep-alive comment must
+      // not rearm the caller's idle watchdog, and the first-payload deadline
+      // is what bounds that window.
+      let sawPayload = false
+      yield* translate(boundFirstPayload(
+        parseSse(response.body, () => { if (sawPayload) onActivity() }),
+        connection.streamFirstPayloadTimeoutMs,
+        () => { sawPayload = true },
+      ))
       return
     }
   }

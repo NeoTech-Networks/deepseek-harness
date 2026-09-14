@@ -33,6 +33,7 @@ import {
   DEFAULT_INLINE_IMAGE_OFFLOAD_BYTE_QUANTUM,
   DEFAULT_MAX_INLINE_REQUEST_IMAGE_BYTES,
   DEFAULT_MAX_TOKENS,
+  DEFAULT_STREAM_FIRST_PAYLOAD_TIMEOUT_MS,
   DEFAULT_STREAM_IDLE_TIMEOUT_MS,
   DeepSeekAdapter,
 } from './adapter.ts'
@@ -56,6 +57,7 @@ export {
   DEFAULT_INLINE_IMAGE_OFFLOAD_BYTE_QUANTUM,
   DEFAULT_MAX_INLINE_REQUEST_IMAGE_BYTES,
   DEFAULT_MAX_TOKENS,
+  DEFAULT_STREAM_FIRST_PAYLOAD_TIMEOUT_MS,
   DEFAULT_STREAM_IDLE_TIMEOUT_MS,
   DeepSeekAdapter,
 } from './adapter.ts'
@@ -148,6 +150,14 @@ export interface Config {
   models?: DeepSeekCatalogModel[]
   /** Maximum provider idle time while one stream read is outstanding (default five minutes). */
   streamIdleTimeoutMs?: number
+  /**
+   * Maximum wait from request send to the stream's FIRST data payload
+   * (default two minutes). Keep-alive comments do not extend it, so a provider
+   * that accepts the request and produces nothing fails as a retryable
+   * `TIMEOUT` here instead of hanging until the provider's own cut-off. Set to
+   * `0` to disable the bound and rely on `streamIdleTimeoutMs` alone.
+   */
+  streamFirstPayloadTimeoutMs?: number
   /** Maximum accumulated file-referenced image bytes per chat request (default 128 MiB). */
   maxRequestFilesBytes?: number
   /** Maximum accumulated base64 image payload after Files API fallback (default 20 MiB). */
@@ -193,6 +203,8 @@ export const Config: z<Config> = z.object({
   defaultContextWindow: z.number().step(1).min(1).default(DEFAULT_CONTEXT_WINDOW),
   models: z.array(catalogModel).default(DEFAULT_MODELS),
   streamIdleTimeoutMs: z.number().min(Number.MIN_VALUE).max(MAX_TIMER_DELAY_MS).default(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
+  streamFirstPayloadTimeoutMs: z.number().min(0).max(MAX_TIMER_DELAY_MS)
+    .default(DEFAULT_STREAM_FIRST_PAYLOAD_TIMEOUT_MS),
   maxRequestFilesBytes: z.number().step(1).min(1).default(DEFAULT_MAX_REQUEST_FILES_BYTES),
   maxInlineRequestImageBytes: z.number().step(1).min(1).default(DEFAULT_MAX_INLINE_REQUEST_IMAGE_BYTES),
   maxImagesPerRequest: z.number().step(1).min(1).default(DEFAULT_MAX_IMAGES_PER_REQUEST),
@@ -329,6 +341,15 @@ export function resolveAdapterOptions(config: Config, environment?: LaunchEnviro
       `llm-deepseek: streamIdleTimeoutMs must be a positive finite number no greater than ${MAX_TIMER_DELAY_MS}`,
     )
   }
+  const streamFirstPayloadTimeoutMs = config.streamFirstPayloadTimeoutMs ?? DEFAULT_STREAM_FIRST_PAYLOAD_TIMEOUT_MS
+  if (!Number.isFinite(streamFirstPayloadTimeoutMs)
+    || streamFirstPayloadTimeoutMs < 0
+    || streamFirstPayloadTimeoutMs > MAX_TIMER_DELAY_MS) {
+    throw new Error(
+      'llm-deepseek: streamFirstPayloadTimeoutMs must be a finite number between 0 '
+      + `and ${MAX_TIMER_DELAY_MS} (0 disables the bound)`,
+    )
+  }
   const maxRequestFilesBytes = config.maxRequestFilesBytes ?? DEFAULT_MAX_REQUEST_FILES_BYTES
   if (!Number.isSafeInteger(maxRequestFilesBytes) || maxRequestFilesBytes <= 0) {
     throw new Error('llm-deepseek: maxRequestFilesBytes must be a positive safe integer')
@@ -402,6 +423,7 @@ export function resolveAdapterOptions(config: Config, environment?: LaunchEnviro
     defaultContextWindow: config.defaultContextWindow ?? DEFAULT_CONTEXT_WINDOW,
     models: resolveModels(config.models),
     streamIdleTimeoutMs,
+    streamFirstPayloadTimeoutMs,
     maxRequestFilesBytes,
     maxInlineRequestImageBytes,
     maxImagesPerRequest,

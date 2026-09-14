@@ -1085,6 +1085,14 @@ export interface Config {
   models?: DeepSeekCatalogModel[]
   /** Maximum provider idle time while one stream read is outstanding (default five minutes). */
   streamIdleTimeoutMs?: number
+  /**
+   * Maximum wait from request send to the stream's FIRST data payload
+   * (default two minutes). Keep-alive comments do not extend it, so a provider
+   * that accepts the request and produces nothing fails as a retryable
+   * `TIMEOUT` here instead of hanging until the provider's own cut-off. Set to
+   * `0` to disable the bound and rely on `streamIdleTimeoutMs` alone.
+   */
+  streamFirstPayloadTimeoutMs?: number
   /** Maximum accumulated file-referenced image bytes per chat request (default 128 MiB). */
   maxRequestFilesBytes?: number
   /** Maximum accumulated base64 image payload after Files API fallback (default 20 MiB). */
@@ -1138,7 +1146,7 @@ export interface DeepSeekCatalogModel {
 
 Depends on: [`ModelModality`](../packages/llm/llm/src/index.ts) · [`RetryPolicyConfig`](../packages/llm/llm/src/index.ts) · [`SystemPromptUpdate`](../packages/llm/llm/src/index.ts)
 
-Source: [`packages/llm/llm-deepseek/src/index.ts:134`](../packages/llm/llm-deepseek/src/index.ts)
+Source: [`packages/llm/llm-deepseek/src/index.ts:136`](../packages/llm/llm-deepseek/src/index.ts)
 
 <a id="deepseek-aidsh-llm-pi-ai"></a>
 
@@ -1801,7 +1809,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/shell/pwsh-local/src/index.ts:58`](../packages/shell/pwsh-local/src/index.ts)
+Source: [`packages/shell/pwsh-local/src/index.ts:94`](../packages/shell/pwsh-local/src/index.ts)
 
 <a id="deepseek-aidsh-pwsh-sandbox"></a>
 
