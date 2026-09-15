@@ -9,11 +9,11 @@
  * menu in between; the flow and its error dialog live in WorkspacePicker
  * (same package — direct composition, no slot between them).
  */
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   Button, IconCloseFill14, IconPersonalizationOutline16,
-  IconProjectAddOutline16, IconSearchOutline16, Menu, Modal, Tooltip,
+  IconProjectAddOutline16, IconSearchOutline16, Menu, Modal, Toast, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   SessionListState, SessionSearchResultItem,
@@ -42,6 +42,39 @@ const SEARCH_DEBOUNCE_MS = 250
 const SEARCH_QUERY_MAX_CODE_UNITS = 500
 /** Session rows visible per Workspace before the local overflow control. */
 const COLLAPSED_SESSION_LIMIT = 5
+
+/**
+ * Ctrl+Shift+A archives the Session the window is currently showing.
+ *
+ * The operator chord lives here, on the browsing region, rather than on the
+ * composer: this component stays mounted in every sidebar state (wide and rail)
+ * and in every main-column state, including while a global panel replaces the
+ * conversation, so ONE listener answers the chord from the All Sessions list,
+ * the workspace tree, the search box and the conversation alike.
+ *
+ * Single-flight window, module scope, mirroring the composer chords: a held key
+ * auto-repeats (also guarded by `repeat`) and a second keydown can arrive in
+ * the same millisecond. The latch is armed only on the path that actually
+ * archives a Session; a refusal is not an action, and arming it there would
+ * swallow the next real press.
+ */
+const ARCHIVE_CHORD_LATCH_MS = 300
+let archiveChordLatchUntil = 0
+
+/**
+ * True when a keydown is the archive chord and nothing else.
+ *
+ * `code` is the faithful signal and stays first, but Chromium derives it from
+ * the hardware scan code, so a keyboard, KVM or remote session that carries
+ * none delivers the letter with an EMPTY code and the chord would die with no
+ * event and no banner. `key` is the fallback that keeps it working there.
+ * @param event - the window keydown under test.
+ * @returns whether Ctrl and Shift are held with `A` and no other modifier.
+ */
+function isArchiveChord(event: WindowEventMap['keydown']): boolean {
+  if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return false
+  return event.code === 'KeyA' || event.key === 'a' || event.key === 'A'
+}
 
 /** Fold one Workspace without charging its provisional New Session against the ordinary-row limit. */
 function collapsedSessionRows(sessions: readonly SessionNode[]): {
@@ -902,6 +935,14 @@ export function WorkspaceBrowser({
   const workspacePhase = useWorkspaces(state => state.phase)
   const workspaceStreamState = useWorkspaces(state => state.state)
   const archivedSessionIds = useWorkspaces(state => state.archivedSessionIds)
+  // The chord's target: the Session the window is showing, and only when the
+  // row menu would offer its Archive item for it. A blank New Session row is a
+  // provisional placeholder carrying no verbs until its first prompt, so the
+  // chord mirrors that rule instead of inventing a second one.
+  const archivableSessionId = useSessions((state) => {
+    const current = state.current
+    return current !== undefined && state.byId[current]?.blank !== true ? current : undefined
+  })
   // Live occupancy of this surface's directory-flow hole (the same source the
   // flow reads): a composition without a picking affordance can add nothing.
   const directoryFlowAvailable = useDirectoryFlow(occupied => occupied)
@@ -944,6 +985,47 @@ export function WorkspaceBrowser({
       ...workspaces.map(workspace => workspace.workspaceId as string),
     ])
   }, [actions.retainAccountKeys, workspacePhase, workspaces])
+
+  // Ctrl+Shift+A replaces the row menu's Archive item with a keyboard path for
+  // the Session currently shown (see ARCHIVE_CHORD_LATCH_MS for why the
+  // listener lives on this component). Refusing in silence is
+  // indistinguishable from a broken shortcut, so both states with nothing to
+  // archive (no Session at all, or a Session that has not started) and a
+  // rejected archive answer through the banner below.
+  const [shortcutToast, setShortcutToast] = useState<{ seq: number; text: string } | null>(null)
+  const shortcutToastSeq = useRef(0)
+  const showShortcutToast = useCallback((text: string) => {
+    shortcutToastSeq.current += 1
+    setShortcutToast({ seq: shortcutToastSeq.current, text })
+  }, [])
+  const dismissShortcutToast = useCallback(() => { setShortcutToast(null) }, [])
+  useEffect(() => {
+    const onChord = (event: WindowEventMap['keydown']): void => {
+      // A held chord auto-repeats; an OS repeat arrives with repeat: true.
+      if (event.repeat) return
+      if (!isArchiveChord(event)) return
+      // No current Session and a not-yet-started one are the same refusal:
+      // there is no row menu to have offered Archive on.
+      if (archivableSessionId === undefined) {
+        event.preventDefault()
+        showShortcutToast(t('archive.nothingToArchive'))
+        return
+      }
+      const now = Date.now()
+      if (now < archiveChordLatchUntil) return
+      archiveChordLatchUntil = now + ARCHIVE_CHORD_LATCH_MS
+      event.preventDefault()
+      archiveSession(archivableSessionId).catch((reason: unknown) => {
+        // Same diagnostic voice as the row menu's own archive path, plus a
+        // banner because the key leaves no menu open to explain itself.
+        console.warn('session archive rejected:', reason)
+        showShortcutToast(t('archive.failed'))
+      })
+    }
+    window.addEventListener('keydown', onChord)
+    return () => { window.removeEventListener('keydown', onChord) }
+  }, [archiveSession, archivableSessionId, showShortcutToast, t])
+
   // The query outlives the tree and the input (both wide-only) so collapsing
   // does not silently drop an in-progress filter.
   const [query, setQuery] = useState('')
@@ -1219,6 +1301,13 @@ export function WorkspaceBrowser({
 
   return (
     <div className={clsx(css.root, !wide && css.rail)}>
+      {shortcutToast !== null && (
+        <Toast
+          key={shortcutToast.seq}
+          text={shortcutToast.text}
+          onDone={dismissShortcutToast}
+        />
+      )}
       <div className={css.sectionHeader}>
         {wide && (
           <span className={clsx(css.sectionLabel, css.wide, searchExpanded && css.sectionLabelHidden)}>

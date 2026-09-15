@@ -1501,3 +1501,163 @@ describe('WorkspaceBrowser', () => {
     expect(row.hasAttribute('draggable')).toBe(false)
   })
 })
+
+// Ctrl+Shift+A archives the Session the window is showing, from any sidebar or
+// main-column state: the listener rides this always-mounted region rather than
+// the composer, which unmounts whenever a global panel takes the main column.
+describe('archive shortcut (Ctrl+Shift+A)', () => {
+  const chord = (extra: KeyboardEventInit = {}): KeyboardEvent =>
+    new window.KeyboardEvent('keydown', {
+      code: 'KeyA', key: 'a', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true, ...extra,
+    })
+
+  // The latch is module scope, so it survives between cases. Only Date is
+  // faked and the clock is stepped per case, which is what keeps a chord from
+  // one case swallowing the next; React, the Toast and Lexical keep real
+  // timers.
+  let clock = Date.parse('2026-09-16T12:00:00.000Z')
+  beforeEach(() => {
+    clock += 60_000
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(clock)
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('archives the current session and does not navigate', () => {
+    const archiveSession = vi.fn(async () => {})
+    const open = vi.fn()
+    mount({
+      useSessions: hook(sessionState([summary('one', 1), summary('two', 2)], { current: sid('two') })),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['one', 'two'])])),
+      archiveSession,
+      open,
+    })
+    fireEvent(window, chord())
+    expect(archiveSession).toHaveBeenCalledWith(sid('two'))
+    expect(open).not.toHaveBeenCalled()
+  })
+
+  it('works with the sidebar collapsed to the rail', () => {
+    const archiveSession = vi.fn(async () => {})
+    mount({
+      wide: false,
+      useSessions: hook(sessionState([summary('one', 1)], { current: sid('one') })),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['one'])])),
+      archiveSession,
+    })
+    fireEvent(window, chord())
+    expect(archiveSession).toHaveBeenCalledWith(sid('one'))
+  })
+
+  it('works while a main panel occupies the conversation column', () => {
+    const archiveSession = vi.fn(async () => {})
+    mount({
+      usePanelInfo: hook({ activePanelId: 'panel-a' as MainPanelId }),
+      useSessions: hook(sessionState([summary('one', 1)], { current: sid('one') })),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['one'])])),
+      archiveSession,
+    })
+    fireEvent(window, chord())
+    expect(archiveSession).toHaveBeenCalledWith(sid('one'))
+  })
+
+  it('ignores a lone modifier, an extra modifier, another key and an auto-repeat', () => {
+    const archiveSession = vi.fn(async () => {})
+    mount({
+      useSessions: hook(sessionState([summary('one', 1)], { current: sid('one') })),
+      archiveSession,
+    })
+    fireEvent(window, new window.KeyboardEvent('keydown', {
+      code: 'KeyA', key: 'a', ctrlKey: true, bubbles: true, cancelable: true,
+    }))
+    fireEvent(window, new window.KeyboardEvent('keydown', {
+      code: 'KeyA', key: 'a', shiftKey: true, bubbles: true, cancelable: true,
+    }))
+    fireEvent(window, chord({ altKey: true }))
+    fireEvent(window, chord({ metaKey: true }))
+    fireEvent(window, chord({ code: 'KeyS', key: 's' }))
+    fireEvent(window, chord({ repeat: true }))
+    expect(archiveSession).not.toHaveBeenCalled()
+  })
+
+  // Chromium derives `code` from the hardware scan code, so a keyboard, KVM or
+  // remote session that carries none delivers the letter with an EMPTY code.
+  it('resolves the chord from the typed character when the scan code is missing', () => {
+    const archiveSession = vi.fn(async () => {})
+    mount({
+      useSessions: hook(sessionState([summary('one', 1)], { current: sid('one') })),
+      archiveSession,
+    })
+    fireEvent(window, chord({ code: '', key: 'A' }))
+    expect(archiveSession).toHaveBeenCalledWith(sid('one'))
+  })
+
+  it('archives once when the same chord arrives twice in one millisecond', () => {
+    const archiveSession = vi.fn(async () => {})
+    mount({
+      useSessions: hook(sessionState([summary('one', 1)], { current: sid('one') })),
+      archiveSession,
+    })
+    fireEvent(window, chord())
+    fireEvent(window, chord())
+    expect(archiveSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('archives again for a deliberate second press after the latch window', () => {
+    const archiveSession = vi.fn(async () => {})
+    mount({
+      useSessions: hook(sessionState([summary('one', 1)], { current: sid('one') })),
+      archiveSession,
+    })
+    fireEvent(window, chord())
+    vi.setSystemTime(clock + 400)
+    fireEvent(window, chord())
+    expect(archiveSession).toHaveBeenCalledTimes(2)
+  })
+
+  it('says so out loud when no session is open, and archives nothing', () => {
+    const archiveSession = vi.fn(async () => {})
+    mount({
+      useSessions: hook(sessionState([summary('one', 1)])),
+      archiveSession,
+    })
+    fireEvent(window, chord())
+    expect(archiveSession).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert').textContent).toBe('暂无可归档的会话')
+  })
+
+  // A blank New Session row carries no verbs in the row menu until its first
+  // prompt; the chord mirrors that rule instead of inventing a second one.
+  it('says so out loud when the current session has not started', () => {
+    const archiveSession = vi.fn(async () => {})
+    mount({
+      useSessions: hook(sessionState([summary('blank', 1, { blank: true })], { current: sid('blank') })),
+      archiveSession,
+    })
+    fireEvent(window, chord())
+    expect(archiveSession).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert').textContent).toBe('暂无可归档的会话')
+  })
+
+  it('reports a rejected archive out loud and leaves the tree alone', async () => {
+    const rejection = new Error('archive exploded')
+    const archiveSession = vi.fn(async () => { throw rejection })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      mount({
+        useSessions: hook(sessionState([summary('alpha-s', 1)], { current: sid('alpha-s') })),
+        useWorkspaces: hook(workspaceState([workspace('alpha', ['alpha-s'])])),
+        archiveSession,
+      })
+      // The group holding the current Session auto-expands, so the row is
+      // already rendered; the chord must leave it exactly where it was.
+      expect(screen.getByText('alpha-s')).toBeTruthy()
+      fireEvent(window, chord())
+      await waitFor(() => { expect(screen.getByRole('alert').textContent).toBe('会话归档失败') })
+      expect(warn).toHaveBeenCalledWith('session archive rejected:', rejection)
+      expect(screen.getByText('alpha-s')).toBeTruthy()
+    } finally {
+      warn.mockRestore()
+    }
+  })
+})
