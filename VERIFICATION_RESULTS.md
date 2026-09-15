@@ -1,5 +1,22 @@
 
 
+## 2026-09-15 - Ctrl+Shift+A archive chord: built and packaged, install pending
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| New chord tests | pass | 10 new cases in `workspace-browser.client.spec.tsx`; 62 passed in that file | VERIFIED |
+| Touched package suite | pass | ui-workspace 11 files, 211 passed | VERIFIED |
+| typecheck | exit 0 | `pnpm run typecheck` exit 0; the pre-push hook ran it again in 31.7s | VERIFIED |
+| build | exit 0 | `pnpm run build` exit 0, 240 client artifacts recorded | VERIFIED |
+| Marker in the built lib | present | `packages/client/ui-workspace/lib/client.js` carries `ARCHIVE_CHORD_LATCH_MS` and the two locale keys | VERIFIED |
+| Translation pair | consistent | re-recorded with `--write`, then checked on the named pair: consistent, exit 0 | VERIFIED |
+| Feature registry | 19 rows | parsed; new row `archive-session-shortcut` -> `dsh-client-ui-workspace` / `lib/client.js` / `ARCHIVE_CHORD_LATCH_MS` | VERIFIED |
+| Installer packaged | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,945,456 bytes, 2026-09-15 19:05:34 | VERIFIED |
+| Change inside the packaged seed | present | extracted the ui-workspace `.tgz` out of `win-unpacked`: `package/lib/client.js` carries `ARCHIVE_CHORD_LATCH_MS` (2) and `nothingToArchive` (3) | VERIFIED |
+| First packaging attempt | exit 0 | NOT A CODE FAULT: `tar (child): Cannot connect to C: resolve failed` from Git's GNU tar reading an absolute Windows path as `host:path`; prepending `C:\Windows\System32` (bsdtar) fixed it (ledger 36) | VERIFIED |
+| Installed and pressed live | 19/19 markers, row disappears | NOT DONE: install pending, and the installer force-closes this session | UNVERIFIED |
+| `verify-client-ui-i18n` | exit 0 | exit 1 on two hard-coded strings in `dsh-client-ui-sidebar-explorer`, a file untouched by this change | PRE-EXISTING |
+
 ## 2026-09-14 - stream-stall fix: built, installed, and proven against the live broken route
 
 | Check | Expected | Result | Status |
