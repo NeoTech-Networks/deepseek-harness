@@ -383,8 +383,10 @@
 }
 
 /* One named group header, above its Workspace sections. The label doubles as
-   the fold control for those Workspaces, so it is a full-width button that
-   keeps the old label metrics. */
+   the fold control for those Workspaces, so it is a full-width button.
+   font-size 13px is the built-in default for every group (operator, 2026-09-16:
+   two points up from the original 11px); line-height follows so the taller
+   glyphs keep their leading. */
 .groupHeader {
   display: flex;
   align-items: center;
@@ -397,9 +399,9 @@
   background: transparent;
   cursor: pointer;
   text-align: left;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 18px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--dsw-static-deepseek-600);
