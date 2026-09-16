@@ -1,5 +1,17 @@
 
 
+## 2026-09-16 - group header text 11px to 13px: the default for every group
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Touched package suite | pass | ui-workspace 11 files, 215 passed; no test asserted the old size, so none changed | VERIFIED |
+| Rule in the built bundle | 13px on the shared class | `packages/client/ui-workspace/lib/client.js` carries `...groupHeader{...font-size:13px;font-weight:600;line-height:18px...}` | VERIFIED |
+| Rule in the packaged seed | 13px, markers intact | ui-workspace `.tgz` extracted from `win-unpacked`: the same rule, plus `ARCHIVE_CHORD_LATCH_MS` (2), `sectionShowsWorkspaces` (5), `group.toggle` (3) | VERIFIED |
+| Installer rebuilt | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,906,904 bytes, 2026-09-16 00:39:04, superseding the 00:19 build so one install carries all three changes | VERIFIED |
+| First packaging attempt | exit 0 | FAILED inside `package-target.ts`; the immediate rerun succeeded. Cause UNKNOWN (that run's output was tail-truncated); the documented `win-unpacked.tmp` EPERM transient fits | UNVERIFIED |
+| Release line | carries the commit | `update/v0.1.5-rc.2` and `feat/archive-session-shortcut` both read back at `1a77e844ad` from the remote | VERIFIED |
+| On-screen size | 13px on every group | NOT DONE: nothing has looked at the rendered sidebar | UNVERIFIED |
+
 ## 2026-09-16 - named Workspace group fold: built, and the installer rebuilt to carry both changes
 
 | Check | Expected | Result | Status |

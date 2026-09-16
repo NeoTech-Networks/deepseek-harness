@@ -1,5 +1,13 @@
 
 
+## 2026-09-16 - the group header is 13px, the default for every group
+
+- REQUEST (operator, same day as the fold): the group label text two points larger, ALL groups, as the built-in default. `.groupHeader` in `WorkspaceBrowser.module.css` is now `font-size: 13px` with `line-height: 18px` (was 11px/16px). It is the single class every named group header shares, so every group gets it and there is no per-group or opt-in size.
+- COMMIT `1a77e844ad` on `feat/archive-session-shortcut` and on `update/v0.1.5-rc.2` (both read back from the remote). Nothing asserted the old size, so no test changed; the ui-workspace suite still reads 215 passed.
+- INSTALLER REBUILT AGAIN, SUPERSEDING the 00:19 build: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,906,904 bytes, 2026-09-16 00:39:04, same worktree. The rule was read back out of BOTH the built bundle and the packaged seed before handover: `...groupHeader{...font-size:13px;font-weight:600;line-height:18px...}`.
+- ONE TRANSIENT PACKAGING FAILURE, CAUSE UNKNOWN: the first attempt after this change failed inside `package-target.ts`, and the immediate rerun succeeded with exit 0. The documented `EPERM` renaming `win-unpacked.tmp` (antivirus holding the extracted electron.exe) is the best fit, but the failure text was lost because that run's output was tail-truncated, so this is reported as transient rather than diagnosed.
+- STILL INSTALL PENDING. ONE installer now carries all three changes: the Ctrl+Shift+A chord, the foldable named group header, and this size.
+
 ## 2026-09-16 - a named Workspace group folds from its own header, and the choice is remembered
 
 - FEATURE: `e7b9f7ef6d` on `feat/archive-session-shortcut` and on `update/v0.1.5-rc.2` (both read back from the remote at `e7b9f7ef6d`). The sidebar's NAMED Workspace groups (the label set through `Set group…`) now fold as a whole: the group header is a button with a triangle beside the name, and its open or closed state is remembered across restarts.

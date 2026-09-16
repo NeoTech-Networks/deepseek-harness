@@ -1,11 +1,12 @@
 # Next session prompt
 
-Continue deepseek-harness. TWO changes are BUILT, PACKAGED AND ON THE RELEASE
-LINE, and NEITHER IS INSTALLED (2026-09-16). Nothing else is waiting on anyone.
+Continue deepseek-harness. THREE changes are BUILT, PACKAGED INTO ONE INSTALLER
+AND ON THE RELEASE LINE, and NONE IS INSTALLED (2026-09-16). Nothing else is
+waiting on anyone.
 
 ## The one job, and it needs the installer run first
 
-One installer carries both changes. The installer force-closes the app, and the
+One installer carries all three changes. The installer force-closes the app, and the
 app hosts the session that built it, so the session that wrote this file is gone
 by the time you read it. Steve was handed this line to run in a NEW PowerShell
 window:
@@ -26,16 +27,17 @@ evidence:
    open: the session leaves both and the window shows the New Session view. Then
    once with no session open: a banner, and nothing archived.
 5. EYEBALL the sidebar, which is the only arm tests cannot cover: a named group
-   header shows a triangle beside the group name, clicking it folds and unfolds
-   its Workspaces, and the choice survives an app restart.
+   header shows a triangle beside the group name, its label is visibly larger
+   than the old 11px look, clicking it folds and unfolds its Workspaces, and the
+   fold choice survives an app restart.
 6. Read `archivedSessionIds` back out of `~\.dsh\storages\workspace.json` after a
    real archive press.
 
 ## What shipped on 2026-09-15 and 2026-09-16
 
 Worktree `C:\Projects\worktrees\dsh-archive-shortcut`, branch
-`feat/archive-session-shortcut`, both commits fast-forward merged into
-`update/v0.1.5-rc.2` and pushed (both refs read back at `e7b9f7ef6d` from the
+`feat/archive-session-shortcut`, three commits fast-forward merged into
+`update/v0.1.5-rc.2` and pushed (both refs read back at `1a77e844ad` from the
 remote):
 
 - `1e78c99f4f` Ctrl+Shift+A archives the Session the window is showing, with the
@@ -43,10 +45,12 @@ remote):
 - `e7b9f7ef6d` a named Workspace group folds from its own header, with the choice
   persisted. The folded map was added without a persist-key bump on purpose; see
   the 2026-09-16 section of `CURRENT_STATE.md` before touching that store.
+- `1a77e844ad` the group header label is 13px (was 11px), the shared default for
+  every group.
 
-Installer `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,914,731 bytes,
-2026-09-16 00:19:52. Both markers were read back out of the packaged seed's
-ui-workspace `.tgz` before handover. Registry is now 20 features.
+Installer `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,906,904 bytes,
+2026-09-16 00:39:04. All three markers and the 13px rule were read back out of the
+packaged seed's ui-workspace `.tgz` before handover. Registry is now 20 features.
 
 ## Still open, unchanged
 
