@@ -1,5 +1,13 @@
 
 
+## 2026-09-16 - the install finished: 20 of 20 markers, all three changes in the running code
+
+- INSTALLED AND VERIFIED at 01:11 to 01:14. Evidence: the installed exe reads 2026-09-16 00:39:00 against the 00:39:04 artifact; four processes started 01:11:32, 01:11:34, 01:13:53 and 01:14:18; the provision log `~\.dsh\desktop\logs\provision-2026-09-16T05-11-34-481Z.log` runs `seed integrity verified` then `staged health check passed` then `staging profile activated as 0.1.5-rc.2` then `applyRelease finished`; the freshly extracted profile's ui-workspace files read 01:11:47 to 01:12:51.
+- `py C:\Claude\bin\dsh_local_features_check.py` reads "all 20 local features are present in the running build", exit 0, so BOTH new markers landed: `archive-session-shortcut` and `workspace-group-fold`.
+- The RUNNING profile's `dsh-client-ui-workspace\lib\client.js` carries `ARCHIVE_CHORD_LATCH_MS` (2), `sectionShowsWorkspaces` (5) and the group rule `font-size:13px;font-weight:600;line-height:18px` (1). The only `font-size:11px` left in that bundle is `.countBadge`, a different element, so the group label really is 13px.
+- STILL OWED, AND IT NEEDS HANDS OR EYES, NOT READS: Ctrl+Shift+A pressed from the All Sessions list and from the workspace tree; the group header folded and unfolded with its 13px label seen on screen; and one app restart to prove the fold is remembered. The mechanical half of the install is proved; the visible half is not.
+- NEW FINDING, cosmetic, NOT TOUCHED: Add/Remove Programs carries TWO entries for this one install, `7260a3eb-fb49-5c0a-a594-ea7b31e1d959` and `7808434f-469e-5eba-848e-edf64d3b94ce`, both at 0.1.5-rc.2 and both pointing at the same `Uninstall DeepSeek Harness.exe /currentuser`. This is the app-id mismatch recorded on 2026-09-10: the build uses `DSH_DESKTOP_APP_ID=com.neotechnetworks.deepseek-harness` per the skill, while the install line predates it. The same duplicate was cleaned once before (2026-09-09, exported to `~\.claude\Exports` then deleted). Left alone here because it is a registry change and both rows remove the same install; the durable fix is to settle on ONE app id in the skill and the builds.
+
 ## 2026-09-16 - the group header is 13px, the default for every group
 
 - REQUEST (operator, same day as the fold): the group label text two points larger, ALL groups, as the built-in default. `.groupHeader` in `WorkspaceBrowser.module.css` is now `font-size: 13px` with `line-height: 18px` (was 11px/16px). It is the single class every named group header shares, so every group gets it and there is no per-group or opt-in size.

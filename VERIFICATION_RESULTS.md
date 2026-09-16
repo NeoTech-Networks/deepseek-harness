@@ -1,5 +1,20 @@
 
 
+## 2026-09-16 - the 00:39 installer was run: 20 of 20 markers in the RUNNING build
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Installer ran | app reinstalled and relaunched | app exe 2026-09-16 00:39:00 (artifact 00:39:04); processes started 01:11:32, 01:11:34, 01:13:53, 01:14:18 | VERIFIED |
+| Seed integrity | verified | provision log `seed integrity verified` | VERIFIED |
+| Profile re-extracted | fresh | profile ui-workspace files 01:11:47 to 01:12:51 | VERIFIED |
+| Provision finished | health check then activation | `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished`, no failed entry | VERIFIED |
+| Local feature markers | 20 of 20 | `dsh_local_features_check.py`: "all 20 local features are present in the running build", exit 0 | VERIFIED |
+| The three changes in the RUNNING code | present | profile `dsh-client-ui-workspace\lib\client.js`: `ARCHIVE_CHORD_LATCH_MS` (2), `sectionShowsWorkspaces` (5), `font-size:13px;font-weight:600;line-height:18px` (1) | VERIFIED |
+| Group label is 13px, not 11px | 13 on this rule | the only `font-size:11px` left in that bundle is `.countBadge`, a different element | VERIFIED |
+| Ctrl+Shift+A pressed live | row leaves both views | NOT DONE: needs the operator's hands | UNVERIFIED |
+| Header folded, 13px seen, fold remembered after a restart | on screen | NOT DONE: needs the operator's eyes | UNVERIFIED |
+| Add/Remove Programs | one entry | TWO rows for this one install (`7260a3eb-...` and `7808434f-...`), same version, same uninstaller path; the known app-id mismatch | UNVERIFIED |
+
 ## 2026-09-16 - group header text 11px to 13px: the default for every group
 
 | Check | Expected | Result | Status |
