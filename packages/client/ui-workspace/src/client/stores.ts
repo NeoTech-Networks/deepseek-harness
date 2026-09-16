@@ -21,6 +21,13 @@ type WorkspaceViewState = {
   orderBy: SessionOrderBy
   /** Explicit zero-or-five-session state keyed by Workspace group identity. */
   groupExpansion: Record<string, boolean>
+  /**
+   * Folded state of the NAMED Workspace group sections, keyed by group label.
+   * Optional because a blob persisted before this field existed carries no map
+   * at all: persistence rehydrates the whole value with no merge, so an absent
+   * field is a legal runtime state and every reader tolerates it.
+   */
+  sectionExpansion?: Record<string, boolean>
   /** Shared editable order per Workspace group plus the browser-local flat-list account. */
   sessionOrderByAccount: Record<string, string[]>
   /** Last observed update timestamps per order account for one-time promotion events. */
@@ -35,6 +42,8 @@ type WorkspaceViewActions = {
   setGroupBy: (draft: WorkspaceViewState, mode: SessionGroupBy) => void
   setOrderBy: (draft: WorkspaceViewState, mode: SessionOrderBy) => void
   setGroupExpanded: (draft: WorkspaceViewState, key: string, expanded: boolean) => void
+  /** Fold or unfold one NAMED Workspace group section, by group label. */
+  setSectionExpanded: (draft: WorkspaceViewState, key: string, expanded: boolean) => void
   retainAccountKeys: (draft: WorkspaceViewState, workspaceKeys: readonly string[]) => void
   syncSessionOrderAccount: (
     draft: WorkspaceViewState,
@@ -55,6 +64,7 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
       groupBy: 'workspace',
       orderBy: 'updated',
       groupExpansion: {},
+      sectionExpansion: {},
       sessionOrderByAccount: {},
       sessionUpdatedAtByAccount: {},
     }),
@@ -63,6 +73,16 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
       setGroupBy: (d, mode: SessionGroupBy) => { d.groupBy = mode },
       setOrderBy: (d, mode: SessionOrderBy) => { d.orderBy = mode },
       setGroupExpanded: (d, key: string, expanded: boolean) => { d.groupExpansion[key] = expanded },
+      // The persisted blob written before this field existed has no map, and
+      // whole-value rehydration supplies no default, so create it on the first
+      // write. The house migration for a shape change is a persist-key bump,
+      // and it was NOT used here on purpose: bumping would also discard the
+      // operator's manual session ordering, grouping mode and per-Workspace
+      // folds, which is a real loss for a field that costs one tolerant read.
+      setSectionExpanded: (d, key: string, expanded: boolean) => {
+        d.sectionExpansion ??= {}
+        d.sectionExpansion[key] = expanded
+      },
       retainAccountKeys: (d, workspaceKeys: readonly string[]) => {
         const retained = new Set(workspaceKeys)
         d.groupExpansion = Object.fromEntries(

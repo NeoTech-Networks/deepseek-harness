@@ -1661,3 +1661,77 @@ describe('archive shortcut (Ctrl+Shift+A)', () => {
     }
   })
 })
+
+// A named Workspace group (the "Set group…" label) folds from its own header: a
+// symbol followed by the group name, and the choice is remembered across
+// restarts. The per-Workspace fold inside it is a different axis and keeps its
+// own persisted map.
+describe('named group folding', () => {
+  const grouped = (id: string, sessionIds: string[], title: string, group: string): WorkspaceView =>
+    ({ ...workspace(id, sessionIds, title), group })
+  const foldHeader = (name: string) => screen.getByRole('button', { name: `展开或收起“${name}”分组` })
+  const persistKey = 'dsh.workspace.view.v5'
+  const readPersisted = (): Record<string, unknown> =>
+    JSON.parse(localStorage.getItem(persistKey) ?? '{}') as Record<string, unknown>
+
+  it('folds a named group from its header and remembers the choice', () => {
+    const b = mount({
+      useWorkspaces: hook(workspaceState([grouped('alpha', ['a'], 'Alpha', 'SIG')])),
+    })
+    expect(foldHeader('SIG').getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByText('Alpha')).toBeTruthy()
+
+    fireEvent.click(foldHeader('SIG'))
+    expect(foldHeader('SIG').getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText('Alpha')).toBeNull()
+    expect(b.store.getSnapshot().sectionExpansion).toEqual({ SIG: false })
+    expect(readPersisted().sectionExpansion).toEqual({ SIG: false })
+
+    fireEvent.click(foldHeader('SIG'))
+    expect(foldHeader('SIG').getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getByText('Alpha')).toBeTruthy()
+    expect(b.store.getSnapshot().sectionExpansion).toEqual({ SIG: true })
+  })
+
+  it('starts a named group folded when the remembered choice says so', () => {
+    localStorage.setItem(persistKey, JSON.stringify({
+      groupBy: 'workspace',
+      orderBy: 'manual',
+      groupExpansion: {},
+      sessionOrderByAccount: {},
+      sessionUpdatedAtByAccount: {},
+      sectionExpansion: { SIG: false },
+    }))
+    mount({ useWorkspaces: hook(workspaceState([grouped('alpha', ['a'], 'Alpha', 'SIG')])) })
+    expect(foldHeader('SIG').getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByText('Alpha')).toBeNull()
+    fireEvent.click(foldHeader('SIG'))
+    expect(screen.getByText('Alpha')).toBeTruthy()
+  })
+
+  // The folded map grew without a persist-key bump on purpose: whole-value
+  // rehydration supplies no default, so a blob written before the field existed
+  // has no map at all and must still open every group the operator has not folded.
+  it('tolerates a remembered view state that predates the fold field', () => {
+    localStorage.setItem(persistKey, JSON.stringify({
+      groupBy: 'workspace',
+      orderBy: 'manual',
+      groupExpansion: {},
+      sessionOrderByAccount: {},
+      sessionUpdatedAtByAccount: {},
+    }))
+    const b = mount({
+      useWorkspaces: hook(workspaceState([grouped('alpha', ['a'], 'Alpha', 'SIG')])),
+    })
+    expect(foldHeader('SIG').getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(foldHeader('SIG'))
+    expect(screen.queryByText('Alpha')).toBeNull()
+    expect(b.store.getSnapshot().sectionExpansion).toEqual({ SIG: false })
+  })
+
+  it('leaves an unlabelled section without a fold header', () => {
+    mount({ useWorkspaces: hook(workspaceState([workspace('alpha', ['a'], 'Alpha')])) })
+    expect(screen.getByText('Alpha')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /分组/ })).toBeNull()
+  })
+})

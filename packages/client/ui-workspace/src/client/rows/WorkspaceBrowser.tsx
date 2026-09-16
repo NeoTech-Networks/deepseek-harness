@@ -13,7 +13,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import clsx from 'clsx'
 import {
   Button, IconCloseFill14, IconPersonalizationOutline16,
-  IconProjectAddOutline16, IconSearchOutline16, Menu, Modal, Toast, Tooltip,
+  IconProjectAddOutline16, IconSearchOutline16, IconTriangleRightFill14, Menu, Modal, Toast, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   SessionListState, SessionSearchResultItem,
@@ -22,7 +22,7 @@ import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-
 import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceBrowserProps } from '../contract/slots.ts'
-import type { SessionNode, SessionOrderBy } from '../tree.ts'
+import type { GroupSectionNode, SessionNode, SessionOrderBy } from '../tree.ts'
 import {
   deriveFlat, deriveGroups, deriveSearchResults, owningGroupKey, UNGROUPED_KEY,
 } from '../tree.ts'
@@ -89,6 +89,25 @@ function collapsedSessionRows(sessions: readonly SessionNode[]): {
     return true
   })
   return { rows, hiddenCount: sessions.length - rows.length }
+}
+
+/**
+ * Whether one group section shows its Workspace rows.
+ *
+ * A section with no label (the ungrouped bucket, then loose sessions) has no
+ * header to fold it, so it always shows. A NAMED section shows unless the
+ * operator folded it. `undefined` (a view state persisted before this field
+ * existed) and a missing key both mean "never folded", so an old blob can never
+ * hide a group the operator has not touched.
+ * @param expansion - persisted folded state by group label, possibly absent.
+ * @param section - the section being rendered.
+ * @returns whether the section's Workspace rows render.
+ */
+function sectionShowsWorkspaces(
+  expansion: Readonly<Record<string, boolean>> | undefined,
+  section: GroupSectionNode,
+): boolean {
+  return section.label === undefined || expansion?.[section.key] !== false
 }
 
 /** Keep controlled input and RPC payload inside the session.search wire contract. */
@@ -280,6 +299,10 @@ type SessionTreeProps = Pick<
   groupExpansion: Readonly<Record<string, boolean>>
   /** Persist one Workspace group's zero-or-five-session state. */
   setGroupExpanded: (key: string, expanded: boolean) => void
+  /** Persisted folded state of the NAMED group sections, by group label; absent before the first fold. */
+  sectionExpansion?: Readonly<Record<string, boolean>> | undefined
+  /** Persist one named group section's folded state. */
+  setSectionExpanded: (key: string, expanded: boolean) => void
   /** Shared editable orders used by Workspace groups and the flat-list account. */
   sessionOrderByAccount: Readonly<Record<string, readonly string[]>>
   /** Last update timestamps observed for one-time recent-update promotions. */
@@ -319,7 +342,7 @@ function SessionTree({
   onRenameRequest, onDeleteRequest, onSetGroupRequest, onSessionRename, onSessionArchive,
   onSessionSetStatus, onSessionClearStatus,
   insertWorkspaceBefore, insertSessionBefore, orderBy,
-  groupExpansion, setGroupExpanded,
+  groupExpansion, setGroupExpanded, sectionExpansion, setSectionExpanded,
   sessionOrderByAccount, sessionUpdatedAtByAccount, syncSessionOrderAccount, setSessionOrder, home, t,
   revealSessionId, onSessionRevealed,
 }: SessionTreeProps) {
@@ -508,9 +531,29 @@ function SessionTree({
         {sections.map(section => (
           <Fragment key={section.key}>
             {section.label !== undefined && (
-              <div className={css.groupHeader}>{section.label}</div>
+              // The named section's own header IS the fold control: a symbol
+              // followed by the group name, with the choice remembered per group
+              // (sectionShowsWorkspaces). An unlabelled section has no header and
+              // always shows its Workspaces.
+              <button
+                type="button"
+                className={css.groupHeader}
+                aria-expanded={sectionShowsWorkspaces(sectionExpansion, section)}
+                aria-label={t('group.toggle', { name: section.label })}
+                onClick={() => {
+                  setSectionExpanded(section.key, !sectionShowsWorkspaces(sectionExpansion, section))
+                }}
+              >
+                <IconTriangleRightFill14
+                  className={clsx(
+                    css.groupChevron,
+                    sectionShowsWorkspaces(sectionExpansion, section) && css.groupChevronOpen,
+                  )}
+                />
+                <span className={css.groupHeaderLabel}>{section.label}</span>
+              </button>
             )}
-            {section.workspaces.map((group) => {
+            {sectionShowsWorkspaces(sectionExpansion, section) && section.workspaces.map((group) => {
               const workspaceId = group.workspaceId
               const collapsed = collapsedSessionRows(group.sessions)
               const sessionsExpanded = expandedSessionGroups.includes(group.key)
@@ -949,6 +992,7 @@ export function WorkspaceBrowser({
   const groupBy = useStore(s => s.groupBy)
   const orderBy = useStore(s => s.orderBy)
   const groupExpansion = useStore(s => s.groupExpansion)
+  const sectionExpansion = useStore(s => s.sectionExpansion)
   const sessionOrderByAccount = useStore(s => s.sessionOrderByAccount)
   const sessionUpdatedAtByAccount = useStore(s => s.sessionUpdatedAtByAccount)
   const currentBlankSessionId = useSessions((state) => {
@@ -1488,6 +1532,8 @@ export function WorkspaceBrowser({
                 workspaceReady={workspacePhase === 'ready' && workspaceStreamState !== 'loading'}
                 groupExpansion={groupExpansion}
                 setGroupExpanded={actions.setGroupExpanded}
+                sectionExpansion={sectionExpansion}
+                setSectionExpanded={actions.setSectionExpanded}
                 sessionOrderByAccount={sessionOrderByAccount}
                 sessionUpdatedAtByAccount={sessionUpdatedAtByAccount}
                 syncSessionOrderAccount={actions.syncSessionOrderAccount}
