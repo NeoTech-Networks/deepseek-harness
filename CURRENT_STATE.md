@@ -1,5 +1,14 @@
 
 
+## 2026-09-16 - a named Workspace group folds from its own header, and the choice is remembered
+
+- FEATURE: `e7b9f7ef6d` on `feat/archive-session-shortcut` and on `update/v0.1.5-rc.2` (both read back from the remote at `e7b9f7ef6d`). The sidebar's NAMED Workspace groups (the label set through `Set group…`) now fold as a whole: the group header is a button with a triangle beside the name, and its open or closed state is remembered across restarts.
+- WHY IT WAS MISSING: that header was a plain `<div>` with no control at all. The per-WORKSPACE fold already existed (folder glyph, chevron, `groupExpansion`), which is a different axis, so the sidebar now has two nested folds: named group, then Workspace, then the zero-or-five Session limit inside a Workspace.
+- PERSISTENCE, AND THE DELIBERATE DEVIATION FROM THE VERSIONED KEY: `sectionExpansion` was added to the browser view store WITHOUT bumping `dsh.workspace.view.v5`. Persistence is whole-value (`attachPersistence` does `setState(JSON.parse(raw))` with no merge), so a blob written before this field existed has no map at all. Every reader tolerates that: `sectionShowsWorkspaces` treats an absent map or a missing key as "never folded", and `setSectionExpanded` creates the map on the first write. Bumping to v6 is the house migration and was REJECTED because it would also discard the operator's manual session ordering, grouping mode and per-Workspace folds, which is real data loss for a field that costs one tolerant read.
+- GATES: 215 ui-workspace tests (4 new fold cases, one of which mounts on a view state that predates the field), `pnpm run typecheck` exit 0, `pnpm run build` exit 0, README pair re-recorded and verified consistent, feature registry now 20 rows (`workspace-group-fold`, marker `sectionShowsWorkspaces`).
+- INSTALLER REBUILT, SUPERSEDING the 2026-09-15 19:05 build: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,914,731 bytes, 2026-09-16 00:19:52, same worktree `C:\Projects\worktrees\dsh-archive-shortcut`. It carries BOTH changes. Proven inside the packaged seed before handover: `deepseek-ai-dsh-client-ui-workspace-0.1.5-rc.2.tgz -> package/lib/client.js` carries `ARCHIVE_CHORD_LATCH_MS` (2), `sectionShowsWorkspaces` (5) and `group.toggle` (3).
+- STILL INSTALL PENDING, and the VISUAL pass is unproven: the chevron rotation and the hover background are copied from the All Sessions header, which is known good, but nothing has looked at the rendered sidebar. The operator's eyes are the proof.
+
 ## 2026-09-15 - Ctrl+Shift+A archives the session you are looking at
 
 - FEATURE: `feat/archive-session-shortcut` (`1e78c99f4f`, pushed to the fork) adds the third operator chord. Ctrl+Shift+A archives the Session the window is showing, which is the row menu's Archive item on the keyboard.

@@ -1,5 +1,23 @@
 
 
+## 2026-09-16 - named Workspace group fold: built, and the installer rebuilt to carry both changes
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| New fold tests | pass | 4 new cases in `workspace-browser.client.spec.tsx`: fold from the header, remember the choice, start folded from a remembered choice, and mount on a view state that predates the field | VERIFIED |
+| Touched package suite | pass | ui-workspace 11 files, 215 passed (was 211 before this change) | VERIFIED |
+| typecheck | exit 0 | `pnpm run typecheck` exit 0; run again inside both pre-push hooks (17.9s and 44.7s) | VERIFIED |
+| build | exit 0 | `pnpm run build` exit 0, 240 client artifacts recorded | VERIFIED |
+| Markers in the built lib | present | `packages/client/ui-workspace/lib/client.js` carries `sectionShowsWorkspaces` (5), `groupChevronOpen` (3), `group.toggle` (3), and still `ARCHIVE_CHORD_LATCH_MS` (2) | VERIFIED |
+| Translation pair | consistent | re-recorded with `--write`, then checked on the named pair: consistent, exit 0 | VERIFIED |
+| Feature registry | 20 rows | parsed; new row `workspace-group-fold` -> `dsh-client-ui-workspace` / `lib/client.js` / `sectionShowsWorkspaces` | VERIFIED |
+| Installer rebuilt | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,914,731 bytes, 2026-09-16 00:19:52, superseding the 194,945,456-byte 19:05 build so one install carries both changes | VERIFIED |
+| Both changes inside the packaged seed | present | ui-workspace `.tgz` extracted from `win-unpacked`: `ARCHIVE_CHORD_LATCH_MS` (2), `sectionShowsWorkspaces` (5), `group.toggle` (3) | VERIFIED |
+| Release line | carries both commits | `update/v0.1.5-rc.2` and `feat/archive-session-shortcut` both read back at `e7b9f7ef6d` from the remote | VERIFIED |
+| Folded state survives a restart | persisted | the fold writes `sectionExpansion` into `dsh.workspace.view.v5`, and a mount on a stored `{ SIG: false }` starts folded | VERIFIED (jsdom) |
+| On-screen look of the header | chevron and hover correct | NOT DONE: nothing has looked at the rendered sidebar | UNVERIFIED |
+| Installed and used live | 20/20 markers, group folds | NOT DONE: install pending | UNVERIFIED |
+
 ## 2026-09-15 - Ctrl+Shift+A archive chord: built and packaged, install pending
 
 | Check | Expected | Result | Status |
