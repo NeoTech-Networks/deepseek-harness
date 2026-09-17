@@ -1,5 +1,27 @@
 
 
+## 2026-09-17 - the footer resolves the dashboard a Session names: built, tested, merged, packaged
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Root cause confirmed live | the Vercel workspace maps to nothing | 28 workspaces and 341 listed Sessions read from `~\.dsh\storages\workspace.json`; 67 resolve, and `C:\Projects\general\Vercel` (77 listed, 307 recorded) resolves none | VERIFIED |
+| The fallback signal exists | the oldest operator message is on disk | `~\.dsh\storages\session_projcache\sessions\9566aecf-....json` -> `titleInput.val.first.text` = `/dashboard https://ops.theseoitguy.net/keywords` (host-only projection, stateVersion 3) | VERIFIED |
+| Resolver unit suite | pass | `packages/api/session-controller/tests/workspace-links.host.spec.ts`: 18 cases pass (folder, subfolder, worktree tail, lookalike path, unmapped, missing and malformed maps, key inversion, no producer key, address intent, `/dashboard <key>`, modes refused, unknown host refused, workspace decides first, map reload) | VERIFIED |
+| Footer component suite | pass | `packages/client/ui-conversation/tests/skeleton.client.spec.tsx`: 27 pass, including "renders no footer at all for a workspace with no dashboard and no design project" | VERIFIED |
+| Touched package suites | pass | 70 files, 1175 passed, 1 skipped, 1 FAILED: `media-references.host.spec.ts` symlink `EPERM`, reproduced with the same test name and error on the base commit `e15a4fc5f4` in `dsh-footer-links` | VERIFIED (failure pre-existing) |
+| typecheck | exit 0 | `pnpm run typecheck` exit 0 | VERIFIED |
+| build | exit 0 | `pnpm run build` exit 0, 240 client artifacts | VERIFIED |
+| oxlint on the changed paths | 0 errors | 0 warnings, 0 errors on the 5 changed files. The base commit's `ConversationRoot.tsx` reported 1 error (`no-unnecessary-condition` on `sessionId !== undefined`, already narrowed by `!hero`); it is fixed in the changed line | VERIFIED |
+| i18n gate | no new findings | exits 1 on the 2 known `ui-sidebar-explorer/src/client/definition.ts` strings; zero findings in the changed files | VERIFIED (failure pre-existing) |
+| Resolution after the fix | more Sessions resolve | over the real stores: 761 recorded Sessions 85 -> 132, the 341 listed Sessions 67 -> 106, the Vercel folder 0 -> 29 of 77. Harness: `C:\Projects\logs\2026-09-17\dsh-footer-intent\resolver_count.py` | VERIFIED |
+| Map check | exit 0 with the checkout note | `dsh_dashboard_links.py --check`: estate 89 dashboard and 83 design entries, stored 89 and 83, "both maps match the live estate"; the checkout is 38 commits behind origin/main and none of the 7 changed contracts touches a mapped field | VERIFIED |
+| Release line | carries the commit | `43500cd452` on `fix/session-footer-intent` and on `update/v0.1.5-rc.2`; both refs pushed to the fork, `e15a4fc5f4..43500cd452 update/v0.1.5-rc.2` reported by the push | VERIFIED |
+| Seed proof before handover | markers inside the packaged seed | `deepseek-ai-dsh-api-session-controller-0.1.5-rc.2.tgz -> package/lib/index.js`: `resolveSessionLinks` (2), `resolveWorkspaceIntent` (2), `titleInput` (1), `dashboard-links.json` (2); `deepseek-ai-dsh-client-ui-conversation-0.1.5-rc.2.tgz -> package/lib/client.js`: `hasWorkspaceLinks` (2), `data-session-footer` (3) | VERIFIED |
+| Installer | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,931,936 bytes, 2026-09-17 19:16:27, `win-x64-release.json` version `0.1.5-rc.2` | VERIFIED |
+| Install and the running build | markers in the RUNNING profile | PENDING: the operator has not run the installer yet. This is the resume point | UNVERIFIED |
+| Footer seen on screen | the two labelled lines | PENDING, and it has never been done. A Vercel-workspace Session that starts with `/dashboard <key>` is the case to capture | UNVERIFIED |
+
+
 ## 2026-09-17 - the two-line session footer: built, tested, merged, packaged
 
 | Check | Expected | Result | Status |
