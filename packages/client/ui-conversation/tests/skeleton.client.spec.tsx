@@ -714,15 +714,11 @@ describe('Session footer workspace lines', () => {
     expect(design?.textContent).toBe(`${designLabel}YouTube`)
   })
 
-  it('keeps both labels, empty, for a workspace with no dashboard and no design project', () => {
+  it('renders no footer at all for a workspace with no dashboard and no design project', () => {
     const b = mount(sessionSnapshotOf())
-    const footer = b.view.container.querySelector('[data-session-footer]')
-    expect(footer?.querySelector('[data-session-footer-line="dashboard"]')?.textContent)
-      .toBe(dashboardLabel)
-    expect(footer?.querySelector('[data-session-footer-line="design-project"]')?.textContent)
-      .toBe(designLabel)
-    // The grey session summary that used to own this footer is gone.
-    expect(footer?.textContent).not.toContain('Child')
+    expect(b.view.container.querySelector('[data-session-footer]')).toBeNull()
+    expect(b.view.container.textContent).not.toContain(dashboardLabel)
+    expect(b.view.container.textContent).not.toContain(designLabel)
   })
 
   it('serves whichever half resolves without inventing the other', () => {

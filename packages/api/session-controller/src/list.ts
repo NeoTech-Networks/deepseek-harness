@@ -9,6 +9,7 @@ import { SessionLogOffset } from '@deepseek-ai/dsh-session'
 import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-session-projection-cache'
+import type {} from '@deepseek-ai/dsh-session-title'
 import { SessionQueryError, type SessionSearchCursor } from '@deepseek-ai/dsh-session-query'
 import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 import { z } from 'zod'
@@ -16,7 +17,9 @@ import {
   SESSION_SEARCH_RESULT_LIMIT,
   SESSION_SEARCH_SNIPPET_MAX_CODE_POINTS,
 } from './types.ts'
-import { loadWorkspaceLinks, resolveWorkspaceLinks, type WorkspaceLinks } from './workspace-links.ts'
+import {
+  loadWorkspaceLinks, resolveSessionLinks, type WorkspaceLinks,
+} from './workspace-links.ts'
 import type {
   SessionListMetadata, SessionProjectionHints, SessionProjectionValues, SessionSearchItem,
   SessionSearchValue, SessionSummary,
@@ -26,21 +29,52 @@ const SEARCH_PROVIDER_CALL_LIMIT = 100
 const SESSION_SEARCH_QUERY_MAX_CHARS = 500
 const MESSAGE_TYPES = new Set(['user/message', 'assistant/message'])
 
-/** Workspace associations (dashboard and design project), cached from the app's profile on first use. */
-let workspaceLinks: ReadonlyMap<string, WorkspaceLinks> | undefined
+/**
+ * Read the oldest operator message a Session carries.
+ *
+ * The title unit folds exactly that message (source `user`, non-empty text)
+ * and keeps it at O(1), so the footer's fallback signal costs no log scan. The
+ * read is guarded: a profile without the title package, or a Session whose
+ * unit has not materialized, falls back to the workspace lookup alone.
+ *
+ * @param ctx - Host context carrying the projection service.
+ * @param session - attached Session to read.
+ * @returns the message text, or `undefined` before one exists.
+ */
+function firstOperatorText(ctx: Context, session: Session): string | undefined {
+  try {
+    return ctx.sessionProjections.stateOf(session, 'titleInput')?.first?.text
+  } catch (error) {
+    ctx.logger.warn(
+      `api-session.list: title input for "${session.id}" failed; using the workspace alone: ${String(error)}`,
+    )
+    return undefined
+  }
+}
 
-/** Resolve the dashboard and design project a Session workspace is associated with. */
-function workspaceLinksFor(cwd: string | undefined): WorkspaceLinks {
-  workspaceLinks ??= loadWorkspaceLinks(join(homedir(), '.dsh'))
-  return resolveWorkspaceLinks(cwd, workspaceLinks)
+/**
+ * Resolve the dashboard and design project one Session is associated with.
+ *
+ * The workspace directory decides first and unchanged. The Session's oldest
+ * operator message is consulted only when the workspace names no dashboard,
+ * which is the case for every Session started in a folder that owns no single
+ * dashboard. The maps are re-read when either file changes, so a regenerated
+ * map needs no restart.
+ *
+ * @param cwd - the Session's workspace directory.
+ * @param firstPrompt - the Session's oldest operator message, when it has one.
+ * @returns the association, or an empty object when neither signal names one.
+ */
+function workspaceLinksFor(cwd: string | undefined, firstPrompt: string | undefined): WorkspaceLinks {
+  return resolveSessionLinks(cwd, firstPrompt, loadWorkspaceLinks(join(homedir(), '.dsh')))
 }
 
 /** Spread this into a list summary to carry the workspace's dashboard and design project. */
-function workspaceLinksField(cwd: string | undefined): {
+function workspaceLinksField(cwd: string | undefined, firstPrompt: string | undefined): {
   readonly dashboardUrl?: string
   readonly designProject?: string
 } {
-  return workspaceLinksFor(cwd)
+  return workspaceLinksFor(cwd, firstPrompt)
 }
 
 const sessionListMetadataSchema: z.ZodType<SessionListMetadata> = z.object({
@@ -134,7 +168,7 @@ export class ApiSessionList {
       running: this.ctx.agents.get(session.id)?.status === 'running',
       blank: metadata?.blank ?? session.seq === 0,
       ...listFields(session.header),
-      ...workspaceLinksField(session.header.cwd),
+      ...workspaceLinksField(session.header.cwd, firstOperatorText(this.ctx, session)),
       ...(projections === undefined ? {} : { projections }),
     }
   }
@@ -174,7 +208,10 @@ export class ApiSessionList {
       // A large, metadata-less, or inaccessible cache miss remains unknown and visible.
       blank: metadata?.blank ?? false,
       ...listFields(header),
-      ...workspaceLinksField(header.cwd),
+      // A cold Session's log is never opened on this path, so the workspace is
+      // the only signal it carries. The footer renders under the open Session's
+      // composer, which is live, and resolves from that Session's own message.
+      ...workspaceLinksField(header.cwd, undefined),
       ...(projections === undefined ? {} : { projections }),
     }
   }

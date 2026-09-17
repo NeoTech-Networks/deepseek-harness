@@ -8,12 +8,24 @@
  *   ~/.dsh/dashboard-links.json   workspace directory -> front-door URL
  *   ~/.dsh/design-links.json      workspace directory -> Claude Design project name
  *
- * A Session's workspace is immutable (it is the header cwd written at
- * creation), so resolving from it keeps the footer static for the life of the
- * Session with no extra state to store.
+ * Two signals answer "which dashboard is this Session about", in this order:
+ *
+ *   1. the Session's workspace directory, which is immutable (it is the header
+ *      cwd written at creation), so the answer stays static for the life of the
+ *      Session with no extra state to store;
+ *   2. failing that, the Session's OLDEST operator message, when it names a
+ *      dashboard: `/dashboard <key>` or a dashboard front-door address.
+ *
+ * The second signal is what resolves a Session started in a folder that belongs
+ * to no single dashboard. The `Vercel` workspace key is the load-bearing case:
+ * every dashboard change is started there, and that folder maps to nothing, so
+ * before this the footer was blank for every dashboard Session started in it.
+ *
+ * Both map files are re-read when either one changes, so a regenerated map is
+ * picked up without restarting the app.
  */
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
 /** The dashboard and design project a Session workspace belongs to. */
@@ -24,6 +36,16 @@ export interface WorkspaceLinks {
   readonly designProject?: string
 }
 
+/** Both lookups the footer needs, plus the front-door hosts a message may use. */
+export interface WorkspaceLinkIndex {
+  /** Normalized mapped directory to association. */
+  readonly byDirectory: ReadonlyMap<string, WorkspaceLinks>
+  /** Dashboard key (`packages/dashboards/src/<key>`) to association. */
+  readonly byKey: ReadonlyMap<string, WorkspaceLinks>
+  /** Lowercased hosts every dashboard address in the maps uses. */
+  readonly hosts: ReadonlySet<string>
+}
+
 const DASHBOARD_FILE = 'dashboard-links.json'
 const DESIGN_FILE = 'design-links.json'
 /**
@@ -32,6 +54,23 @@ const DESIGN_FILE = 'design-links.json'
  * the absolute primary-checkout prefix of the mapped directory does not apply.
  */
 const DASHBOARD_TAIL_SEGMENTS = 4
+/** The three path segments a mapped dashboard page-source folder ends with. */
+const DASHBOARD_SOURCE_PREFIX = 'packages/dashboards/src'
+/** The dashboard skill's command form, whose target names one dashboard. */
+const INTENT_COMMAND = '/dashboard'
+/** `/dashboard` words that select a mode rather than a dashboard. */
+const INTENT_MODES = new Set(['orient', 'explain', 'new', 'design', 'remove'])
+/** Addresses inside a message; the host and the key must both be known to count. */
+const URL_PATTERN = /https?:\/\/[^\s)\]}>"'`]+/g
+
+/** One cached map build, dropped when either file's stamp moves. */
+interface WorkspaceLinkCache {
+  readonly root: string
+  readonly stamp: string
+  readonly index: WorkspaceLinkIndex
+}
+
+let cache: WorkspaceLinkCache | undefined
 
 /**
  * Fold a path to the form the maps are compared in.
@@ -40,6 +79,20 @@ const DASHBOARD_TAIL_SEGMENTS = 4
  */
 function normalizedPath(value: string): string {
   return value.replace(/[\\/]+/g, '/').replace(/\/+$/, '').toLowerCase()
+}
+
+/**
+ * Identify one map file's current contents cheaply.
+ * @param path - absolute path of a map file.
+ * @returns a modification-time and size stamp, or `-` when unreadable.
+ */
+function fileStamp(path: string): string {
+  try {
+    const stats = statSync(path)
+    return `${String(stats.mtimeMs)}:${String(stats.size)}`
+  } catch {
+    return '-'
+  }
 }
 
 /**
@@ -60,23 +113,57 @@ function readStringMap(path: string): ReadonlyMap<string, string> {
 }
 
 /**
- * Load every workspace association under one profile directory.
+ * Read the dashboard key a mapped directory names, when it is a page source.
  *
- * The two files are read independently on purpose: the design map can be
- * missing while the dashboard map is present, which is exactly the state a
- * build older than the design map leaves behind. A missing or malformed file
- * contributes nothing rather than failing the list, so an unreadable map costs
- * a blank footer line and never a broken sidebar.
+ * Only `.../packages/dashboards/src/<key>` yields a key. Every other mapped
+ * directory (the producer service folders the generator also writes) is left
+ * out, because it names a service and not a dashboard.
+ *
+ * @param directory - normalized mapped directory.
+ * @returns the lowercased key, or `undefined` for anything else.
+ */
+function dashboardKeyOf(directory: string): string | undefined {
+  const segments = directory.split('/')
+  if (segments.length < DASHBOARD_TAIL_SEGMENTS) return undefined
+  if (segments.slice(-DASHBOARD_TAIL_SEGMENTS, -1).join('/') !== DASHBOARD_SOURCE_PREFIX) {
+    return undefined
+  }
+  const key = segments[segments.length - 1]
+  return key === undefined || key === '' ? undefined : key
+}
+
+/**
+ * Read the host one front-door address uses.
+ * @param address - a mapped dashboard URL.
+ * @returns the lowercased host, or `undefined` when it cannot be parsed.
+ */
+function hostOf(address: string): string | undefined {
+  try {
+    const host = new URL(address).host.toLowerCase()
+    return host === '' ? undefined : host
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Build both lookups from the two map files under one profile directory.
+ *
+ * The files are read independently on purpose: the design map can be missing
+ * while the dashboard map is present, which is exactly the state a build older
+ * than the design map leaves behind. A missing or malformed file contributes
+ * nothing rather than failing the list, so an unreadable map costs a blank
+ * footer line and never a broken sidebar.
  *
  * @param root - profile directory holding both map files.
- * @returns normalized workspace directory to merged association.
+ * @returns the directory lookup, the dashboard-key lookup, and the known hosts.
  */
-export function loadWorkspaceLinks(root: string): ReadonlyMap<string, WorkspaceLinks> {
-  const links = new Map<string, WorkspaceLinks>()
+function buildIndex(root: string): WorkspaceLinkIndex {
+  const byDirectory = new Map<string, WorkspaceLinks>()
   const add = (directory: string, value: WorkspaceLinks): void => {
     const key = normalizedPath(directory)
     if (key === '') return
-    links.set(key, { ...links.get(key), ...value })
+    byDirectory.set(key, { ...byDirectory.get(key), ...value })
   }
   for (const [directory, dashboardUrl] of readStringMap(join(root, DASHBOARD_FILE))) {
     add(directory, { dashboardUrl })
@@ -84,7 +171,35 @@ export function loadWorkspaceLinks(root: string): ReadonlyMap<string, WorkspaceL
   for (const [directory, designProject] of readStringMap(join(root, DESIGN_FILE))) {
     add(directory, { designProject })
   }
-  return links
+  const byKey = new Map<string, WorkspaceLinks>()
+  const hosts = new Set<string>()
+  for (const [directory, value] of byDirectory) {
+    if (value.dashboardUrl !== undefined) {
+      const host = hostOf(value.dashboardUrl)
+      if (host !== undefined) hosts.add(host)
+    }
+    const key = dashboardKeyOf(directory)
+    if (key !== undefined && !byKey.has(key)) byKey.set(key, value)
+  }
+  return { byDirectory, byKey, hosts }
+}
+
+/**
+ * Load every workspace association under one profile directory.
+ *
+ * The build is cached against a modification-time and size stamp of both
+ * files, so a map regenerated while the app is running is picked up by the next
+ * list read. The cache holds one profile root, which is all the app uses.
+ *
+ * @param root - profile directory holding both map files.
+ * @returns both lookups over the current contents of those files.
+ */
+export function loadWorkspaceLinks(root: string): WorkspaceLinkIndex {
+  const stamp = `${fileStamp(join(root, DASHBOARD_FILE))}|${fileStamp(join(root, DESIGN_FILE))}`
+  if (cache !== undefined && cache.root === root && cache.stamp === stamp) return cache.index
+  const index = buildIndex(root)
+  cache = { root, stamp, index }
+  return index
 }
 
 /**
@@ -110,7 +225,7 @@ function matches(needle: string, root: string): boolean {
  * file order wins, which keeps the answer stable between runs.
  *
  * @param cwd - the Session's workspace directory, as its header records it.
- * @param links - map returned by {@link loadWorkspaceLinks}.
+ * @param links - directory lookup returned by {@link loadWorkspaceLinks}.
  * @returns the association, or an empty object when the workspace has none.
  */
 export function resolveWorkspaceLinks(
@@ -123,4 +238,92 @@ export function resolveWorkspaceLinks(
     if (matches(needle, root)) return value
   }
   return {}
+}
+
+/**
+ * Strip the decoration a prompt puts around one whitespace-delimited token.
+ * @param token - one raw token.
+ * @returns the token without surrounding punctuation, lowercased.
+ */
+function cleanToken(token: string): string {
+  return token
+    .replace(/^[^0-9a-z/]+/i, '')
+    .replace(/[^0-9a-z]+$/i, '')
+    .toLowerCase()
+}
+
+/**
+ * Read the dashboard target a `/dashboard <target>` command names.
+ * @param text - one operator message.
+ * @returns the lowercased target, or `undefined` when the command names none.
+ */
+function commandTarget(text: string): string | undefined {
+  const tokens = text.split(/\s+/)
+  for (let position = 0; position < tokens.length; position++) {
+    if (cleanToken(tokens[position] ?? '') !== INTENT_COMMAND) continue
+    const target = cleanToken(tokens[position + 1] ?? '')
+    if (target === '' || INTENT_MODES.has(target)) return undefined
+    return target
+  }
+  return undefined
+}
+
+/**
+ * Resolve the dashboard one operator message names, when it names one.
+ *
+ * A dashboard address is accepted only when BOTH its host is one of the
+ * front-door hosts the maps already use and its last path segment is a known
+ * dashboard key, so a client-site URL that happens to end in a key cannot
+ * claim a dashboard. The command form is accepted only for the documented
+ * dashboard skill, and never for one of its modes. The oldest operator message
+ * is the one passed in, so the footer is decided once and stays put.
+ *
+ * @param text - the Session's oldest operator message, if it has one.
+ * @param index - lookups returned by {@link loadWorkspaceLinks}.
+ * @returns the association, or an empty object when the message names none.
+ */
+export function resolveWorkspaceIntent(
+  text: string | undefined,
+  index: WorkspaceLinkIndex,
+): WorkspaceLinks {
+  if (text === undefined || text === '') return {}
+  for (const match of text.matchAll(URL_PATTERN)) {
+    let address: URL
+    try {
+      address = new URL(match[0].replace(/[.,;:!?]+$/, ''))
+    } catch {
+      continue
+    }
+    if (!index.hosts.has(address.host.toLowerCase())) continue
+    const segment = address.pathname.split('/').filter(Boolean).pop()
+    if (segment === undefined) continue
+    const hit = index.byKey.get(segment.toLowerCase())
+    if (hit !== undefined) return hit
+  }
+  const target = commandTarget(text)
+  if (target === undefined) return {}
+  return index.byKey.get(target) ?? {}
+}
+
+/**
+ * Resolve one Session against both signals, with the workspace deciding first.
+ *
+ * The order is deliberate: the workspace answer is unchanged from before this
+ * pair existed, so no footer that already resolved can move. The message is
+ * consulted only when the workspace names no dashboard at all, which is the
+ * case this pair was added for.
+ *
+ * @param cwd - the Session's workspace directory.
+ * @param firstPrompt - the Session's oldest operator message, when it has one.
+ * @param index - lookups returned by {@link loadWorkspaceLinks}.
+ * @returns the association, or an empty object when neither signal names one.
+ */
+export function resolveSessionLinks(
+  cwd: string | undefined,
+  firstPrompt: string | undefined,
+  index: WorkspaceLinkIndex,
+): WorkspaceLinks {
+  const workspace = resolveWorkspaceLinks(cwd, index.byDirectory)
+  if (workspace.dashboardUrl !== undefined || workspace.designProject !== undefined) return workspace
+  return resolveWorkspaceIntent(firstPrompt, index)
 }

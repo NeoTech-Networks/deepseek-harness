@@ -345,13 +345,18 @@ export function ConversationRoot({
         : hero ? { placeholder: t('placeholder.hero') } : {}),
   })
 
+  // The footer earns its space only when it names something. A workspace that
+  // belongs to no dashboard is not a finding, so nothing renders rather than
+  // two bare labels; when one half resolves, both rows stay, as before.
+  const hasWorkspaceLinks = dashboardUrl !== undefined || designProject !== undefined
+
   const composerBar = (
     <div className={clsx(css.composerStack, hero && css.composerHero)}>
       {hero && <HeroShell t={t} renderSlot={renderSlot} />}
       {hero && heroWorkspaceRow}
       {zone !== undefined && renderSlot('conversation.input.dock', zone)}
       {inputBar}
-      {!hero && sessionId !== undefined && (
+      {!hero && hasWorkspaceLinks && (
         <div className={css.sessionFooter} data-session-footer="">
           <div className={css.sessionFooterLine} data-session-footer-line="dashboard">
             <span className={css.sessionFooterLabel}>{t('footer.dashboard')}</span>
