@@ -475,13 +475,14 @@
   visibility: hidden;
 }
 
-/* Session footer: read-only summary plus the optional dashboard link, shown
-   under the message box for an open session only. */
+/* Session footer: the workspace's dashboard address and the design project
+   behind it, shown under the message box for an open session only. Both rows
+   render for every session; a row with no association is its label alone. */
 .sessionFooter {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
   min-width: 0;
   margin-top: 2px;
   padding: 0 4px;
@@ -489,20 +490,27 @@
   line-height: 17px;
 }
 
-.sessionFooterSummary {
+.sessionFooterLine {
+  display: flex;
+  gap: 4px;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100%;
+  /* The address must stay readable in full, so the value wraps instead of
+     being clipped: an ellipsis here would hide the part that identifies the
+     page. */
+  overflow-wrap: anywhere;
+}
+
+.sessionFooterLabel {
+  flex: none;
   color: var(--dsw-alias-label-tertiary);
 }
 
-.sessionFooterDashboard {
-  flex: none;
+.sessionFooterValue {
   color: var(--dsw-alias-state-business-primary);
   text-decoration: none;
 }
 
-.sessionFooterDashboard:hover {
+.sessionFooterValue:hover {
   text-decoration: underline;
 }

@@ -144,8 +144,8 @@ export function ConversationRoot({
   const inputState = useInput(s => s)
   const cwd = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.cwd)
   const summaryBlank = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.blank)
-  const footerTitle = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.displayTitle)
   const dashboardUrl = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.dashboardUrl)
+  const designProject = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.designProject)
   const workspaces = useWorkspaces(s => s)
   // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
@@ -351,21 +351,27 @@ export function ConversationRoot({
       {hero && heroWorkspaceRow}
       {zone !== undefined && renderSlot('conversation.input.dock', zone)}
       {inputBar}
-      {!hero && sessionId !== undefined && (footerTitle !== undefined || dashboardUrl !== undefined) && (
+      {!hero && sessionId !== undefined && (
         <div className={css.sessionFooter} data-session-footer="">
-          {footerTitle !== undefined && (
-            <span className={css.sessionFooterSummary}>{footerTitle}</span>
-          )}
-          {dashboardUrl !== undefined && (
-            <a
-              className={css.sessionFooterDashboard}
-              href={dashboardUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {t('footer.dashboard')}
-            </a>
-          )}
+          <div className={css.sessionFooterLine} data-session-footer-line="dashboard">
+            <span className={css.sessionFooterLabel}>{t('footer.dashboard')}</span>
+            {dashboardUrl !== undefined && (
+              <a
+                className={css.sessionFooterValue}
+                href={dashboardUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {dashboardUrl}
+              </a>
+            )}
+          </div>
+          <div className={css.sessionFooterLine} data-session-footer-line="design-project">
+            <span className={css.sessionFooterLabel}>{t('footer.designProject')}</span>
+            {designProject !== undefined && (
+              <span className={css.sessionFooterValue}>{designProject}</span>
+            )}
+          </div>
         </div>
       )}
     </div>

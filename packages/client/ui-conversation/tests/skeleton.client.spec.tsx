@@ -126,6 +126,10 @@ function mount(
     composerBlock?: { reason: string }
     /** Mutable view ledger used by registration-order regressions. */
     viewTabs?: ViewTab[]
+    /** Dashboard URL the list projects for this Session, when one is mapped. */
+    dashboardUrl?: string
+    /** Claude Design project name the list projects for this Session. */
+    designProject?: string
   } = {},
 ) {
   const root = sid('root')
@@ -139,6 +143,8 @@ function mount(
     id: SID, displayTitle: 'Child', parentId: options.nestedSubagent === true ? parent : root,
     cwd: '/projects/one', running: false, blank: options.summaryBlank ?? false, updatedAt: 3,
     ...(options.summaryOrigin === undefined ? {} : { origin: options.summaryOrigin }),
+    ...(options.dashboardUrl === undefined ? {} : { dashboardUrl: options.dashboardUrl }),
+    ...(options.designProject === undefined ? {} : { designProject: options.designProject }),
   }
   const listed = options.omitSummaryRow !== true
   const sessions = createSnapshotStore<SessionListState>({
@@ -684,5 +690,58 @@ describe('ConversationRoot resident composer', () => {
   it('hero phase renders no width handles (no transcript to size)', () => {
     const b = mount(sessionSnapshotOf({ blank: true }))
     expect(b.view.container.querySelector('[data-width-handle]')).toBeNull()
+  })
+})
+
+describe('Session footer workspace lines', () => {
+  // This suite's locale seat is zh; the English wording is pinned separately
+  // below, because the label text itself is the contract.
+  const dashboardLabel = zh['footer.dashboard']
+  const designLabel = zh['footer.designProject']
+
+  it('renders the dashboard address and the design project under the composer', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      dashboardUrl: 'https://ops.theseoitguy.net/youtube-creator',
+      designProject: 'YouTube',
+    })
+    const footer = b.view.container.querySelector('[data-session-footer]')
+    expect(footer).not.toBeNull()
+    const dashboard = footer?.querySelector('[data-session-footer-line="dashboard"]')
+    expect(dashboard?.textContent).toBe(`${dashboardLabel}https://ops.theseoitguy.net/youtube-creator`)
+    const link = dashboard?.querySelector('a')
+    expect(link?.getAttribute('href')).toBe('https://ops.theseoitguy.net/youtube-creator')
+    const design = footer?.querySelector('[data-session-footer-line="design-project"]')
+    expect(design?.textContent).toBe(`${designLabel}YouTube`)
+  })
+
+  it('keeps both labels, empty, for a workspace with no dashboard and no design project', () => {
+    const b = mount(sessionSnapshotOf())
+    const footer = b.view.container.querySelector('[data-session-footer]')
+    expect(footer?.querySelector('[data-session-footer-line="dashboard"]')?.textContent)
+      .toBe(dashboardLabel)
+    expect(footer?.querySelector('[data-session-footer-line="design-project"]')?.textContent)
+      .toBe(designLabel)
+    // The grey session summary that used to own this footer is gone.
+    expect(footer?.textContent).not.toContain('Child')
+  })
+
+  it('serves whichever half resolves without inventing the other', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, { designProject: 'YouTube' })
+    const footer = b.view.container.querySelector('[data-session-footer]')
+    expect(footer?.querySelector('[data-session-footer-line="dashboard"]')?.textContent)
+      .toBe(dashboardLabel)
+    expect(footer?.querySelector('[data-session-footer-line="design-project"]')?.textContent)
+      .toBe(`${designLabel}YouTube`)
+  })
+
+  it('renders no footer for the hero, where no Session exists yet', () => {
+    const b = mount(sessionSnapshotOf({ blank: true }))
+    expect(b.view.container.querySelector('[data-session-footer]')).toBeNull()
+  })
+
+  it('names both rows exactly as the English seat asks, colon included', () => {
+    expect(en['footer.dashboard']).toBe('Dashboard:')
+    expect(en['footer.designProject']).toBe('Design Project:')
+    expect(zh['footer.designProject']).toBe('设计项目：')
   })
 })
