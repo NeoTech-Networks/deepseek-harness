@@ -1,77 +1,75 @@
 # Next session prompt
 
-Continue deepseek-harness. The 2026-09-16 build is INSTALLED AND VERIFIED at the
-code level (01:11 to 01:14): 20 of 20 local feature markers are present in the
-running build, and all three changes are in the running profile.
+Continue deepseek-harness. The session footer change is BUILT, TESTED, MERGED and
+PACKAGED. The installer is waiting for the operator, and the running app has NOT
+been verified.
 
-## What is left, and none of it is a read
+## The one thing waiting on Steve
 
-The mechanical half is done and recorded. The remaining three arms need hands or
-eyes, so they are Steve's, and only then does the loop close:
+Run this in a NEW PowerShell window (Win+R, `powershell`), then choose "Run anyway"
+if SmartScreen prompts on the unsigned installer:
 
-1. **Press Ctrl+Shift+A** with the All Sessions list open, then with the workspace
-   tree open. Expected: the session leaves both and the window shows the New
-   Session view. Then once with no session open: a banner, nothing archived.
-2. **Fold a named group** from its header: a triangle beside the group name, and
-   the label should look larger than the old 11px. Then restart the app and
-   confirm the fold is still there.
-3. **Look at the grouped sidebar as a whole.** The chevron and hover are copied
-   from the All Sessions header and the 13px size is a CSS value; nobody has seen
-   the rendered result.
+```
+powershell -ExecutionPolicy Bypass -File "C:\Projects\worktrees\dsh-update-v0.1.5-rc.2\finish-install.ps1"
+```
 
-## One small thing to decide, not to fix blind
+It closes the app, installs silently, clears the stale profile, relaunches, and
+prints `SETUP COMPLETE. Running <version>`. It is never run from inside a session:
+it force-closes the app that hosts the session. Expect about four minutes with no
+window before that line appears; do not re-run it because it looks stuck.
 
-Add/Remove Programs holds TWO rows for this single install:
-`7260a3eb-fb49-5c0a-a594-ea7b31e1d959` and `7808434f-469e-5eba-848e-edf64d3b94ce`,
-same version, same uninstaller path. It is the app-id mismatch first recorded
-2026-09-10 (the build sets `DSH_DESKTOP_APP_ID=com.neotechnetworks.deepseek-harness`;
-the install line predates it). Both rows remove the same install, so it is
-cosmetic. The 2026-09-09 session cleaned the same duplicate by exporting the key
-to `~\.claude\Exports` and deleting it. The durable fix is to settle on one app id
-in the ds-harness-update skill and in every future build, and only then retire the
-extra row.
+Artifact: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,884,537 bytes,
+2026-09-17 01:20:22, built in `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`.
+
+## What to verify after he confirms (all of it is required)
+
+1. `py C:\Claude\bin\dsh_local_features_check.py` reads 21 of 21 markers. The new
+   row is `session-footer-design-project` (marker `data-session-footer-line`).
+2. The RUNNING profile's `~\.dsh\profiles\desktop\node_modules\@deepseek-ai\dsh-client-ui-conversation\lib\client.js`
+   carries `data-session-footer-line` and no `sessionFooterSummary`.
+3. The newest `~\.dsh\desktop\logs\provision-*.log` ends `staged health check passed`,
+   `staging profile activated as 0.1.5-rc.2`, `applyRelease finished`.
+4. The VISIBLE half, which no read can do: open a Session whose workspace is a
+   dashboard folder (for example
+   `C:\Projects\repos\vercel-services\packages\dashboards\src\youtube-creator`, or any
+   vercel-services worktree of it) and confirm it shows
+   `Dashboard: https://ops.theseoitguy.net/youtube-creator` and
+   `Design Project: YouTube`; then open one in an ordinary folder and confirm both
+   labels are present with empty values and that the grey session summary is GONE.
 
 ## What shipped, for the record
 
-Worktree `C:\Projects\worktrees\dsh-archive-shortcut`, branch
-`feat/archive-session-shortcut`, three commits, all fast-forward merged into
-`update/v0.1.5-rc.2` and pushed (both refs read back at `1a77e844ad`):
-
-- `1e78c99f4f` Ctrl+Shift+A archives the Session the window is showing.
-- `e7b9f7ef6d` a named Workspace group folds from its own header, choice persisted.
-  The folded map was added without a persist-key bump on purpose; read the
-  2026-09-16 section of `CURRENT_STATE.md` before touching that store.
-- `1a77e844ad` the group header label is 13px (was 11px), the default for every
-  group.
-
-Installer run: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,906,904 bytes,
-2026-09-16 00:39:04. Evidence of the install and the marker read-backs is in the
-2026-09-16 sections of `CURRENT_STATE.md` and `VERIFICATION_RESULTS.md`; the
-provision log is `~\.dsh\desktop\logs\provision-2026-09-16T05-11-34-481Z.log`.
+- `4980d90f54` host resolver (`packages/api/session-controller/src/workspace-links.ts`,
+  wired through `list.ts`, `types.ts`, the client summary and the lineage entry).
+- `e15a4fc5f4` the two footer rows, the CSS, the locale pair, and the tests.
+- Both fast-forward merged into `update/v0.1.5-rc.2`, both refs read back at
+  `e15a4fc5f4`.
+- Maps: `~\.dsh\dashboard-links.json` (66 entries) and `~\.dsh\design-links.json`
+  (62 entries, every name read from Claude Design). The generator is
+  `C:\Claude\bin\dsh_dashboard_links.py`; `list_projects` alone is not enough
+  (20 plus 9 projects, no pagination), so it closes the rest with `get_project`.
+- The feature registry is now 21 rows.
 
 ## Still open elsewhere, unchanged
 
-- OPEN_ISSUES 27: the All Sessions rail defect. NOT touched by this work.
-- OPEN_ISSUES 28: the session footer, the workspace count badge and a long
-  question card have still never been eyeballed on screen.
-- OPEN_ISSUES 29: `deepseek-flash` stalls intermittently; the 25s first-payload
-  bound and the retry policy are live.
-- PRE-EXISTING GATE FAILURE, found 2026-09-15: `verify-client-ui-i18n` exits 1 on
-  two hard-coded strings in
-  `packages/client/ui-sidebar-explorer/src/client/definition.ts`. Untouched here
-  and present on the committed base. Decide whether to fix it or record it as
-  intended.
-- Step 8 housekeeping: the 2026-09-15/16 pass is written (version-history row,
-  error ledger 37, CHANGES page). The 2026-09-13 gaps (question-card scroll, pwsh
-  wrap, All Sessions recovery) are still owed.
-- Not taken up: upstream `dsh-v0.1.6-alpha.1` (2026-09-15). The installed app and
-  the local stack are both on `0.1.5-rc.2`, deliberately.
+- OPEN_ISSUES 28: the footer was never eyeballed. This change rebuilds that footer,
+  so the item should be closed by the check above or re-stated against the new shape.
+- OPEN_ISSUES 27: the All Sessions rail defect. NOT touched.
+- PRE-EXISTING GATE FAILURE: `verify-client-ui-i18n` exits 1 on two hard-coded
+  strings in `packages/client/ui-sidebar-explorer/src/client/definition.ts`
+  (`pinnedText` and the text id). Confirmed identical on `1a77e844ad`.
+  Decide whether to fix it or record it as intended.
+- PRE-EXISTING TEST FAILURE: `packages/api/session-controller/tests/media-references.host.spec.ts`
+  fails on `symlink EPERM` with Developer Mode off, on both lines.
+- Not taken up: upstream `dsh-v0.1.6-alpha.1`. The installed app and the local stack
+  stay on `0.1.5-rc.2` deliberately.
 
 ## Checkout state
 
-`C:\Projects\repos\deepseek-harness` is on `master` (this file and the other state
-files are committed there). The RC line lives in
-`C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`, which still carries five MODIFIED
-state files left by an earlier session; they are stale copies of the
-OPEN_ISSUES-16 kind. Do not commit or publish them, and compare against
+`C:\Projects\repos\deepseek-harness` is on `master` (the state files live there).
+The release line is in `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`, which still
+carries five MODIFIED state files left by an earlier session; they are stale copies
+of the OPEN_ISSUES-16 kind. Do not commit or publish them, and compare against
 `git show origin/master:<file>` before touching any state file in a worktree.
+`C:\Projects\worktrees\dsh-footer-links` is this change's feature worktree;
+`feat/session-footer-links` is merged and can be deleted when convenient.

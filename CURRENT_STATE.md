@@ -1,5 +1,19 @@
 
 
+## 2026-09-17 - the session footer lists the dashboard and the design project, and one installer carries it
+
+- CHANGE (operator request): the footer under the message box now carries TWO labelled lines for an open Session, `Dashboard: <full url>` and `Design Project: <name>`. Both rows render for every Session, each with its label alone when the workspace has no association. The grey session-summary line that used to own that footer is REMOVED by instruction, and the dashboard value is now the whole address (still a link) instead of the word "Dashboard".
+- COMMITS: `4980d90f54` (api-session-controller: the resolver plus tests) and `e15a4fc5f4` (ui-conversation: the two rows, the locale pair, the tests) on `feat/session-footer-links`, fast-forward merged into `update/v0.1.5-rc.2`. Both refs read back from the fork at `e15a4fc5f4`.
+- TWO MAPS, NOT ONE: `~\.dsh\dashboard-links.json` had to keep its flat `{folder: url}` shape because an older build reads it, so the design names went to a SECOND flat file, `~\.dsh\design-links.json`, written in the same run of `C:\Claude\bin\dsh_dashboard_links.py`. Either file can be missing; the host reads them independently.
+- WHAT THE DESIGN LISTING ACTUALLY GIVES YOU (live reads): `list_projects` answers 20 projects on the primary account and 9 on `team_account`, takes no limit and no cursor (both schemas read live, `properties: {}`), and therefore covers 29 of the 46 distinct design project ids the contracts name. `get_project` by id resolves the rest, and with it every one of the 62 design links carries a real Claude Design name: `cfo` -> `NeoTech Monthly Billing`, `youtube-creator` -> `YouTube`, `all-postgres-databases` -> `Database View`. ZERO fell back to the contract title.
+- RESOLUTION ALSO MATCHES A WORKTREE, and that is the part that makes it useful: dashboard work runs in vercel-services worktrees (about 200 of them under `C:\Projects\_wt\...`), where the mapped absolute path of the primary checkout does not apply. `packages/api/session-controller/src/workspace-links.ts` matches the mapped directory or its trailing `packages/dashboards/src/<key>`, case-insensitively and separator-insensitively.
+- THE OLD MAP WAS STALE, AND THAT WAS THE FIRST FINDING: the previous `dashboard-links.json` held 67 entries. The estate independently yields exactly 66 live + react keys with a live route (counted from the contracts in the same run), so the regenerated file matches the estate and the 67th entry was a leftover.
+- GATES: the two touched package suites read 1166 passed of 1168, and the single failure is the known no-symlink-privilege `media-references` case, reproduced unchanged on `1a77e844ad`. `pnpm run typecheck` exit 0. `pnpm run build` exit 0 with 240 client artifacts. The pre-push hook typecheck passed on both pushes. `verify-client-ui-i18n` still exits 1 on the two pre-existing `ui-sidebar-explorer` strings, byte-identical on `1a77e844ad`.
+- INSTALLER BUILT AND PROVEN AT THE SEED LEVEL: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,884,537 bytes, 2026-09-17 01:20:22, worktree `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`. Out of the packaged seed: `deepseek-ai-dsh-client-ui-conversation-0.1.5-rc.2.tgz -> package/lib/client.js` carries `data-session-footer-line` (2) and NO `sessionFooterSummary` (0), and `deepseek-ai-dsh-api-session-controller-0.1.5-rc.2.tgz -> package/lib/index.js` reads both map files.
+- FEATURE REGISTRY: 21 rows now. The `session-footer` row's wording was corrected (it described the old summary line) and `session-footer-design-project` was added with marker `data-session-footer-line`.
+- INSTALL PENDING. The installer force-closes the app that hosts the session that built it, so the running build cannot be read back from that session.
+- STILL OWED AFTER THE INSTALL: `dsh_local_features_check.py` must read 21 of 21, the marker must come back out of the RUNNING profile's `dsh-client-ui-conversation\lib\client.js`, the provision log must end `applyRelease finished`, and then someone has to LOOK at a Session in a dashboard folder and a Session in an ordinary folder. Nothing has seen the rendered footer.
+
 ## 2026-09-16 - the install finished: 20 of 20 markers, all three changes in the running code
 
 - INSTALLED AND VERIFIED at 01:11 to 01:14. Evidence: the installed exe reads 2026-09-16 00:39:00 against the 00:39:04 artifact; four processes started 01:11:32, 01:11:34, 01:13:53 and 01:14:18; the provision log `~\.dsh\desktop\logs\provision-2026-09-16T05-11-34-481Z.log` runs `seed integrity verified` then `staged health check passed` then `staging profile activated as 0.1.5-rc.2` then `applyRelease finished`; the freshly extracted profile's ui-workspace files read 01:11:47 to 01:12:51.
@@ -191,16 +205,16 @@ prints the feature-check command.
   Auto-managed by the claude-memory save-state hook.
   Anything between :begin and :end is overwritten on every save-state.
   Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=ed63410e-aa2b-4f97-88cd-17c99e25805e at=2026-09-14T21:43:25.655801+00:00
+  Last write: actor=claude-code:steve session=96b1d58a-6f53-4d12-a9e7-f09748fb3936 at=2026-09-16T05:25:45.908935+00:00
 -->
-## Last save-state (2026-09-14T21:43:25.655801+00:00)
+## Last save-state (2026-09-16T05:25:45.908935+00:00)
 
 - Trigger: `save_state`
 - Actor: `claude-code:steve`
-- Session id: `ed63410e-aa2b-4f97-88cd-17c99e25805e`
+- Session id: `96b1d58a-6f53-4d12-a9e7-f09748fb3936`
 - Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
 - Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-752003ad-788b-4b02-917c-fb8f2d3bb756
+- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-98b7e8a8-dab7-42bf-b4b7-f4e3091fc725
 
 <!-- claude-memory-actor:end -->
 
