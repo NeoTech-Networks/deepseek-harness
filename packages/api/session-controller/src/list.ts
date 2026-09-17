@@ -1,6 +1,5 @@
 /** Cold-safe Session list and search projection. */
 
-import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
@@ -17,6 +16,7 @@ import {
   SESSION_SEARCH_RESULT_LIMIT,
   SESSION_SEARCH_SNIPPET_MAX_CODE_POINTS,
 } from './types.ts'
+import { loadWorkspaceLinks, resolveWorkspaceLinks, type WorkspaceLinks } from './workspace-links.ts'
 import type {
   SessionListMetadata, SessionProjectionHints, SessionProjectionValues, SessionSearchItem,
   SessionSearchValue, SessionSummary,
@@ -26,42 +26,21 @@ const SEARCH_PROVIDER_CALL_LIMIT = 100
 const SESSION_SEARCH_QUERY_MAX_CHARS = 500
 const MESSAGE_TYPES = new Set(['user/message', 'assistant/message'])
 
-/** cwd -> dashboard URL association, cached from the app's profile on first use. */
-let dashboardLinks: ReadonlyMap<string, string> | undefined
+/** Workspace associations (dashboard and design project), cached from the app's profile on first use. */
+let workspaceLinks: ReadonlyMap<string, WorkspaceLinks> | undefined
 
-function normalizedPath(value: string): string {
-  return value.replace(/[\\/]+/g, '/').replace(/\/+$/, '').toLowerCase()
+/** Resolve the dashboard and design project a Session workspace is associated with. */
+function workspaceLinksFor(cwd: string | undefined): WorkspaceLinks {
+  workspaceLinks ??= loadWorkspaceLinks(join(homedir(), '.dsh'))
+  return resolveWorkspaceLinks(cwd, workspaceLinks)
 }
 
-function loadDashboardLinks(): ReadonlyMap<string, string> {
-  try {
-    const raw = readFileSync(join(homedir(), '.dsh', 'dashboard-links.json'), 'utf8')
-    const parsed: unknown = JSON.parse(raw)
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return new Map()
-    return new Map(Object.entries(parsed as Record<string, unknown>).filter(
-      (entry): entry is [string, string] => typeof entry[1] === 'string',
-    ))
-  } catch {
-    return new Map()
-  }
-}
-
-/** Resolve the dashboard a Session workspace is associated with, by directory ancestry. */
-function dashboardUrlFor(cwd: string | undefined): string | undefined {
-  if (cwd === undefined || cwd === '') return undefined
-  dashboardLinks ??= loadDashboardLinks()
-  const needle = normalizedPath(cwd)
-  for (const [root, url] of dashboardLinks) {
-    const rootNorm = normalizedPath(root)
-    if (needle === rootNorm || needle.startsWith(`${rootNorm}/`)) return url
-  }
-  return undefined
-}
-
-/** Spread this into a list summary to carry the workspace's dashboard URL when one exists. */
-function dashboardField(cwd: string | undefined): { readonly dashboardUrl?: string } {
-  const dashboardUrl = dashboardUrlFor(cwd)
-  return dashboardUrl === undefined ? {} : { dashboardUrl }
+/** Spread this into a list summary to carry the workspace's dashboard and design project. */
+function workspaceLinksField(cwd: string | undefined): {
+  readonly dashboardUrl?: string
+  readonly designProject?: string
+} {
+  return workspaceLinksFor(cwd)
 }
 
 const sessionListMetadataSchema: z.ZodType<SessionListMetadata> = z.object({
@@ -155,7 +134,7 @@ export class ApiSessionList {
       running: this.ctx.agents.get(session.id)?.status === 'running',
       blank: metadata?.blank ?? session.seq === 0,
       ...listFields(session.header),
-      ...dashboardField(session.header.cwd),
+      ...workspaceLinksField(session.header.cwd),
       ...(projections === undefined ? {} : { projections }),
     }
   }
@@ -195,7 +174,7 @@ export class ApiSessionList {
       // A large, metadata-less, or inaccessible cache miss remains unknown and visible.
       blank: metadata?.blank ?? false,
       ...listFields(header),
-      ...dashboardField(header.cwd),
+      ...workspaceLinksField(header.cwd),
       ...(projections === undefined ? {} : { projections }),
     }
   }

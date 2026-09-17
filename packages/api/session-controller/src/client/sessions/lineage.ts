@@ -27,6 +27,8 @@ export interface SessionListEntry {
   cwd?: string
   /** Front-door URL of the dashboard this Session's workspace is associated with; absent when there is no association. */
   dashboardUrl?: string
+  /** Name of the Claude Design project behind that dashboard; absent when there is no association. */
+  designProject?: string
   /** Current host-computed projection values for list consumers. */
   projectionValues?: Readonly<Partial<SessionProjectionMap>>
   /** Finished running while not selected and not yet opened — the sidebar's green "done" reminder (clears on select or the next run). */

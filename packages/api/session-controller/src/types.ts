@@ -171,6 +171,8 @@ export interface SessionSummary {
   readonly cwd?: string
   /** Front-door URL of the dashboard this Session's workspace is associated with; absent when there is no association. */
   readonly dashboardUrl?: string
+  /** Name of the Claude Design project behind that dashboard; absent when there is no association. */
+  readonly designProject?: string
   readonly projections?: SessionProjectionHints
 }
 
