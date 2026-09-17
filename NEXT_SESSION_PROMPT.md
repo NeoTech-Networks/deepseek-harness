@@ -1,75 +1,63 @@
 # Next session prompt
 
-Continue deepseek-harness. The session footer change is BUILT, TESTED, MERGED and
-PACKAGED. The installer is waiting for the operator, and the running app has NOT
-been verified.
+Continue deepseek-harness. The session footer change is BUILT, TESTED, MERGED,
+PACKAGED and INSTALLED. The running build is verified at the code level: 21 of 21
+feature markers, the new marker in the running profile, the provision log clean.
 
-## The one thing waiting on Steve
+## The one thing left
 
-Run this in a NEW PowerShell window (Win+R, `powershell`), then choose "Run anyway"
-if SmartScreen prompts on the unsigned installer:
+Nobody has LOOKED at the footer of an open Session. The mechanical half is proved;
+the visible half is not.
 
-```
-powershell -ExecutionPolicy Bypass -File "C:\Projects\worktrees\dsh-update-v0.1.5-rc.2\finish-install.ps1"
-```
+1. Click into any started Session (the app was last seen on the New Session screen,
+   where the footer correctly does not render).
+2. Expected in an ordinary folder: `Dashboard:` and `Design Project:` on two lines
+   under the message box, both EMPTY, and NO grey session summary above them.
+3. Expected in a mapped workspace: `Dashboard: <full url>` and `Design Project: <name>`.
+   `C:\Projects\repos\sig-railway-services\services\youtube-creator` is mapped and
+   resolves to `https://ops.theseoitguy.net/youtube-creator` plus `YouTube`; so are
+   the dashboard page folders under vercel-services and their worktrees.
+4. Photograph the window (a DPI-aware capture; without `SetProcessDPIAware` the
+   capture silently grabs only the top-left corner of the window). Evidence folder
+   `C:\Projects\logs\2026-09-17\dsh-session-footer-lines\`.
 
-It closes the app, installs silently, clears the stale profile, relaunches, and
-prints `SETUP COMPLETE. Running <version>`. It is never run from inside a session:
-it force-closes the app that hosts the session. Expect about four minutes with no
-window before that line appears; do not re-run it because it looks stuck.
+## Maps and the restart rule
 
-Artifact: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,884,537 bytes,
-2026-09-17 01:20:22, built in `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`.
-
-## What to verify after he confirms (all of it is required)
-
-1. `py C:\Claude\bin\dsh_local_features_check.py` reads 21 of 21 markers. The new
-   row is `session-footer-design-project` (marker `data-session-footer-line`).
-2. The RUNNING profile's `~\.dsh\profiles\desktop\node_modules\@deepseek-ai\dsh-client-ui-conversation\lib\client.js`
-   carries `data-session-footer-line` and no `sessionFooterSummary`.
-3. The newest `~\.dsh\desktop\logs\provision-*.log` ends `staged health check passed`,
-   `staging profile activated as 0.1.5-rc.2`, `applyRelease finished`.
-4. The VISIBLE half, which no read can do: open a Session whose workspace is a
-   dashboard folder (for example
-   `C:\Projects\repos\vercel-services\packages\dashboards\src\youtube-creator`, or any
-   vercel-services worktree of it) and confirm it shows
-   `Dashboard: https://ops.theseoitguy.net/youtube-creator` and
-   `Design Project: YouTube`; then open one in an ordinary folder and confirm both
-   labels are present with empty values and that the grey session summary is GONE.
+`~\.dsh\dashboard-links.json` (89 entries) and `~\.dsh\design-links.json`
+(83 entries, every name read from Claude Design) are written by
+`C:\Claude\bin\dsh_dashboard_links.py`. Entries beyond the 66 dashboard page
+folders are the 23 unambiguous producer SERVICE folders; 10 ambiguous services
+(`content-planner` alone publishes 17 dashboards) are skipped by name. The host
+memoizes the map on first use, so a map edit needs an app RESTART, never a rebuild.
+Names come from `list_projects` (20 on the primary account, 9 on `team_account`,
+no pagination) plus `get_project` for every id the list misses.
 
 ## What shipped, for the record
 
 - `4980d90f54` host resolver (`packages/api/session-controller/src/workspace-links.ts`,
   wired through `list.ts`, `types.ts`, the client summary and the lineage entry).
 - `e15a4fc5f4` the two footer rows, the CSS, the locale pair, and the tests.
-- Both fast-forward merged into `update/v0.1.5-rc.2`, both refs read back at
-  `e15a4fc5f4`.
-- Maps: `~\.dsh\dashboard-links.json` (66 entries) and `~\.dsh\design-links.json`
-  (62 entries, every name read from Claude Design). The generator is
-  `C:\Claude\bin\dsh_dashboard_links.py`; `list_projects` alone is not enough
-  (20 plus 9 projects, no pagination), so it closes the rest with `get_project`.
-- The feature registry is now 21 rows.
+- Both fast-forward merged into `update/v0.1.5-rc.2`, both refs at `e15a4fc5f4`.
+- Installer `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,884,537 bytes,
+  2026-09-17 01:20:22, installed at 01:49 from
+  `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`.
+- Feature registry: 21 rows (`session-footer`, `session-footer-design-project`).
 
 ## Still open elsewhere, unchanged
 
-- OPEN_ISSUES 28: the footer was never eyeballed. This change rebuilds that footer,
-  so the item should be closed by the check above or re-stated against the new shape.
-- OPEN_ISSUES 27: the All Sessions rail defect. NOT touched.
 - PRE-EXISTING GATE FAILURE: `verify-client-ui-i18n` exits 1 on two hard-coded
-  strings in `packages/client/ui-sidebar-explorer/src/client/definition.ts`
-  (`pinnedText` and the text id). Confirmed identical on `1a77e844ad`.
-  Decide whether to fix it or record it as intended.
-- PRE-EXISTING TEST FAILURE: `packages/api/session-controller/tests/media-references.host.spec.ts`
-  fails on `symlink EPERM` with Developer Mode off, on both lines.
-- Not taken up: upstream `dsh-v0.1.6-alpha.1`. The installed app and the local stack
-  stay on `0.1.5-rc.2` deliberately.
+  strings in `packages/client/ui-sidebar-explorer/src/client/definition.ts`.
+- PRE-EXISTING TEST FAILURE: `media-references.host.spec.ts` fails on `symlink EPERM`
+  with Developer Mode off. Both reproduced on `1a77e844ad`.
+- A push from the fork's PRIMARY checkout cannot run the pre-push typecheck; push
+  state commits by SHA from a healthy worktree (playbook error ledger 38).
+- OPEN_ISSUES 27: the All Sessions rail defect. NOT touched.
+- Not taken up: upstream `dsh-v0.1.6-alpha.1`.
 
 ## Checkout state
 
-`C:\Projects\repos\deepseek-harness` is on `master` (the state files live there).
-The release line is in `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`, which still
-carries five MODIFIED state files left by an earlier session; they are stale copies
-of the OPEN_ISSUES-16 kind. Do not commit or publish them, and compare against
-`git show origin/master:<file>` before touching any state file in a worktree.
-`C:\Projects\worktrees\dsh-footer-links` is this change's feature worktree;
+`C:\Projects\repos\deepseek-harness` is on `master`. The release line is in
+`C:\Projects\worktrees\dsh-update-v0.1.5-rc.2`, which still carries five MODIFIED
+state files from an earlier session; do not commit or publish them.
+`C:\Projects\worktrees\dsh-footer-links` is the feature worktree;
 `feat/session-footer-links` is merged and can be deleted when convenient.
