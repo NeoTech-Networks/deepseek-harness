@@ -1,48 +1,40 @@
 # Next session prompt
 
-Continue deepseek-harness. TWO changes are BUILT, TESTED, MERGED, PACKAGED and
-PUSHED: the Session-footer intent fix, and the sidebar's folders sorting by name.
-**The installer is NOT installed yet.**
+Continue deepseek-harness. TWO changes are INSTALLED and verified at the code level:
+the Session-footer intent fix, and the sidebar's folders sorting by name. The install
+ran on 2026-09-18 at 09:58, the profile was re-extracted, and all three markers plus
+all 23 features read back out of the RUNNING build.
 
-## First: the install (operator action, one pasted line)
+## The one thing left (one click, then one capture)
 
-Open a NEW PowerShell window (Win+R, `powershell`) and paste:
+A POPULATED footer has never been photographed, because every Session the window was
+showing at capture time maps to no dashboard.
 
-```
-powershell -ExecutionPolicy Bypass -File "C:\Projects\worktrees\dsh-footer-intent\finish-install.ps1"
-```
+1. Open any Session whose workspace resolves: the `Dashboard Design ...` row in All
+   Sessions is one, and any Session in the Vercel workspace is another.
+2. Capture the window DPI-aware and read the PNG back:
+   `pwsh -File C:\Projects\logs\2026-09-18\dsh-footer-intent\capture_app_window.ps1`
+   (without `SetProcessDPIAware` the capture silently grabs only the top-left corner).
+3. Expected under the message box: `Dashboard: <full url>` as a link, and
+   `Design Project: <name>`.
 
-It force-closes the app, installs silently, clears the stale profile, relaunches and
-waits for first-run setup (about four minutes with NO window) before printing
-`SETUP COMPLETE. Running 0.1.5-rc.2`. It cannot be run from inside a Session, and it
-must not be run a second time because the app "looks stuck".
+## Already verified on 2026-09-18, with the evidence
 
-## Then verify, in this order
+| Check | Result |
+|---|---|
+| Installer ran | Installed exe 244,440,576 bytes written 2026-09-17 23:52:40, the 23:52 build |
+| Provision log | `provision-2026-09-18T13-58-39-011Z.log` ends `staged health check passed` (14:04:39Z), `staging profile activated as 0.1.5-rc.2`, `applyRelease finished` |
+| Processes | 4, started 09:58:36 to 10:04:45 |
+| Running profile | `resolveSessionLinks` (2, 09:58:52), `hasWorkspaceLinks` (2, 10:00:14), `byWorkspaceName` (3, 09:59:05) |
+| Feature registry | `dsh_local_features_check.py` exit 0, "all 23 local features are present in the running build" |
+| Sidebar folder order SEEN | Under the expanded SIG group: Agents, backlinks, blog-articles, client-reporting, content-planner, Google Business, onboarding, service-pages. `sidebar-band.png` |
+| Footer hides when nothing resolves SEEN | The open Session (maps to nothing) shows no footer rows at all, where the old build drew both labels empty. `composer-band.png` |
+| Shipped resolver against the LIVE maps | Vercel plus `/dashboard https://ops.theseoitguy.net/keywords` -> keywords URL plus `Keywords`; `services\youtube-creator` -> youtube-creator plus `YouTube`; unmapped -> `{}`; `https://theseoitguy.com/youtube-creator` -> `{}`. `resolve_live.txt` |
 
-1. `py C:\Claude\bin\dsh_local_features_check.py` reads "all 22 local features are
-   present in the running build", exit 0, including `session-footer-intent`.
-2. Read the RUNNING profile:
-   `~\.dsh\profiles\desktop\node_modules\@deepseek-ai\dsh-api-session-controller\lib\index.js`
-   carries `resolveSessionLinks` and `resolveWorkspaceIntent`, and
-   `...\dsh-client-ui-conversation\lib\client.js` carries `hasWorkspaceLinks` and
-   `data-session-footer`.
-3. The newest `~\.dsh\desktop\logs\provision-*.log` ends `staged health check passed`,
-   `staging profile activated as 0.1.5-rc.2`, `applyRelease finished`.
-4. `Get-Process "DeepSeek Harness"` reports four or more processes, started after the
-   install.
-5. THE VISUAL ONE, owed since 2026-09-13. Open a Session created in
-   `C:\Projects\general\Vercel` whose first message is `/dashboard <key>` or a pasted
-   dashboard address. Expected under the message box:
-   `Dashboard: https://<front door>/<key>` as a link, and `Design Project: <name>`.
-   Then open a Session whose workspace maps to no dashboard: the footer must not render
-   at all. Capture the window DPI-aware (without `SetProcessDPIAware` the capture
-   silently grabs only the top-left corner of the window) into
-   `C:\Projects\logs\<today>\dsh-footer-intent\` and read the PNG back.
-6. THE SECOND VISUAL ONE. In the sidebar, the folders under each group header must read
-   A to Z, and a folder added or removed must slot into place with nothing pressed. The
-   group headers themselves keep their A to Z order.
-7. `py C:\Claude\bin\dsh_dashboard_links.py --check` exits 0 with "both maps match the
-   live estate".
+Evidence folder: `C:\Projects\logs\2026-09-18\dsh-footer-intent\` (`app-window.png`,
+`sidebar-band.png`, `composer-band.png`, `resolve_live.ts`, `resolve_live.txt`,
+`capture_app_window.ps1`, `crop_png.ps1`). The 2026-09-17 folder beside it holds the
+build-time evidence (`resolver_count.py`, `map-check.txt`, `EVIDENCE.md`).
 
 ## What shipped, for the record
 
@@ -51,28 +43,26 @@ must not be run a second time because the app "looks stuck".
   `packages/api/session-controller/src/list.ts`, their spec, and
   `packages/client/ui-conversation/src/client/skeleton/ConversationRoot.tsx` (with its
   spec).
-- Fast-forward merged into `update/v0.1.5-rc.2`; both refs pushed to the fork
-  (`43500cd452..a21af3a222`).
 - `a21af3a222` `feat(ui-workspace): sort the sidebar's folders by name inside every
   group`. Files: `packages/client/ui-workspace/src/client/tree.ts` and its spec. The
-  folders under each group now sort by the name they show, with the same natural
+  folders under each group sort by the name they show, with the same natural
   case-insensitive collator the file explorer uses; the group headers use it too, so
   both levels order identically. Sessions inside a folder keep their Manual or
   Last-updated order. One existing test asserted the old Host order, which is what the
   operator asked to change; it now pins the session order and the sorted folder order.
+- Both fast-forward merged into `update/v0.1.5-rc.2`; both refs pushed to the fork
+  (`43500cd452..a21af3a222`).
 - Installer `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,901,646 bytes,
-  2026-09-17 23:52:45, built in `C:\Projects\worktrees\dsh-footer-intent`, and it
-  SUPERSEDES the 19:16 build so ONE install carries both changes. Markers were read out
-  of the packaged seed `.tgz` archives before handover, not out of the source.
+  2026-09-17 23:52:45, built in `C:\Projects\worktrees\dsh-footer-intent`, superseding
+  the 19:16 build so ONE install carried both changes. Markers were read out of the
+  packaged seed `.tgz` archives before handover, not out of the source.
 - Feature registry 23 rows: `session-footer-intent` (marker `resolveSessionLinks`) and
   `workspace-folder-sort` (marker `byWorkspaceName`).
 - `C:\Claude\bin\dsh_dashboard_links.py` gained `--check` (config repo `4e9b97ff`).
-- Evidence: `C:\Projects\logs\2026-09-17\dsh-footer-intent\` (`resolver_count.py` and its
-  output, `map-check.txt`).
 
 ## Known limits of the fix (not faults, do not re-report them)
 
-- A Session whose first message never names a dashboard still shows no footer.
+- A Session whose first message never names a dashboard shows no footer.
 - A cold Session resolves by folder alone, because the list path never opens a cold
   Session log. The footer renders under the open Session, which is live.
 - A Session that changes its dashboard target later keeps its first answer.
@@ -82,11 +72,10 @@ must not be run a second time because the app "looks stuck".
 - Pre-existing i18n gate failure: two hard-coded strings in `ui-sidebar-explorer`.
 - Pre-existing test failure: `media-references.host.spec.ts` symlink `EPERM` with
   Developer Mode off.
-- OPEN_ISSUES 27 (All Sessions rail) is untouched, and item 28's photograph is now
-  reachable.
+- OPEN_ISSUES 27 (All Sessions rail) is untouched.
 - The estate checkout `C:\Projects\repos\vercel-services` is 38 commits behind
-  `origin/main`. The maps are current today, but a dashboard added to `main` would be
-  invisible to the generator until that checkout is updated.
+  `origin/main`. The maps were current on 2026-09-17, but a dashboard added to `main`
+  would be invisible to the generator until that checkout is updated.
 - Not taken up: upstream `dsh-v0.1.6-alpha.1`.
 
 ## Checkout state

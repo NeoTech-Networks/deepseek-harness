@@ -1,5 +1,20 @@
 
 
+## 2026-09-18 - the install was run: both changes are in the RUNNING build, and the sidebar was SEEN sorted
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Installed build | the 23:52 artifact | `DeepSeek Harness.exe` 244,440,576 bytes, written 2026-09-17 23:52:40; `resources\seed\desktop-release.json` version `0.1.5-rc.2` | VERIFIED |
+| Provision log | the three closing lines | `provision-2026-09-18T13-58-39-011Z.log`: `pnpm install exited with 0`, `staged health check passed` 14:04:39Z, `staging profile activated as 0.1.5-rc.2`, `applyRelease finished` | VERIFIED |
+| Processes | 4 or more after the install | 4 processes, started 09:58:36 to 10:04:45 | VERIFIED |
+| Running profile carries the footer fix | both markers | `dsh-api-session-controller\lib\index.js` `resolveSessionLinks` (2, 09:58:52); `dsh-client-ui-conversation\lib\client.js` `hasWorkspaceLinks` (2, 10:00:14) | VERIFIED |
+| Running profile carries the folder sort | marker | `dsh-client-ui-workspace\lib\client.js` `byWorkspaceName` (3, 09:59:05) | VERIFIED |
+| Feature registry | 23 of 23 | `dsh_local_features_check.py` exit 0, "all 23 local features are present in the running build", including `session-footer-intent` and `workspace-folder-sort` | VERIFIED |
+| Sidebar folder order SEEN | A to Z under each group | PrintWindow capture at 2984x1760 with a sidebar crop: under the expanded SIG group the folders read Agents, backlinks, blog-articles, client-reporting, content-planner, Google Business, onboarding, service-pages. Evidence: `C:\Projects\logs\2026-09-18\dsh-footer-intent\sidebar-band.png` | VERIFIED |
+| Footer hides when nothing resolves SEEN | no footer rows | The open Session (`C:\Projects\general`, first message names no dashboard) shows the message box, toolbar and stats line with NO `Dashboard:` or `Design Project:` rows, where the old build drew both labels empty. Evidence: `composer-band.png` | VERIFIED |
+| Shipped resolver against the LIVE maps | resolves and refuses | `resolveSessionLinks` imported from the repo source: Vercel workspace plus `/dashboard https://ops.theseoitguy.net/keywords` -> keywords URL plus `Keywords`; `services\youtube-creator` -> youtube-creator URL plus `YouTube`; the unmapped Session -> `{}`; `https://theseoitguy.com/youtube-creator` -> `{}`. Evidence: `resolve_live.txt` | VERIFIED |
+| Populated footer SEEN on screen | url and design name | PENDING: every Session on screen at capture time mapped to nothing. One click on a resolving Session (`Dashboard Design ...` in All Sessions, or any Vercel Session) and one more capture closes it | UNVERIFIED |
+
 ## 2026-09-17 - the sidebar's folders sort by name: built, tested, merged, packaged
 
 | Check | Expected | Result | Status |
