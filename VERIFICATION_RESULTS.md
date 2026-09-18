@@ -1,5 +1,19 @@
 
 
+## 2026-09-17 - the sidebar's folders sort by name: built, tested, merged, packaged
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| ui-workspace suite | pass | 216 passed of 216 (was 215): the order inside a named group and in the ungrouped section, and a folder added afterwards slotting into place. The case that pinned Host Workspace order was updated, because it asserted exactly the behaviour the operator asked to change | VERIFIED |
+| typecheck | exit 0 | `pnpm run typecheck` exit 0 | VERIFIED |
+| build | exit 0 | `pnpm run build` exit 0, 240 client artifacts | VERIFIED |
+| oxlint on the changed files | 0 errors | `tree.ts` and `tree.client.spec.ts`: 0 warnings, 0 errors | VERIFIED |
+| Built bundle carries the change | present | `packages/client/ui-workspace/lib/client.js` carries `byWorkspaceName` (3), applied to the named buckets and to the ungrouped section | VERIFIED |
+| Release line | carries the commit | `a21af3a222` on `fix/session-footer-intent` and on `update/v0.1.5-rc.2`; both pushed and read back (`43500cd452..a21af3a222`) | VERIFIED |
+| Seed proof before handover | marker inside the packaged seed | `deepseek-ai-dsh-client-ui-workspace-0.1.5-rc.2.tgz -> package/lib/client.js`: `byWorkspaceName` (3) | VERIFIED |
+| Installer | exit 0 | 194,901,646 bytes, 2026-09-17 23:52:45, superseding the 19:16 build so ONE install carries both changes | VERIFIED |
+| Folder order seen on screen | A to Z inside every group | PENDING: waits on the install | UNVERIFIED |
+
 ## 2026-09-17 - the footer resolves the dashboard a Session names: built, tested, merged, packaged
 
 | Check | Expected | Result | Status |

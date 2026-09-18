@@ -1,7 +1,8 @@
 # Next session prompt
 
-Continue deepseek-harness. The Session-footer intent fix is BUILT, TESTED, MERGED,
-PACKAGED and PUSHED. **The installer is NOT installed yet.**
+Continue deepseek-harness. TWO changes are BUILT, TESTED, MERGED, PACKAGED and
+PUSHED: the Session-footer intent fix, and the sidebar's folders sorting by name.
+**The installer is NOT installed yet.**
 
 ## First: the install (operator action, one pasted line)
 
@@ -37,7 +38,10 @@ must not be run a second time because the app "looks stuck".
    at all. Capture the window DPI-aware (without `SetProcessDPIAware` the capture
    silently grabs only the top-left corner of the window) into
    `C:\Projects\logs\<today>\dsh-footer-intent\` and read the PNG back.
-6. `py C:\Claude\bin\dsh_dashboard_links.py --check` exits 0 with "both maps match the
+6. THE SECOND VISUAL ONE. In the sidebar, the folders under each group header must read
+   A to Z, and a folder added or removed must slot into place with nothing pressed. The
+   group headers themselves keep their A to Z order.
+7. `py C:\Claude\bin\dsh_dashboard_links.py --check` exits 0 with "both maps match the
    live estate".
 
 ## What shipped, for the record
@@ -48,12 +52,20 @@ must not be run a second time because the app "looks stuck".
   `packages/client/ui-conversation/src/client/skeleton/ConversationRoot.tsx` (with its
   spec).
 - Fast-forward merged into `update/v0.1.5-rc.2`; both refs pushed to the fork
-  (`e15a4fc5f4..43500cd452 update/v0.1.5-rc.2`, plus the new
-  `fix/session-footer-intent`).
-- Installer `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,931,936 bytes,
-  2026-09-17 19:16:27, built in `C:\Projects\worktrees\dsh-footer-intent`. Markers were
-  read out of the packaged seed `.tgz` archives before handover, not out of the source.
-- Feature registry 22 rows: `session-footer-intent`, marker `resolveSessionLinks`.
+  (`43500cd452..a21af3a222`).
+- `a21af3a222` `feat(ui-workspace): sort the sidebar's folders by name inside every
+  group`. Files: `packages/client/ui-workspace/src/client/tree.ts` and its spec. The
+  folders under each group now sort by the name they show, with the same natural
+  case-insensitive collator the file explorer uses; the group headers use it too, so
+  both levels order identically. Sessions inside a folder keep their Manual or
+  Last-updated order. One existing test asserted the old Host order, which is what the
+  operator asked to change; it now pins the session order and the sorted folder order.
+- Installer `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,901,646 bytes,
+  2026-09-17 23:52:45, built in `C:\Projects\worktrees\dsh-footer-intent`, and it
+  SUPERSEDES the 19:16 build so ONE install carries both changes. Markers were read out
+  of the packaged seed `.tgz` archives before handover, not out of the source.
+- Feature registry 23 rows: `session-footer-intent` (marker `resolveSessionLinks`) and
+  `workspace-folder-sort` (marker `byWorkspaceName`).
 - `C:\Claude\bin\dsh_dashboard_links.py` gained `--check` (config repo `4e9b97ff`).
 - Evidence: `C:\Projects\logs\2026-09-17\dsh-footer-intent\` (`resolver_count.py` and its
   output, `map-check.txt`).
