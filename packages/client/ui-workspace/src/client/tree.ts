@@ -429,7 +429,40 @@ const UNGROUPED_SECTION_KEY = '\u0000ungrouped'
 /** Section key for Sessions outside every Workspace. */
 const LOOSE_SECTION_KEY = '\u0000loose'
 
-/** Group Workspace rows into sections: named groups first, ungrouped next, loose sessions last. */
+/**
+ * Natural, case-insensitive name order, the same ordering the right sidebar's
+ * file explorer uses for its rows.
+ */
+const NAME_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+
+/**
+ * Order Workspace rows by the name the row shows.
+ *
+ * The rendered text is the Workspace title, so that is what sorts; a title the
+ * operator has cleared falls back to the path, which keeps an unnamed folder in
+ * a predictable place instead of at the top. Equal names keep their Host order,
+ * because Array.sort is stable.
+ *
+ * @param left - one Workspace row.
+ * @param right - the other Workspace row.
+ * @returns the collator's ordering of the two displayed names.
+ */
+function byWorkspaceName(left: GroupNode, right: GroupNode): number {
+  const nameOf = (node: GroupNode): string => node.label.trim() === ''
+    ? node.cwd ?? ''
+    : node.label
+  return NAME_COLLATOR.compare(nameOf(left), nameOf(right))
+}
+
+/**
+ * Group Workspace rows into sections: named groups first, ungrouped next, loose
+ * sessions last.
+ *
+ * Named group headers and the Workspace rows under them both sort by name, so a
+ * folder added or removed on disk slots into place with nothing to press. Loose
+ * Sessions are left in the order the caller derived them, because they are not
+ * folders.
+ */
 function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
   const sections: GroupSectionNode[] = []
   const named = new Map<string, GroupNode[]>()
@@ -444,11 +477,11 @@ function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
     if (bucket === undefined) { named.set(label, [node]); namedOrder.push(label) }
     else bucket.push(node)
   }
-  // Named groups render alphabetically, independent of the order their
-  // members appear in Host order, so a newly added group slots in place.
-  namedOrder.sort((a, b) => a.localeCompare(b))
+  // Named groups render alphabetically, independent of the order their members
+  // appear in Host order, so a newly added group slots in place.
+  namedOrder.sort((a, b) => NAME_COLLATOR.compare(a, b))
   for (const label of namedOrder) {
-    const workspaces = named.get(label) as GroupNode[]
+    const workspaces = (named.get(label) as GroupNode[]).sort(byWorkspaceName)
     sections.push({
       key: label,
       label,
@@ -457,6 +490,7 @@ function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
     })
   }
   if (ungrouped.length > 0) {
+    ungrouped.sort(byWorkspaceName)
     sections.push({
       key: UNGROUPED_SECTION_KEY,
       label: undefined,
@@ -480,11 +514,12 @@ function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
  * under a header, ungrouped Workspaces render without one, and Sessions
  * outside every Workspace trail in the browser-local Ungrouped bucket.
  *
- * Every group shows; sessions populate under expanded groups in the selected
- * local order. Blank sessions are excluded except for the selected
- * provisional New Session row; archived sessions are excluded everywhere.
- * Content search lives outside this derivation
- * (see {@link deriveSearchResults}).
+ * Workspace rows sort by name inside their section and named group headers sort
+ * by name too, so folders added or removed are placed without any action. Every
+ * group shows; sessions populate under expanded groups in the selected local
+ * order. Blank sessions are excluded except for the selected provisional New
+ * Session row; archived sessions are excluded everywhere. Content search lives
+ * outside this derivation (see {@link deriveSearchResults}).
  * @param list - sessions list snapshot (`current` feeds containsCurrent).
  * @param workspaces - real workspaces in stable Host order.
  * @param archivedSessionIds - registry-global archive set.

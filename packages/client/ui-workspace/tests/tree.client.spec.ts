@@ -56,12 +56,14 @@ describe('owningGroupKey', () => {
 })
 
 describe('deriveGroups', () => {
-  it('keeps Host Workspace and sessionIds order without Client recency sorting', () => {
+  it('keeps sessionIds order without Client recency sorting, and names the rows', () => {
     const sessions = list(summary('newer', 20), summary('older', 10))
     const workspaces = [workspace('first', ['older', 'newer']), workspace('empty', [])]
     const groups = deriveGroups(sessions, workspaces, noArchive, noAttention, view(['first']))
-    expect(groups.map(group => group.key)).toEqual(['first', 'empty'])
-    expect(groups[0]!.sessions.map(session => session.id)).toEqual([sid('older'), sid('newer')])
+    // 'empty' sorts before 'first' by name; the order INSIDE a folder is the
+    // Host's sessionIds order, never recency.
+    expect(groups.map(group => group.key)).toEqual(['empty', 'first'])
+    expect(groups[1]!.sessions.map(session => session.id)).toEqual([sid('older'), sid('newer')])
   })
 
   it('projects pending-interaction state into grouped and flat rows', () => {
@@ -377,6 +379,35 @@ describe('deriveGroups', () => {
     const sections = deriveGroupsSectioned(list(), workspaces, noArchive, noAttention, view())
     expect(sections.map(section => section.label)).toEqual(['Alpha', 'Beta', 'Mike', 'Zeta'])
     expect(sections.map(section => section.workspaces.map(w => w.key))).toEqual([['a'], ['b'], ['m'], ['z']])
+  })
+
+  it('sorts the folders inside every section by name, and places a new one in order', () => {
+    const sessions = list()
+    const before = [
+      workspace('zeta', [], 'Zeta', 'Railway'),
+      workspace('alpha', [], 'alpha', 'Railway'),
+      workspace('mike', [], 'Mike', 'Railway'),
+      workspace('tools', [], 'b-tools'),
+      workspace('app', [], 'App'),
+    ]
+    const sections = deriveGroupsSectioned(sessions, before, noArchive, noAttention, view())
+    expect(sections.map(section => section.label)).toEqual(['Railway', undefined])
+    expect(sections.map(section => section.workspaces.map(w => w.key))).toEqual([
+      ['alpha', 'mike', 'zeta'],
+      ['app', 'tools'],
+    ])
+    // A folder added afterwards slots into place with nothing to press.
+    const after = deriveGroupsSectioned(
+      sessions,
+      [...before, workspace('bravo', [], 'Bravo', 'Railway'), workspace('zebra', [], 'Zebra')],
+      noArchive,
+      noAttention,
+      view(),
+    )
+    expect(after.map(section => section.workspaces.map(w => w.key))).toEqual([
+      ['alpha', 'bravo', 'mike', 'zeta'],
+      ['app', 'tools', 'zebra'],
+    ])
   })
 })
 
