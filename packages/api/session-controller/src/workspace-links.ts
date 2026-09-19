@@ -13,13 +13,17 @@
  *   1. the Session's workspace directory, which is immutable (it is the header
  *      cwd written at creation), so the answer stays static for the life of the
  *      Session with no extra state to store;
- *   2. failing that, the Session's OLDEST operator message, when it names a
- *      dashboard: `/dashboard <key>` or a dashboard front-door address.
+ *   2. failing that, the operator message that most recently names a dashboard:
+ *      `/dashboard <key>` or a dashboard front-door address.
  *
  * The second signal is what resolves a Session started in a folder that belongs
  * to no single dashboard. The `Vercel` workspace key is the load-bearing case:
- * every dashboard change is started there, and that folder maps to nothing, so
- * before this the footer was blank for every dashboard Session started in it.
+ * every dashboard change is started there, and that folder maps to nothing.
+ * The NEWEST naming message wins, so a Session that moves from one dashboard to
+ * another follows it; that is why the retained candidates are read in reverse.
+ * The extraction half here is map-free (see {@link linkCandidatesOf}) so it can
+ * fold inside a Session projection; only {@link resolveCandidates} consults the
+ * maps, and {@link resolveSessionLinks} does so at read time.
  *
  * Both map files are re-read when either one changes, so a regenerated map is
  * picked up without restarting the app.
@@ -27,22 +31,19 @@
 
 import { readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import type { WorkspaceLinkCandidates, WorkspaceLinks } from './types.ts'
 
-/** The dashboard and design project a Session workspace belongs to. */
-export interface WorkspaceLinks {
-  /** Front-door URL of the dashboard whose page source is this workspace. */
-  readonly dashboardUrl?: string
-  /** Name of the Claude Design project behind that dashboard. */
-  readonly designProject?: string
-}
+export type { WorkspaceLinkCandidates, WorkspaceLinks } from './types.ts'
 
 /** Both lookups the footer needs, plus the front-door hosts a message may use. */
 export interface WorkspaceLinkIndex {
   /** Normalized mapped directory to association. */
   readonly byDirectory: ReadonlyMap<string, WorkspaceLinks>
+  /** Normalized mapped address (`host + path`) to association. */
+  readonly byAddress: ReadonlyMap<string, WorkspaceLinks>
   /** Dashboard key (`packages/dashboards/src/<key>`) to association. */
   readonly byKey: ReadonlyMap<string, WorkspaceLinks>
-  /** Lowercased hosts every dashboard address in the maps uses. */
+  /** Lowercased hosts a dashboard address may use. */
   readonly hosts: ReadonlySet<string>
 }
 
@@ -60,8 +61,24 @@ const DASHBOARD_SOURCE_PREFIX = 'packages/dashboards/src'
 const INTENT_COMMAND = '/dashboard'
 /** `/dashboard` words that select a mode rather than a dashboard. */
 const INTENT_MODES = new Set(['orient', 'explain', 'new', 'design', 'remove'])
+/**
+ * Front-door names that predate the Vercel cutover and redirect per path to the
+ * door that owns it. They are accepted as an address's host, and a legacy
+ * address still has to end in a known dashboard key, so this adds no lookalike:
+ * `https://theseoitguy.com/youtube-creator` stays refused.
+ */
+const LEGACY_FRONT_DOOR_HOSTS = ['railway.neotech.biz', 'railway.theseoitguy.net']
 /** Addresses inside a message; the host and the key must both be known to count. */
 const URL_PATTERN = /https?:\/\/[^\s)\]}>"'`]+/g
+/** Addresses retained from one operator message (a footer needs one answer). */
+export const MAX_CANDIDATE_URLS = 4
+/**
+ * Longest address retained. A longer one is dropped rather than truncated: a
+ * truncated address can only be a wrong one, and no front door uses one.
+ */
+const MAX_URL_CHARS = 256
+/** Longest `/dashboard` target retained; dashboard keys are short by design. */
+const MAX_TARGET_CHARS = 128
 
 /** One cached map build, dropped when either file's stamp moves. */
 interface WorkspaceLinkCache {
@@ -147,6 +164,27 @@ function hostOf(address: string): string | undefined {
 }
 
 /**
+ * Fold one dashboard address to the `host + path` form the exact lookup uses.
+ *
+ * Paths are compared without case or a trailing slash, which is how a pasted
+ * address and the map's own copy of it meet. The query and fragment are
+ * ignored: `.../gbl-overlord#studio` is still that dashboard.
+ *
+ * @param address - one absolute address, as a URL or a mapped string.
+ * @returns the normalized address key, or `undefined` when it cannot be parsed.
+ */
+function addressKeyOf(address: string | URL): string | undefined {
+  try {
+    const parsed = address instanceof URL ? address : new URL(address)
+    const host = parsed.host.toLowerCase()
+    if (host === '') return undefined
+    return `${host}${parsed.pathname.replace(/\/+$/, '').toLowerCase()}`
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Build both lookups from the two map files under one profile directory.
  *
  * The files are read independently on purpose: the design map can be missing
@@ -155,8 +193,17 @@ function hostOf(address: string): string | undefined {
  * nothing rather than failing the list, so an unreadable map costs a blank
  * footer line and never a broken sidebar.
  *
+ * Three lookups come out of the same pass: the directory (the strongest signal),
+ * the exact address as the map recorded it, and the dashboard key. The address
+ * lookup exists because 17 of the 66 page-source entries route somewhere whose
+ * last segment is not their key (`gbl-content-dashboard` is served at
+ * `/gbl-overlord`, and every `content-roadmap-*` key lives under
+ * `/content-roadmap/<client>`), so pasting the estate's own address would
+ * otherwise resolve nothing.
+ *
  * @param root - profile directory holding both map files.
- * @returns the directory lookup, the dashboard-key lookup, and the known hosts.
+ * @returns the directory lookup, the address lookup, the dashboard-key lookup,
+ *   and the hosts a dashboard address may use.
  */
 function buildIndex(root: string): WorkspaceLinkIndex {
   const byDirectory = new Map<string, WorkspaceLinks>()
@@ -172,16 +219,19 @@ function buildIndex(root: string): WorkspaceLinkIndex {
     add(directory, { designProject })
   }
   const byKey = new Map<string, WorkspaceLinks>()
-  const hosts = new Set<string>()
+  const byAddress = new Map<string, WorkspaceLinks>()
+  const hosts = new Set<string>(LEGACY_FRONT_DOOR_HOSTS)
   for (const [directory, value] of byDirectory) {
     if (value.dashboardUrl !== undefined) {
       const host = hostOf(value.dashboardUrl)
       if (host !== undefined) hosts.add(host)
+      const address = addressKeyOf(value.dashboardUrl)
+      if (address !== undefined && !byAddress.has(address)) byAddress.set(address, value)
     }
     const key = dashboardKeyOf(directory)
     if (key !== undefined && !byKey.has(key)) byKey.set(key, value)
   }
-  return { byDirectory, byKey, hosts }
+  return { byDirectory, byAddress, byKey, hosts }
 }
 
 /**
@@ -192,7 +242,7 @@ function buildIndex(root: string): WorkspaceLinkIndex {
  * list read. The cache holds one profile root, which is all the app uses.
  *
  * @param root - profile directory holding both map files.
- * @returns both lookups over the current contents of those files.
+ * @returns every lookup over the current contents of those files.
  */
 export function loadWorkspaceLinks(root: string): WorkspaceLinkIndex {
   const stamp = `${fileStamp(join(root, DASHBOARD_FILE))}|${fileStamp(join(root, DESIGN_FILE))}`
@@ -269,16 +319,81 @@ function commandTarget(text: string): string | undefined {
 }
 
 /**
+ * Extract the dashboard signal one operator message carries, without any map.
+ *
+ * Purely textual on purpose: this runs inside a Session projection's fold, where
+ * only the event may be consulted. Addresses longer than {@link MAX_URL_CHARS}
+ * are dropped rather than truncated, and the first {@link MAX_CANDIDATE_URLS}
+ * survive; a trailing sentence punctuation mark is trimmed off each one, which
+ * is exactly what the read side used to do.
+ *
+ * @param seq - seq of the message being read.
+ * @param text - the message's exact text content.
+ * @returns the candidate set, empty when the message names no dashboard.
+ */
+export function linkCandidatesOf(seq: number, text: string): WorkspaceLinkCandidates {
+  const urls: string[] = []
+  for (const match of text.matchAll(URL_PATTERN)) {
+    const address = match[0].replace(/[.,;:!?]+$/, '')
+    if (address.length > MAX_URL_CHARS) continue
+    urls.push(address)
+    if (urls.length === MAX_CANDIDATE_URLS) break
+  }
+  const target = commandTarget(text)
+  return {
+    seq,
+    urls,
+    target: target !== undefined && target.length <= MAX_TARGET_CHARS ? target : null,
+  }
+}
+
+/**
+ * Resolve the dashboard one candidate set names, when it names one.
+ *
+ * An address is accepted in two forms. First, EXACTLY as the estate's own maps
+ * record it, which is what makes a route that differs from its key work
+ * (`/gbl-overlord` for `gbl-content-dashboard`). Second, for an address the maps
+ * do not literally carry, only when BOTH its host is a host a dashboard address
+ * may use and its last path segment is a known dashboard key, so a client-site
+ * URL that happens to end in a key cannot claim a dashboard. The command form is
+ * accepted only for the documented dashboard skill, and never for one of its
+ * modes. Addresses are preferred over the command, which is the order the
+ * single-message form always used.
+ *
+ * @param candidates - one message's extracted signal.
+ * @param index - lookups returned by {@link loadWorkspaceLinks}.
+ * @returns the association, or an empty object when the message names none.
+ */
+export function resolveCandidates(
+  candidates: WorkspaceLinkCandidates,
+  index: WorkspaceLinkIndex,
+): WorkspaceLinks {
+  for (const raw of candidates.urls) {
+    let address: URL
+    try {
+      address = new URL(raw)
+    } catch {
+      continue
+    }
+    const exact = index.byAddress.get(addressKeyOf(address) ?? '')
+    if (exact !== undefined) return exact
+    if (!index.hosts.has(address.host.toLowerCase())) continue
+    const segment = address.pathname.split('/').filter(Boolean).pop()
+    if (segment === undefined) continue
+    const hit = index.byKey.get(segment.toLowerCase())
+    if (hit !== undefined) return hit
+  }
+  if (candidates.target === null) return {}
+  return index.byKey.get(candidates.target) ?? {}
+}
+
+/**
  * Resolve the dashboard one operator message names, when it names one.
  *
- * A dashboard address is accepted only when BOTH its host is one of the
- * front-door hosts the maps already use and its last path segment is a known
- * dashboard key, so a client-site URL that happens to end in a key cannot
- * claim a dashboard. The command form is accepted only for the documented
- * dashboard skill, and never for one of its modes. The oldest operator message
- * is the one passed in, so the footer is decided once and stays put.
+ * Kept as the single-message entry point: it extracts and classifies in one
+ * call, which is what a caller holding a prompt rather than a fold needs.
  *
- * @param text - the Session's oldest operator message, if it has one.
+ * @param text - one operator message, if the Session has one.
  * @param index - lookups returned by {@link loadWorkspaceLinks}.
  * @returns the association, or an empty object when the message names none.
  */
@@ -287,43 +402,34 @@ export function resolveWorkspaceIntent(
   index: WorkspaceLinkIndex,
 ): WorkspaceLinks {
   if (text === undefined || text === '') return {}
-  for (const match of text.matchAll(URL_PATTERN)) {
-    let address: URL
-    try {
-      address = new URL(match[0].replace(/[.,;:!?]+$/, ''))
-    } catch {
-      continue
-    }
-    if (!index.hosts.has(address.host.toLowerCase())) continue
-    const segment = address.pathname.split('/').filter(Boolean).pop()
-    if (segment === undefined) continue
-    const hit = index.byKey.get(segment.toLowerCase())
-    if (hit !== undefined) return hit
-  }
-  const target = commandTarget(text)
-  if (target === undefined) return {}
-  return index.byKey.get(target) ?? {}
+  return resolveCandidates(linkCandidatesOf(0, text), index)
 }
 
 /**
  * Resolve one Session against both signals, with the workspace deciding first.
  *
- * The order is deliberate: the workspace answer is unchanged from before this
- * pair existed, so no footer that already resolved can move. The message is
- * consulted only when the workspace names no dashboard at all, which is the
- * case this pair was added for.
+ * The workspace directory is unchanged from before the message signal existed,
+ * so no footer that resolves from a folder can move. The message candidates are
+ * then tried NEWEST FIRST, so the footer names the dashboard the Session is
+ * working on now; that is the operator's chosen rule (2026-09-19).
  *
  * @param cwd - the Session's workspace directory.
- * @param firstPrompt - the Session's oldest operator message, when it has one.
+ * @param candidates - every candidate-bearing message retained, oldest first.
  * @param index - lookups returned by {@link loadWorkspaceLinks}.
  * @returns the association, or an empty object when neither signal names one.
  */
 export function resolveSessionLinks(
   cwd: string | undefined,
-  firstPrompt: string | undefined,
+  candidates: readonly WorkspaceLinkCandidates[],
   index: WorkspaceLinkIndex,
 ): WorkspaceLinks {
   const workspace = resolveWorkspaceLinks(cwd, index.byDirectory)
   if (workspace.dashboardUrl !== undefined || workspace.designProject !== undefined) return workspace
-  return resolveWorkspaceIntent(firstPrompt, index)
+  for (let position = candidates.length - 1; position >= 0; position--) {
+    const candidate = candidates[position]
+    if (candidate === undefined) continue
+    const hit = resolveCandidates(candidate, index)
+    if (hit.dashboardUrl !== undefined || hit.designProject !== undefined) return hit
+  }
+  return {}
 }

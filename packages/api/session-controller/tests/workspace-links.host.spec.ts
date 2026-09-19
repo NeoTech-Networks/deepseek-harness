@@ -4,9 +4,10 @@
  * The two map files are read from one profile directory. Two signals answer
  * "which dashboard is this Session about": the workspace directory, matched by
  * directory ancestry (and by the trailing `packages/dashboards/src/<key>` form
- * that makes a vercel-services WORKTREE resolve), and, failing that, the
- * Session's oldest operator message when it names a dashboard by address or by
- * `/dashboard <target>`.
+ * that makes a vercel-services WORKTREE resolve), and, failing that, the operator
+ * message that most recently names a dashboard by address or by
+ * `/dashboard <target>`. The newest naming message wins, so a Session that moves
+ * from one dashboard to another follows it.
  */
 
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -14,7 +15,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
-  loadWorkspaceLinks, resolveSessionLinks, resolveWorkspaceIntent, resolveWorkspaceLinks,
+  linkCandidatesOf, loadWorkspaceLinks, resolveCandidates, resolveSessionLinks,
+  resolveWorkspaceIntent, resolveWorkspaceLinks,
 } from '../src/workspace-links.ts'
 
 const PRIMARY = 'C:\\Projects\\repos\\vercel-services\\packages\\dashboards\\src\\youtube-creator'
@@ -46,6 +48,15 @@ function resolve(cwd: string | undefined) {
 /** Load the fixture maps and resolve one oldest operator message against them. */
 function intent(text: string | undefined) {
   return resolveWorkspaceIntent(text, loadWorkspaceLinks(root))
+}
+
+/** Fold operator messages the way the projection does, then resolve the Session. */
+function sessionLinks(cwd: string | undefined, texts: readonly string[]) {
+  return resolveSessionLinks(
+    cwd,
+    texts.map((text, index) => linkCandidatesOf(index, text)),
+    loadWorkspaceLinks(root),
+  )
 }
 
 describe('workspace associations for the Session footer', () => {
@@ -117,7 +128,35 @@ describe('Session intent for the Session footer', () => {
     const links = loadWorkspaceLinks(root)
     expect(links.byKey.get('youtube-creator')).toEqual({ dashboardUrl: URL, designProject: 'YouTube' })
     expect(links.byKey.size).toBe(1)
-    expect(links.hosts).toEqual(new Set(['ops.theseoitguy.net']))
+    expect(links.hosts).toEqual(new Set([
+      'ops.theseoitguy.net', 'railway.neotech.biz', 'railway.theseoitguy.net',
+    ]))
+  })
+
+  it('resolves the estate address whose route is not the dashboard key', () => {
+    // 17 of the 66 mapped page sources route somewhere else: this is
+    // gbl-content-dashboard at /gbl-overlord, and every content-roadmap-* key.
+    const route = 'https://ops.theseoitguy.net/gbl-overlord'
+    writeMap('dashboard-links.json', { [PRIMARY]: route })
+    writeMap('design-links.json', { [PRIMARY]: 'GBL Content' })
+    const links = loadWorkspaceLinks(root)
+    expect(links.byAddress.get('ops.theseoitguy.net/gbl-overlord')).toEqual({
+      dashboardUrl: route, designProject: 'GBL Content',
+    })
+    expect(intent(`/dashboard ${route}`)).toEqual({ dashboardUrl: route, designProject: 'GBL Content' })
+    expect(intent(`why is ${route} broken?`).dashboardUrl).toBe(route)
+    expect(intent(`${route}#studio`).dashboardUrl).toBe(route)
+    expect(intent(`${route}/`).dashboardUrl).toBe(route)
+  })
+
+  it('accepts a legacy front-door host for a known key, and no other host', () => {
+    expect(intent('https://railway.neotech.biz/youtube-creator'))
+      .toEqual({ dashboardUrl: URL, designProject: 'YouTube' })
+    expect(intent('https://railway.theseoitguy.net/youtube-creator').dashboardUrl).toBe(URL)
+    expect(intent('https://railway.theseoitguy.net/not-a-dashboard')).toEqual({})
+    // The exact-address lookup is keyed by host, so a legacy host cannot borrow
+    // a mapped route either.
+    expect(intent('https://railway.theseoitguy.net/nothing-here')).toEqual({})
   })
 
   it('resolves a dashboard address typed as the oldest operator message', () => {
@@ -157,11 +196,39 @@ describe('Session intent for the Session footer', () => {
     const cfoUrl = 'https://ops.theseoitguy.net/cfo'
     writeMap('dashboard-links.json', { [PRIMARY]: URL, [DESIGN_KEY]: cfoUrl })
     writeMap('design-links.json', { [PRIMARY]: 'YouTube', [DESIGN_KEY]: 'NeoTech Monthly Billing' })
-    const links = loadWorkspaceLinks(root)
-    expect(resolveSessionLinks(PRIMARY, '/dashboard cfo', links).dashboardUrl).toBe(URL)
-    expect(resolveSessionLinks(VERCEL_KEY, `/dashboard ${URL}`, links))
+    expect(sessionLinks(PRIMARY, ['/dashboard cfo']).dashboardUrl).toBe(URL)
+    expect(sessionLinks(VERCEL_KEY, [`/dashboard ${URL}`]))
       .toEqual({ dashboardUrl: URL, designProject: 'YouTube' })
-    expect(resolveSessionLinks(VERCEL_KEY, 'Fix the double-encoding defect', links)).toEqual({})
+    expect(sessionLinks(VERCEL_KEY, ['Fix the double-encoding defect'])).toEqual({})
+  })
+
+  it('follows the NEWEST dashboard-naming message, not the first one', () => {
+    const cfoUrl = 'https://ops.theseoitguy.net/cfo'
+    writeMap('dashboard-links.json', { [PRIMARY]: URL, [DESIGN_KEY]: cfoUrl })
+    writeMap('design-links.json', { [PRIMARY]: 'YouTube', [DESIGN_KEY]: 'NeoTech Monthly Billing' })
+    expect(sessionLinks(VERCEL_KEY, ['/dashboard youtube-creator', 'now the cfo board']).dashboardUrl)
+      .toBe(URL)
+    expect(sessionLinks(VERCEL_KEY, ['/dashboard youtube-creator', '/dashboard cfo']))
+      .toEqual({ dashboardUrl: cfoUrl, designProject: 'NeoTech Monthly Billing' })
+    expect(sessionLinks(VERCEL_KEY, [`${URL} first`, `now ${cfoUrl}`]).dashboardUrl).toBe(cfoUrl)
+  })
+
+  it('fills a footer whose first message named no dashboard', () => {
+    expect(sessionLinks(VERCEL_KEY, ['review the boards', `publish ${URL}`]))
+      .toEqual({ dashboardUrl: URL, designProject: 'YouTube' })
+    expect(sessionLinks(VERCEL_KEY, ['review the boards', 'any bugs to fix?'])).toEqual({})
+  })
+
+  it('keeps an older dashboard when the newer messages name none', () => {
+    expect(sessionLinks(VERCEL_KEY, [`publish ${URL}`, 'now run the gate check', 'and report'])
+      .dashboardUrl).toBe(URL)
+    expect(sessionLinks(VERCEL_KEY, [`publish ${URL}`, 'https://example.com/nothing-here']).dashboardUrl)
+      .toBe(URL)
+  })
+
+  it('ignores a lookalike address in the newest message and keeps the older answer', () => {
+    expect(sessionLinks(VERCEL_KEY, [`publish ${URL}`, 'https://theseoitguy.com/youtube-creator'])
+      .dashboardUrl).toBe(URL)
   })
 
   it('re-reads a regenerated map without a restart', () => {
@@ -173,5 +240,38 @@ describe('Session intent for the Session footer', () => {
       .toBe(URL)
     expect(resolveWorkspaceLinks(VERCEL_KEY, loadWorkspaceLinks(root).byDirectory).dashboardUrl)
       .toBe(moved)
+  })
+})
+
+describe('candidate extraction for the workspace-links projection', () => {
+  it('extracts the addresses and the command target without consulting a map', () => {
+    const candidates = linkCandidatesOf(7, `see ${URL} and /dashboard cfo for the rest`)
+    expect(candidates.seq).toBe(7)
+    expect(candidates.urls).toEqual([URL])
+    expect(candidates.target).toBe('cfo')
+  })
+
+  it('is empty for a message that names nothing, and drops a mode target', () => {
+    expect(linkCandidatesOf(1, 'run the gate check')).toEqual({ seq: 1, urls: [], target: null })
+    expect(linkCandidatesOf(1, '/dashboard design youtube-creator')).toEqual({
+      seq: 1, urls: [], target: null,
+    })
+  })
+
+  it('trims sentence punctuation, caps the count and drops an over-long address', () => {
+    const long = `https://ops.theseoitguy.net/${'a'.repeat(300)}`
+    const candidates = linkCandidatesOf(1, `${URL}. ${long} https://ops.theseoitguy.net/cfo, ${URL}/extra`)
+    expect(candidates.urls).toEqual([URL, 'https://ops.theseoitguy.net/cfo', `${URL}/extra`])
+  })
+
+  it('classifies a candidate set against the maps, refusing a lookalike host', () => {
+    writeMap('dashboard-links.json', { [PRIMARY]: URL })
+    writeMap('design-links.json', { [PRIMARY]: 'YouTube' })
+    const links = loadWorkspaceLinks(root)
+    expect(resolveCandidates(linkCandidatesOf(1, URL), links)).toEqual({
+      dashboardUrl: URL, designProject: 'YouTube',
+    })
+    expect(resolveCandidates(linkCandidatesOf(1, 'https://theseoitguy.com/youtube-creator'), links))
+      .toEqual({})
   })
 })

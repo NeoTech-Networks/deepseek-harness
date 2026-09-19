@@ -130,6 +130,8 @@ function mount(
     dashboardUrl?: string
     /** Claude Design project name the list projects for this Session. */
     designProject?: string
+    /** The live `workspaceLinks` projection value, when the host has published one. */
+    projectionLinks?: { dashboardUrl?: string; designProject?: string }
   } = {},
 ) {
   const root = sid('root')
@@ -313,7 +315,7 @@ function mount(
     useSessionPendingInteraction,
     useResource,
     useWorkspaces: bindSnapshotSelector(workspaces),
-    useProjection: (() => undefined),
+    useProjection: (key: string) => key === 'workspaceLinks' ? options.projectionLinks : undefined,
     useComposerBlock: select => select(options.composerBlock),
     useInput,
     inputActions,
@@ -712,6 +714,33 @@ describe('Session footer workspace lines', () => {
     expect(link?.getAttribute('href')).toBe('https://ops.theseoitguy.net/youtube-creator')
     const design = footer?.querySelector('[data-session-footer-line="design-project"]')
     expect(design?.textContent).toBe(`${designLabel}YouTube`)
+  })
+
+  it('renders the live projection value for a Session the list row has not caught up with', () => {
+    // The Vercel case: the workspace maps to no dashboard, so the list row is
+    // empty, and the Session's own messages are what name the board.
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      projectionLinks: { dashboardUrl: 'https://ops.theseoitguy.net/youtube-creator', designProject: 'YouTube' },
+    })
+    const footer = b.view.container.querySelector('[data-session-footer]')
+    expect(footer).not.toBeNull()
+    expect(footer?.querySelector('[data-session-footer-line="dashboard"]')?.textContent)
+      .toBe(`${dashboardLabel}https://ops.theseoitguy.net/youtube-creator`)
+    expect(footer?.querySelector('[data-session-footer-line="design-project"]')?.textContent)
+      .toBe(`${designLabel}YouTube`)
+  })
+
+  it('prefers the live projection over a stale summarised dashboard', () => {
+    const moved = 'https://ops.theseoitguy.net/backlinks-profile'
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      dashboardUrl: 'https://ops.theseoitguy.net/youtube-creator',
+      designProject: 'YouTube',
+      projectionLinks: { dashboardUrl: moved, designProject: 'Backlinks' },
+    })
+    const dashboard = b.view.container.querySelector('[data-session-footer-line="dashboard"]')
+    expect(dashboard?.textContent).toBe(`${dashboardLabel}${moved}`)
+    expect(b.view.container.querySelector('[data-session-footer-line="design-project"]')?.textContent)
+      .toBe(`${designLabel}Backlinks`)
   })
 
   it('renders no footer at all for a workspace with no dashboard and no design project', () => {

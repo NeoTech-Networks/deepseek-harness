@@ -130,7 +130,7 @@ function WidthHandle(props: {
 
 export function ConversationRoot({
   sessionId, useSession, useSessions, useSessionPendingInteraction,
-  useWorkspaces, useConversation, useInput, useComposerBlock,
+  useWorkspaces, useConversation, useInput, useComposerBlock, useProjection,
   renderSlot, renderSlotChain, selectWorkspace, t,
 }: ConversationRootProps) {
   const session = useSession(s => s)
@@ -144,8 +144,15 @@ export function ConversationRoot({
   const inputState = useInput(s => s)
   const cwd = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.cwd)
   const summaryBlank = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.blank)
-  const dashboardUrl = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.dashboardUrl)
-  const designProject = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.designProject)
+  const summaryDashboardUrl = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.dashboardUrl)
+  const summaryDesignProject = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.designProject)
+  // The live half: the host publishes the `workspaceLinks` projection as the
+  // Session's own messages name a dashboard, so the footer follows the Session
+  // without waiting for a Session-list pull. The summary row stays as the
+  // fallback for a Session whose projection store has not been seeded yet.
+  const projected = useProjection('workspaceLinks')
+  const dashboardUrl = projected?.dashboardUrl ?? summaryDashboardUrl
+  const designProject = projected?.designProject ?? summaryDesignProject
   const workspaces = useWorkspaces(s => s)
   // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
