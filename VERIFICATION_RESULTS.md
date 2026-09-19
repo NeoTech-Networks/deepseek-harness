@@ -1,5 +1,21 @@
 
 
+## 2026-09-19 - the footer follows the dashboard a Session names, live: built, tested, merged, packaged
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Resolver matches the older rule for Sessions it already answered | no footer lost | 321 REAL Vercel Session logs folded through the shipped projection: old rule 51, new rule 52, lost 0, workspace-directory-alone 0. Evidence `C:\Projects\logs\2026-09-19-dsh-footer-live-intent\intent-proof.txt` | VERIFIED |
+| The newest naming message wins | a moved target follows | `session-30675526-1e86-4ffa-b430-a700c01409c5` retained `[{seq:129, urls:["https://portal.theseoitguy.net/website-audit"], target:null}]` and resolved to that URL plus `Website Audit`, where the old rule resolved `{}` | VERIFIED |
+| An address whose route is not its key resolves | exact mapped address accepted | Unit cases pass for `/gbl-overlord` for `gbl-content-dashboard`, with `#studio` and a trailing slash; the live maps show 17 of 66 page-source URLs in that class | VERIFIED |
+| The list path still never folds history | `apply` not called on a list read | `session-cold.host.spec.ts` and `session-projections.host.spec.ts` pass unchanged with the projection in place (`cachedSnapshot`, not `stateOf`) | VERIFIED |
+| Touched suites | green apart from the known environmental failure | 1195 passed, 1 failed, 1 skipped across `packages/api/session-controller` and `packages/client/ui-conversation`; the failure is `media-references.host.spec.ts` symlink `EPERM` (harness error ledger 17/18) | VERIFIED |
+| Typecheck and build | exit 0 | `pnpm run typecheck` exit 0 (host and client faces); `pnpm run build` exit 0, "recorded 240 client artifact(s)" | VERIFIED |
+| Lint on the changed directories | 0 findings | `oxlint` over the four changed src/tests directories: 0 warnings, 0 errors | VERIFIED |
+| Pre-existing gate findings unchanged | identical on the untouched release line | `verify-export-jsdoc` 1 (`session-status`), `verify-client-ui-i18n` 2 (`ui-sidebar-explorer`), `test:docs` 9 passed / 7 failed: all reproduced byte-identically in `C:\Projects\worktrees\dsh-update-v0.1.5-rc.2` | VERIFIED |
+| Refs on the fork | both at the commit | `git ls-remote origin` reads `d9e83fca02c926f64f1b9ef6af64efc9cc922d13` for BOTH `refs/heads/fix/session-footer-live-intent` and `refs/heads/update/v0.1.5-rc.2` | VERIFIED |
+| Installer carries the change | markers INSIDE the packaged seed | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,952,772 bytes, 2026-09-19 18:24:52; `.../seed/desktop-packages/deepseek-ai-dsh-api-session-controller-0.1.5-rc.2.tgz -> package/lib/index.js` carries `workspaceLinks` (10), `resolveSessionLinks` (3), `byAddress` (5); `...dsh-client-ui-conversation...tgz -> package/lib/client.js` carries `workspaceLinks` (1) beside `data-session-footer` (3) | VERIFIED |
+| Populated footer SEEN on screen | url and design name | PENDING the operator install: no populated footer has ever been looked at (OPEN_ISSUES 28 and 32) | UNVERIFIED |
+
 ## 2026-09-18 - the install was run: both changes are in the RUNNING build, and the sidebar was SEEN sorted
 
 | Check | Expected | Result | Status |
