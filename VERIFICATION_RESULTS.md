@@ -1,5 +1,17 @@
 
 
+## 2026-09-20 - the sidebar stage marks SEEN in the running app, against a pre-install control
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| A running session draws the new mark in the sidebar | two arcs plus a centre dot, not a bare dot | `app-window-running.png` at 6x (`zoom-sidebar-marks.png`): every running row in All Sessions draws the Working mark | VERIFIED |
+| The mark carries the running colour | the ongoing blue, not the old amber | The marks render in `--dsw-static-deepseek-450` blue through the `data-active` rule, read off the capture | VERIFIED |
+| The loop is actually running | arcs at a different angle per frame | Three captures about two minutes apart put the arcs at a different rotation on every row each time | VERIFIED |
+| It is the build and not the state alone | the same rows unmarked before the install | The pre-install capture of the same band (`preinstall-sidebar-band.png`, from `dsh-settings-retention\app-window-3.png`) shows those rows with NO mark, one of them on the old amber `right-up` glyph | VERIFIED |
+| Six simultaneous running marks are genuine | six Sessions writing at once | SIX distinct `session_projcache` files written 14:22:10 to 14:25:29; the next capture shows the list membership already changing | VERIFIED |
+| The populated footer, in the same capture | url and design name | `Dashboard: https://portal.theseoitguy.net/core30` and `Design Project: Core 30` visible under the composer | VERIFIED |
+| Hook bridge firing after the install | a new emitted-context marker | Still no DSH prompt taken since the install from the app; newest marker 2026-09-19 18:21:55 | UNVERIFIED |
+
 ## 2026-09-20 - the stage-marks build installed and proven in the running app; footer photographed
 
 | Check | Expected | Result | Status |

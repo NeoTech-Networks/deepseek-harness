@@ -1,5 +1,13 @@
 
 
+## 2026-09-20 - the sidebar stage marks are PHOTOGRAPHED in the running app: the last visual gap on item 34 is closed
+
+- THE ONE THING ITEM 36 LEFT OPEN FOR THE STAGE MARKS IS DONE. The 2026-09-20 evening session could not get the marks on screen because no Session was in a running, waiting or plan state during any of its captures; this session is mid-turn while it looks, so the running state was on screen for the whole capture. Window capture via `C:\Projects\logs\2026-09-18\dsh-footer-intent\capture_app_window.ps1`, cropped with `crop_png.ps1` beside it and with this session's `upscale_crop.ps1` for the 6x zoom. Evidence: `C:\Projects\logs\2026-09-20\dsh-stage-icons\` (`app-window-running.png`, `app-window-running-2.png`, `app-window-running-3.png`, `sidebar-band.png`, `sidebar-band-3.png`, `zoom-sidebar-marks.png`, `zoom-sidebar-marks-frame2.png`, `preinstall-sidebar-band.png`).
+- WHAT THE CAPTURE SHOWS, read back with my own eyes rather than through the vision sidecar that defeated the previous attempt: every running row in the All Sessions list draws the NEW Working mark (two arcs plus a centre dot) in the ongoing blue, not the old bare dot and not the old `right-up` arrow. Three captures over about two minutes put the arcs at a DIFFERENT ROTATION on every row each time, so the loop is genuinely running rather than a static frame. The same capture also shows the populated footer (`Dashboard: https://portal.theseoitguy.net/core30`, `Design Project: Core 30`), independently confirming item 36's footer claim.
+- THE CONTROL THAT MAKES IT A PROOF RATHER THAN A SIGHTING: the pre-install capture of the SAME list at `C:\Projects\logs\2026-09-20\dsh-settings-retention\app-window-3.png` (taken before the install) shows those same rows with NO mark at all, and one of them carrying the OLD amber `right-up` declared-status glyph. Re-cropped here as `preinstall-sidebar-band.png`, it is the same band, the same rows and the same window geometry, so the difference on screen is the build.
+- "SIX ROWS RUNNING AT ONCE LOOKED WRONG, AND WAS MEASURED RATHER THAN ASSUMED." Because the mark can only appear when the app reports that Session running, and the phase logic in `tree.ts` is untouched by this change, five or six simultaneous marks were checked against an independent source instead of being reported either as a fault or as fact: SIX distinct Session projection caches under `~\.dsh\storages\session_projcache\sessions\` were written inside a 3.5 minute window (14:22:10 to 14:25:29). This machine really does run that many Sessions concurrently. The third capture 90 seconds later shows the membership already changing (one row gone from the list, the order and the selection moved), which is a live list, not a frozen one.
+- STILL OPEN FROM ITEM 36, both small and both needing a Session that is actually doing something: the hook bridge firing proof (send one message in the app and check for a new file under `C:\Claude\integrations\dsh-hook-bridge\state\emitted-context\`), and the `claude_design_team_account` read, which mounts only in the app.
+
 ## 2026-09-20 - the session-stage-marks build is INSTALLED and verified live, the populated footer is photographed, and the 1.6 question is settled
 
 The 0.1.5-rc.2 rebuild the previous section left PENDING was run the same day at 13:29 to
@@ -162,15 +170,15 @@ the rules require. And the shared-checkout guard creates its worktree inside the
   Auto-managed by the claude-memory save-state hook.
   Anything between :begin and :end is overwritten on every save-state.
   Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=f3c0c51c-4349-4551-bc87-d545bb0f0dc7 at=2026-09-17T06:04:46.632616+00:00
+  Last write: actor=claude-code:steve session=6955a759-b1d1-4c5d-8d9f-8af7967c3ce3 at=2026-09-20T18:12:57.652008+00:00
 -->
-## Last save-state (2026-09-17T06:04:46.632616+00:00)
+## Last save-state (2026-09-20T18:12:57.652008+00:00)
 
 - Trigger: `save_state`
 - Actor: `claude-code:steve`
-- Session id: `f3c0c51c-4349-4551-bc87-d545bb0f0dc7`
-- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Session id: `6955a759-b1d1-4c5d-8d9f-8af7967c3ce3`
+- Repos touched: deepseek-harness, claude-cowork-config (source: transcript scan)
 - Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general-DS~0020harness--\session-5a755741-1457-452c-b5dd-c3c61af1b18a
+- Transcript: C:\Users\SteveDempsey\.claude\projects\C--Projects-general-DS-harness\baf27558-0c0b-437f-af73-ea4dd1341a51.jsonl
 
 <!-- claude-memory-actor:end -->
