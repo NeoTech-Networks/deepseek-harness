@@ -66,44 +66,64 @@ declare module '@deepseek-ai/cordis' {
  */
 export const EXIT_PLAN_MODE = 'exit_plan_mode'
 
-/** A line that may legitimately precede the plan's `#` heading. */
-const PLAN_PREAMBLE_LINE = /^(?:\s*|>.*)$/
+/** A fenced-code delimiter. Lines between two of them are not markdown. */
+const CODE_FENCE_LINE = /^(?:```|~~~)/
+
+/** A level-1 heading line: the plan's title. */
+const TITLE_LINE = /^#\s+\S/
+
+/** A level-2-or-deeper heading line. */
+const SUB_HEADING_LINE = /^#{2,6}\s+\S/
 
 /**
  * Explain why a plan is not acceptable, or `undefined` when it is.
  *
- * The check used to be `/^#\s+\S/` against the trimmed plan, which rejected
- * two shapes that are not mistakes:
+ * What this check is for is that the model sent a PLAN, which means a titled
+ * document, rather than prose or a running commentary. It is not for where the
+ * title sits. The check used to conflate the two by testing only the first
+ * content line, and every widening since has been the same bug reported again:
  *
- *  * A plan opening with a blockquote line. Deployments put operator metadata
- *    in a leading `>` block, so their own house style produced a rejection.
- *  * A plan opening with blank lines, which some providers emit ahead of the
- *    first heading.
+ *  * `/^#\s+\S/` on the trimmed plan rejected a plan opening with a blockquote
+ *    (a deployment's operator-metadata block) or with blank lines.
+ *  * Skipping only blank and blockquote lines still rejected a plan opening
+ *    with a lead-in sentence, an italic note, a bullet list or an HTML comment.
+ *    Measured 2026-09-21: that refusal costs a turn, it recurs across every
+ *    repo and backend because it is a property of how models write, and the
+ *    deployment cannot tune it away (the guidance section lives in the shipped
+ *    preset, which user presets include rather than copy).
  *
- * Leading blank and blockquote lines are therefore skipped before looking for
- * the heading. Everything the old check caught is still caught: no heading at
- * all, an empty plan, or a heading that is not top level.
+ * So the title is looked for ANYWHERE in the plan instead of on one line, and
+ * the two real faults are still caught and now named apart: a plan with no `#`
+ * title but sub-headings, and a plan with no heading at all. A heading that
+ * appears only inside a fenced code block does not count, which is stricter
+ * than the line-one check ever was.
  *
- * The message names what was actually found. The old one always said the plan
- * was "non-empty ... starting with a # heading", which read as "your plan was
- * empty" for a 13,000-character plan whose first line was a blockquote, and
- * sent the model looking in the wrong place.
+ * Nothing is rewritten. The plan is presented and stored exactly as the model
+ * sent it; every consumer downstream finds the title with a multi-line search.
  * @param plan - the plan argument as supplied by the model.
  * @returns a one-clause fault description, or `undefined` when the plan passes.
  */
 export function describePlanFault(plan: string): string | undefined {
   if (plan.trim().length === 0) return 'the plan is empty'
-  const lines = plan.split('\n')
-  let index = 0
-  while (index < lines.length && PLAN_PREAMBLE_LINE.test(lines[index] as string)) index += 1
-  if (index >= lines.length) return 'the plan has no content beyond blank and blockquote lines'
-  const first = (lines[index] as string).trim()
-  if (/^#\s+\S/.test(first)) return undefined
-  if (/^#{2,}\s+\S/.test(first)) {
-    const depth = (/^#+/.exec(first) as RegExpExecArray)[0].length
-    return `the first heading is level ${depth} ("${first.slice(0, 60)}"), but the plan must open with a single "#" title`
+  let fenced = false
+  let firstSubHeading: string | undefined
+  let firstContent: string | undefined
+  for (const raw of plan.split('\n')) {
+    const line = raw.trim()
+    if (CODE_FENCE_LINE.test(line)) {
+      fenced = !fenced
+      continue
+    }
+    if (fenced || line === '') continue
+    if (TITLE_LINE.test(line)) return undefined
+    if (firstSubHeading === undefined && SUB_HEADING_LINE.test(line)) firstSubHeading = line
+    if (firstContent === undefined) firstContent = line
   }
-  return `the first content line is not a heading ("${first.slice(0, 60)}")`
+  if (firstContent === undefined) return 'the plan has no content outside code fences'
+  if (firstSubHeading !== undefined) {
+    return `the plan has no "#" title; its highest heading is "${firstSubHeading.slice(0, 60)}"`
+  }
+  return `the plan has no markdown heading at all (it opens "${firstContent.slice(0, 60)}")`
 }
 
 /** Deployment-owned plan guidance. */
