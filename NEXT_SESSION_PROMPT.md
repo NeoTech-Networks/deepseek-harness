@@ -1,3 +1,7 @@
+2026-09-20 POINTER (supersedes everything below, which is kept as the 2026-09-11 record): the plan-mode lead-in fix is BUILT, PACKAGED AND NOT INSTALLED. Commit `203ac5a2d7` is on `update/v0.1.5-rc.2` and pushed; the installer is `C:\Projects\worktrees\dsh-plan-preamble\apps\desktop\.desktop-build\targets\win-x64\artifacts\deepseek-harness-0.1.5-rc.2-win-x64.exe` (194,900,330 bytes). Install it with `powershell -ExecutionPolicy Bypass -File "C:\Projects\worktrees\dsh-plan-preamble\finish-install.ps1"` in a NEW window, then prove it with `node C:\Projects\temp\plan-fault-proof.mjs` (the first two cases must read ACCEPTED) and `py C:\Claude\bin\dsh_local_features_check.py` (28 of 28, exit 0). The pre-install control for both is in `C:\Projects\logs\2026-09-20\dsh-plan-preamble\`.
+
+---
+
 Continue deepseek-harness. 0.1.5-rc.2 IS INSTALLED AND RUNNING (installed 2026-09-11 09:47, profile re-extracted 09:51, four processes from 10:45). The composer-shortcut question is CLOSED and must not be re-diagnosed: the chord moved off Alt to Ctrl+Shift in rc.2 and nothing told the operator, which is why his Alt presses did nothing. Ctrl+Shift+S was verified by a real press plus a session-log read-back (`/save-state` at 2026-09-11T15:14:25.963Z, session e0b8a4a0). On Windows an Alt+letter chord arrives as a KEYUP only, so an unbound Alt chord is silent by nature.
 
 FOUR THINGS THE NEXT SESSION NEEDS THAT ARE NEW (all in OPEN_ISSUES.md):

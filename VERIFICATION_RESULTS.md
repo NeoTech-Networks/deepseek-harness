@@ -1,3 +1,18 @@
+## 2026-09-20 - plan lead-in tolerance: built and packaged, install not taken
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| The fault reproduces on the running build | a lead-in plan is refused | First `exit_plan_mode` of this session: `the first content line is not a heading ("_(submitted through the plan review channel)_")`; six-case control run at `C:\Projects\logs\2026-09-20\dsh-plan-preamble\preinstall-validator-verdicts.txt` refuses ALL six, including the two that should pass | VERIFIED |
+| plan-mode unit suite | green | 94 of 94 across 4 files, including the extended accept table (note, sentence, list, HTML comment, fence) and two new rejections | VERIFIED |
+| typecheck | exit 0 | `pnpm run typecheck` exit 0 | VERIFIED |
+| lint | no new findings | 51 findings, none in `packages/plan/plan-mode` (pre-existing baseline; diff touches plan-mode only) | VERIFIED |
+| build | exit 0 | 240 client artifacts recorded | VERIFIED |
+| The built module's own verdicts | accept lead-in, refuse prose | `describePlanFault` from the built lib returned `null` for a note-then-title plan, and named the fault for bare prose and for sub-headings-only | VERIFIED |
+| The PACKAGED artifact carries the fix | marker present | `deepseek-ai-dsh-plan-mode-0.1.5-rc.2.tgz` extracted; `the plan has no markdown heading at all` found at `lib/types/index.js` line 94 | VERIFIED |
+| Installer produced | one signed-unsigned exe | 194,900,330 bytes, SHA256 `3010895892...AB9F37C1`, packaging exit 0 | VERIFIED |
+| Feature registry control | 1 missing before install | `dsh_local_features_check.py` 27 ok / `plan-lead-in-tolerated` MISSING, exit 3 | VERIFIED |
+| The RUNNING build accepts a lead-in | after install | Not run: the installer has not been taken | PENDING |
+
 ## 2026-09-11 - Composer shortcut silence fix: built, packaged, installer not taken
 
 | Check | Expected | Result | Status |
