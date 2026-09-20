@@ -1,5 +1,30 @@
 
 
+## 2026-09-20 - the stage-marks build installed and proven in the running app; footer photographed
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Install runs to completion | exit 0 | `finish-install.ps1` printed `SETUP COMPLETE. Running 0.1.5-rc.2`, `SCRIPT-EXIT=0` | VERIFIED |
+| Installer artifact | unchanged | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,849,563 bytes, sha256 `eaa8964f3e44928cb4e6cf1ac0724630f9a07e7ae39c501ad658f4e08cc5267c` | VERIFIED |
+| Seed integrity | clean | `expected 272, actual 272` / `extra 0, missing 0, mismatch 0` / `PASS: seed integrity clean` | VERIFIED |
+| Local features in the running build | 27 of 27 | `all 27 local features are present in the running build`, exit 0 (was 24 of 27 before the install) | VERIFIED |
+| Vault after install | 20 files, all same | `verify: 20 files, all same`, exit 0 (script's own check said the same) | VERIFIED |
+| Independent fingerprint | empty diff vs pre-install | `diff fingerprint-pre.txt fingerprint-post-install.txt` printed NOTHING; 21 files hashed, 0 missing | VERIFIED |
+| Hardlink identity | two paths, one file id | `fsutil hardlink list` names BOTH; both `queryfileid` return `0x000000000000000000050000007ad594`; script printed `HARDLINK OK (final)` | VERIFIED |
+| Provision log milestones | all four | `seed integrity verified` / `staged health check passed` (17:35:45.379Z) / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished` | VERIFIED |
+| Processes after install | 4 or more, all post-install | 4 `DeepSeek Harness` processes started 13:30:43, 13:30:46, 13:35:24, 13:35:51 | VERIFIED |
+| New markers in the RUNNING profile | present | `dsh-client-ui-workspace\lib\client.js` `dsw-stage-arc-spin` (3); `dsh-session-status\lib\index.js` `deploying` (3); `dsh-client-ui-sessions-panel\lib\client.js` `IconStageWorkingOutline24` (1) | VERIFIED |
+| Populated Session footer | url and design name | SEEN in `composer-band-3.png`: `Dashboard: https://ops.theseoitguy.net/backlinks` and `Design Project: Backlinks` | VERIFIED |
+| Model picker | both DeepSeek ids | `settings.yaml` deepseek `models` lists `deepseek-flash` and `deepseek-v4-pro`; picker on screen reads `DeepSeek-V41-Flash High` | VERIFIED |
+| Permission preset | danger-full-access | `permission: defaultPreset: danger-full-access` | VERIFIED |
+| Post-install vault snapshot | recorded and pushed | `snapshot: 20 files, 0 changed ... commit a4675b9`, `push: main published to origin` | VERIFIED |
+| MCP servers answer a read | one each | `claude-memory-bridge` 2 hits; `composio` github active as `neotechnet`; `composio_platform` gsc connections listed; `claude_design` 20 projects; `playwright` responded | VERIFIED |
+| Six MCP rows declared in the preset | 6 | `claude-memory-bridge`, `composio`, `composio_platform`, `claude_design`, `claude_design_team_account`, `playwright` all present in `agent.cordis.yml` | VERIFIED |
+| Hook bridge FIRING post-install | new marker | NOT OBTAINED: no DSH Session started or took a prompt since the install, so the newest `emitted-context/<session>.json` is still 2026-09-19 18:21:55 | UNVERIFIED |
+| `claude_design_team_account` read | one cheap read | CANNOT RUN from a Claude Code session; it mounts only in the app | UNVERIFIED |
+| Sidebar stage marks photographed | spinner/waiting/plan marks | NOT OBTAINED: no Session was in a running, waiting or plan state during any capture, so those marks were not on screen to photograph | UNVERIFIED |
+| `dsh_update_check.py` verdict on a prerelease | should not say UPDATE AVAILABLE | live run's last line is `VERDICT: UPDATE AVAILABLE dsh-v0.1.6-alpha.2` against `installed 0.1.5-rc.2`, with all six listed releases marked `pre`. Recorded as playbook error ledger row 41 | BROKEN (pre-existing) |
+
 ## 2026-09-20 - 0.1.6 blocked by upstream deletion; vault widened to 20 files and the hardlink guard proven
 
 | Check | Expected | Result | Status |
@@ -187,42 +212,3 @@
 | First packaging attempt | exit 0 | NOT A CODE FAULT: `tar (child): Cannot connect to C: resolve failed` from Git's GNU tar reading an absolute Windows path as `host:path`; prepending `C:\Windows\System32` (bsdtar) fixed it (ledger 37) | VERIFIED |
 | Installed and pressed live | 19/19 markers, row disappears | NOT DONE: install pending, and the installer force-closes this session | UNVERIFIED |
 | `verify-client-ui-i18n` | exit 0 | exit 1 on two hard-coded strings in `dsh-client-ui-sidebar-explorer`, a file untouched by this change | PRE-EXISTING |
-
-## 2026-09-14 - stream-stall fix: built, installed, and proven against the live broken route
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| Provider fault reproduced | flash stalls, pro does not | flash: HTTP 200 then 0 bytes in 45s, twice; streaming gave 98 bytes in 90s, all `: keep-alive`. pro: full completion, twice | VERIFIED |
-| Historical scope | which turns died and when | 14 `STREAM_CLOSED` turn deaths, all 2026-09-14, all `deepseek-flash`, 5 sessions, 0 on any earlier day (535 session logs decoded) | VERIFIED |
-| Request shape ruled out | unchanged across good and bad days | 112 tools, ~68.8 KB tool parameters on 2026-09-10 through 2026-09-14 alike | VERIFIED |
-| New unit tests | pass | 8 passed in `first-payload.spec.ts`, including the no-unhandled-rejection guard | VERIFIED |
-| New wire test | retries instead of hanging | `keepalive_stall` recovers in 345ms with idle timeout set to 30s, so comments provably no longer count | VERIFIED |
-| Touched suites | pass | 536 passed across llm-deepseek, llm-retry, llm-mock-server | VERIFIED |
-| Typecheck | exit 0 | `pnpm run typecheck` exit 0 | VERIFIED |
-| Lint, changed paths | clean | oxlint 0 warnings 0 errors on the 4 changed source/test dirs | VERIFIED |
-| Pre-existing failures separated | not caused here | `plugin-package-inventory-deepseek` fails identically on the untouched `update/v0.1.5-rc.2` worktree; `llm-pi-ai` idle test passes in isolation (parallel-load flake) | VERIFIED |
-| Config gates | pass | `verify-cordis-config` 142 files passed; config catalog regenerated and up to date; both translation pairs re-recorded | VERIFIED |
-| Fix inside the installer payload | present | extracted `deepseek-ai-dsh-llm-deepseek-0.1.5-rc.2.tgz` from `win-unpacked`, found the new code in `package/lib/index.js` | VERIFIED |
-| Installed build is the new one | matches | app exe 2026-09-14 16:49:20 (artifact 16:49:24); 4 processes from 16:57:58; provision log ends `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished` | VERIFIED |
-| Fix in the RUNNING profile | present | `~\.dsh\profiles\desktop\...\dsh-llm-deepseek\lib\index.js` (16:58:28) carries `boundFirstPayload`, the gated comment callback (`if (sawPayload) onActivity()`), and the new config field | VERIFIED |
-| Retry policy shipped | present | installed `dsh-base\cordis.patch.yml` carries `retryPolicy`, `maxRetries: 3`, `STREAM_CLOSED` | VERIFIED |
-| LIVE: stalled route is bounded and retried | fails fast, retries | real `deepseek-flash`, 20s bound, 1 retry: 41.1s total, `llm/retry` `TIMEOUT`, ended "DeepSeek accepted the request and sent no stream payload within 20000ms". Before the fix the same fault took ~15 minutes, no retry, `STREAM_CLOSED` | VERIFIED |
-| LIVE: healthy route unaffected | completes, no retries | same probe on `deepseek-v4-pro`: completed in 13.6s with zero retries | VERIFIED |
-
-## 2026-09-13 - four DSH app fixes: tests, build, package (install pending)
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| ui-user-questions tests | pass | 53 passed, including the whole-question scrollport case | VERIFIED |
-| tool-ask-user tests | pass | 11 passed, including `detail` pass-through and the description rule | VERIFIED |
-| pwsh-local tests | pass | 47 passed; 1 pre-existing EPERM symlink failure (no symlink privilege, environmental) | VERIFIED |
-| tool-pwsh tests | pass | 61 passed | VERIFIED |
-| ui-workspace + ui-renderer tests | pass | 310 passed, including the crash/retry recovery case | VERIFIED |
-| typecheck | exit 0 | `pnpm run typecheck` exit 0; the pre-push hook ran it again in 24.8s | VERIFIED |
-| lint, changed sources | clean | oxlint 0 warnings 0 errors on the 6 changed files | VERIFIED |
-| tool catalog | up to date | `verify-tool-catalog` up to date; the zh pair updated and re-recorded | VERIFIED |
-| Installer packaged | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,784,998 bytes, 11:08:32 | VERIFIED |
-| PR #21 landed | merged | GitHub reports MERGED, merge commit `5512545eac` | VERIFIED |
-| Built bundles carry every change | all markers present | `SINGLE-quoted`, `param(...)` wrap, `at most two sentences`, `headingInBody`, `data-all-sessions-error`, `data-session-count`, `commandText` all found in `lib/` | VERIFIED |
-| Running build carries all changes | 18/18 markers | NOT DONE: install pending | UNVERIFIED |
-| All Sessions root cause | named | NOT CAPTURED: the recovery row ships; the crash message is now on screen | UNVERIFIED |

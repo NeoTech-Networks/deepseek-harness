@@ -1,5 +1,51 @@
 
 
+## 2026-09-20 - the session-stage-marks build is INSTALLED and verified live, the populated footer is photographed, and the 1.6 question is settled
+
+The 0.1.5-rc.2 rebuild the previous section left PENDING was run the same day at 13:29 to
+13:35 and is proven in the RUNNING app. `finish-install.ps1` from
+`C:\Projects\worktrees\dsh-stage-icons` exited 0 and printed `SETUP COMPLETE. Running
+0.1.5-rc.2`; the installer reported `expected 272, actual 272 / extra 0, missing 0,
+mismatch 0 / PASS: seed integrity clean`; the vault read `20 files, all same` after the
+install and the script closed with `HARDLINK OK (final): AGENTS.md and .claude\CLAUDE.md
+are one file, 2 links, id 0x000000000000000000050000007ad594.`; the provision log
+`provision-2026-09-20T17-30-46-313Z.log` ends `seed integrity verified` / `staged health
+check passed` (17:35:45.379Z) / `staging profile activated as 0.1.5-rc.2` /
+`applyRelease finished`; four processes start afterwards.
+
+- `dsh_local_features_check.py` reads **27 of 27**, exit 0. The three markers that read
+  MISSING before the install (`session-footer-live-read`, `session-stage-marks`,
+  `session-status-failed`) are present, and the running profile carries
+  `dsw-stage-arc-spin` (3), `deploying` (3) and `IconStageWorkingOutline24` (1).
+- An independent 21-file SHA256 fingerprint diff against the pre-install capture is
+  EMPTY, which is a measurement rather than the tool's own claim.
+- Vault snapshot `a4675b9` (`--reason post-install`) pushed to `dsh-config` `main`.
+
+**The populated Session footer was PHOTOGRAPHED**, the thing owed since 2026-09-16.
+Opening the `Pull backlinks in dashboard design code` Session renders `Dashboard:
+https://ops.theseoitguy.net/backlinks` and `Design Project: Backlinks`. That address is the
+exact route the 2026-09-19 `byAddress` fix was built for, so the photograph confirms the
+footer-live-intent work visually too. Files in
+`C:\Projects\logs\2026-09-20\dsh-settings-retention\`.
+
+**The sidebar stage marks are NOT photographed, for a measured reason:** no Session in the
+app was in a running, waiting or plan state during any capture, so the marks that
+distinguish states were not on screen, and at this render scale the glyph column does not
+survive the vision sidecar's per-image token cap row by row. One click and one keystroke in
+the app closes it.
+
+**The 1.6 question is SETTLED, do not re-derive it.** There is no 1.6 release: the newest
+of fifteen upstream releases, ALL prereleases, is `dsh-v0.1.6-alpha.2`. And the ordinary
+upgrade path is closed, because that tag deletes the desktop provisioning layer and about
+a dozen packages the fork's features live in, so a rebase cannot reach it. Two routes
+recorded, operator decision was to stay on 0.1.5-rc.2 and take 0.1.6 as its own project.
+Full detail: `OPEN_ISSUES.md` item 35 and the playbook's `05-neotech-fork.md` section 3.
+
+**One record was corrected:** item 35 was reported missing by the session that planned
+this work, because it read a primary checkout one commit behind `origin/master`. The item
+exists and always did (sync commit `4d173056b7`, 13:14:36). The checkout was fast-forwarded
+instead of writing a duplicate.
+
 ## 2026-09-20 - the 0.1.6 update is BLOCKED by upstream deletions, so the install target fell back to the proven 0.1.5-rc.2 build
 
 `dsh-v0.1.6-alpha.2` is NOT a version bump and the fork cannot take it by rebasing. Two
