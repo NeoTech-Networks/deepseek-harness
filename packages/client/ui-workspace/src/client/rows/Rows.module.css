@@ -284,6 +284,119 @@
   50% { opacity: 0.35; }
 }
 
+/* The session stage marks (design project "dsh icons", 2026-09-19). The glyphs
+   themselves are pure: they carry `data-part` names and nothing else, and the
+   loops below are the row's own. That is what lets one stylesheet stop all of
+   them for prefers-reduced-motion, and what guarantees that with motion off the
+   mark is the complete glyph the design draws at rest.
+
+   Motion is scoped to the states that mean work in progress. The awaiting-*
+   phases stay still even though their glyphs can animate, for the reason they
+   always did: they mean "you are blocking me", and a blinking version of that is
+   noise. `failed` and `saved` are still too - they are outcomes, not activity. */
+
+/* A run in flight with no finer stage to report: the design's own spin. It
+   carries its own motion, so it does not also take the wrapper pulse below. */
+.phaseIcon[data-active='true'][data-phase='running'] {
+  animation: none;
+}
+
+.phaseIcon[data-phase='running'] [data-part='arc'] {
+  transform-origin: 12px 12px;
+  animation: dsw-stage-arc-spin 1.8s linear infinite;
+}
+
+.phaseIcon[data-phase='running'] [data-part='arc-back'] {
+  transform-origin: 12px 12px;
+  animation: dsw-stage-arc-spin-back 2.9s linear infinite;
+}
+
+.phaseIcon[data-phase='running'] [data-part='core'] {
+  animation: dsw-stage-core-pulse 1.8s ease-in-out infinite;
+}
+
+/* Plan mode during a running turn: the check draws itself, which is the liveness
+   the pulse used to carry for this phase. */
+.phaseIcon[data-active='true'][data-phase='planning'] [data-part='check-2'] {
+  animation: dsw-stage-check-draw 3s ease-out infinite;
+}
+
+/* Declared holds that are still moving. The parts are unique to their glyph, so
+   these need no tone qualifier: `stuck` (error) and `waiting-external`
+   (attention) share the hourglass, and `waiting-production` owns the tray. */
+.phaseIcon [data-part='arrow'] {
+  animation: dsw-stage-lift-off 2.4s cubic-bezier(.3, .7, .2, 1) infinite;
+}
+
+.phaseIcon [data-part='sweep'] {
+  animation: dsw-stage-tick-sweep 2.4s ease-in-out infinite;
+}
+
+.phaseIcon [data-part='glass'] {
+  transform-origin: 12px 12px;
+  animation: dsw-stage-glass-tip 3.6s cubic-bezier(.6, 0, .2, 1) infinite;
+}
+
+.phaseIcon [data-part='grain'] {
+  animation: dsw-stage-grain-fall 1.8s ease-in infinite;
+}
+
+/* The design's 14px reduction, which is the row's working size: the hourglass
+   drops its base line and the plan mark keeps ONE check, on the middle row,
+   exactly as the design's own 14px examples do. A larger consumer keeps the
+   full detail, because it lives in the glyph rather than in the stylesheet. */
+.phaseIcon [data-part='detail'],
+.phaseIcon [data-part='check'],
+.phaseIcon [data-part='check-3'] {
+  display: none;
+}
+
+@keyframes dsw-stage-arc-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes dsw-stage-arc-spin-back {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+@keyframes dsw-stage-core-pulse {
+  0%, 100% { r: 1.6; }
+  50% { r: 2.6; }
+}
+
+@keyframes dsw-stage-check-draw {
+  0%, 55% { stroke-dashoffset: 0; }
+  68% { stroke-dashoffset: 12; }
+  94%, 100% { stroke-dashoffset: 0; }
+}
+
+@keyframes dsw-stage-lift-off {
+  0% { transform: translateY(0); opacity: 1; }
+  48% { transform: translateY(-3.2px); opacity: 1; }
+  56% { transform: translateY(-4.4px); opacity: 0; }
+  70% { transform: translateY(2.4px); opacity: 0; }
+  84%, 100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes dsw-stage-tick-sweep {
+  0%, 100% { opacity: .3; }
+  40% { opacity: 1; }
+}
+
+@keyframes dsw-stage-glass-tip {
+  0%, 74% { transform: rotate(0deg); }
+  88%, 100% { transform: rotate(180deg); }
+}
+
+@keyframes dsw-stage-grain-fall {
+  0% { transform: translateY(-.6px); opacity: 0; }
+  20% { opacity: 1; }
+  70% { transform: translateY(4.4px); opacity: 1; }
+  90%, 100% { transform: translateY(5px); opacity: 0; }
+}
+
 /* Declared status tones: the glyph names the status and the colour carries
    urgency, reusing the state-dot colour tokens. */
 .phaseIcon[data-tone='attention'] {
@@ -436,7 +549,10 @@
 @media (prefers-reduced-motion: reduce) {
   .sessionRow,
   .arrow,
-  .phaseIcon[data-active='true'] {
+  .phaseIcon[data-active='true'],
+  /* Every stage-mark part. None of them depends on its animation to be
+     identifiable: the design's keyframes all rest on the complete glyph. */
+  .phaseIcon * {
     animation: none;
     transition: none;
   }

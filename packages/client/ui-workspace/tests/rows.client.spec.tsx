@@ -91,7 +91,7 @@ describe('workspace browser rows', () => {
 
     view.rerender(<SessionNodeItem node={sessionRow({ ...idle, running: true })} currentId={undefined} now={0}
       onOpen={vi.fn()} onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} flat t={t} />)
-    expect(screen.getByText('Flat Session').previousElementSibling?.querySelector('[data-state="ongoing"]')).toBeTruthy()
+    expect(screen.getByText('Flat Session').previousElementSibling?.querySelector('[data-phase="running"]')).toBeTruthy()
   })
 
   it('renders a selected content-search row and opens only its session', () => {
@@ -108,7 +108,7 @@ describe('workspace browser rows', () => {
     expect(row.getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Workspace context')).toBeTruthy()
     expect(screen.getByText('matching message excerpt')).toBeTruthy()
-    expect(row.querySelector('[data-state="ongoing"]')).toBeTruthy()
+    expect(row.querySelector('[data-phase="running"]')).toBeTruthy()
     expect(screen.getByText('进行中')).toBeTruthy()
     expect(row.hasAttribute('draggable')).toBe(false)
     fireEvent.click(row)
@@ -248,9 +248,9 @@ describe('workspace browser rows', () => {
     const done = renderRow({ completed: true })
     expect(done.container.querySelector('[data-state="done"]')).not.toBeNull()
     done.unmount()
-    // Running wins the slot: the animated ongoing dot, no done dot.
+    // Running wins the slot: the live stage mark, no done dot.
     const running = renderRow({ completed: true, running: true })
-    expect(running.container.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    expect(running.container.querySelector('[data-phase="running"]')).not.toBeNull()
     expect(running.container.querySelector('[data-state="done"]')).toBeNull()
     running.unmount()
     // Descendant activity also wins until the last running descendant stops.
@@ -279,9 +279,9 @@ describe('workspace browser rows', () => {
   })
 
   it.each([
-    ['attention', 'right-up'],
-    ['error', 'stop'],
-    ['success', 'check'],
+    ['attention', 'deploying'],
+    ['error', 'blocked'],
+    ['success', 'saved'],
     ['neutral', 'pause'],
   ] as const)('names a declared %s status with its glyph and tone', (tone, icon) => {
     const declared = sessionRow({
@@ -293,6 +293,36 @@ describe('workspace browser rows', () => {
     const row = screen.getByRole('treeitem')
     expect(row.querySelector(`[data-tone="${tone}"]`)).not.toBeNull()
     expect(screen.getByText(tone)).toBeTruthy()
+  })
+
+  /**
+   * The rule the whole slot encodes: the mark says what the session is doing
+   * NOW, and a declared status is what an IDLE session says about why it is idle.
+   * So one mark has to move twice in a turn, not once at the end of it.
+   */
+  it('hands the slot from the live stage mark to the declared status at the real boundary', () => {
+    const declared = { id: 'stuck', label: 'Stuck', icon: 'blocked' as const, tone: 'error' as const }
+    const view = render(
+      <SessionNodeItem
+        node={sessionRow({ id: sid('holder'), title: 'Working', running: true, declaredStatus: declared })}
+        currentId={undefined} now={0} onOpen={vi.fn()}
+        onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t}
+      />,
+    )
+    // A session that is working is not holding: the work owns the slot.
+    expect(view.container.querySelector('[data-phase="running"]')).not.toBeNull()
+    expect(view.container.querySelector('[data-tone="error"]')).toBeNull()
+
+    view.rerender(
+      <SessionNodeItem
+        node={sessionRow({ id: sid('holder'), title: 'Held', declaredStatus: declared })}
+        currentId={undefined} now={0} onOpen={vi.fn()}
+        onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t}
+      />,
+    )
+    // Quiet again: the hold it was always reporting becomes the mark.
+    expect(view.container.querySelector('[data-phase="running"]')).toBeNull()
+    expect(view.container.querySelector('[data-tone="error"]')).not.toBeNull()
   })
 
   it('falls back to a neutral glyph for an icon id this client does not know', () => {
@@ -314,7 +344,7 @@ describe('workspace browser rows', () => {
       render(<SessionNodeItem node={node} currentId={undefined} now={0} onOpen={vi.fn()}
         onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
       const row = screen.getByRole('treeitem')
-      expect(row.querySelectorAll('[data-state="ongoing"]')).toHaveLength(1)
+      expect(row.querySelectorAll('[data-phase="running"]')).toHaveLength(1)
       expect(screen.getByText('进行中')).toBeTruthy()
       expect(screen.getByText('1 个子代理运行中')).toBeTruthy()
 
@@ -627,17 +657,17 @@ describe('workspace browser rows', () => {
   it('keeps showing the work while a status is declared mid-turn, and the status once it stops', () => {
     // The model declares its status before the turn's last events land. The
     // row must keep reporting the work and switch at the real boundary.
-    const declared = { id: 'finished', label: '完成', icon: 'check' as const, tone: 'success' as const }
+    const declared = { id: 'finished', label: '完成', icon: 'saved' as const, tone: 'success' as const }
     const working = sessionRow({ id: sid('finisher'), title: 'Finishing', running: true, declaredStatus: declared })
     const view = render(<SessionNodeItem node={working} currentId={undefined} now={0} onOpen={vi.fn()}
       onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
-    expect(view.container.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    expect(view.container.querySelector('[data-phase="running"]')).not.toBeNull()
     expect(view.container.querySelector('[data-tone="success"]')).toBeNull()
 
     view.rerender(<SessionNodeItem node={sessionRow({ ...working, running: false })} currentId={undefined} now={0}
       onOpen={vi.fn()} onRename={vi.fn()} onFork={vi.fn()} onArchive={vi.fn()} t={t} />)
     expect(view.container.querySelector('[data-tone="success"]')).not.toBeNull()
-    expect(view.container.querySelector('[data-state="ongoing"]')).toBeNull()
+    expect(view.container.querySelector('[data-phase="running"]')).toBeNull()
   })
 
   it('idle hover card shows the Idle status line', () => {

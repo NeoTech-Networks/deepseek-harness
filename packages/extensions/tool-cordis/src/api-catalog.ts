@@ -5607,7 +5607,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionStatusIconId',
-    declaration: 'export type SessionStatusIconId = \'right-up\' | \'stop\' | \'check\' | \'clock\' | \'pause\';',
+    declaration: 'export type SessionStatusIconId = \'right-up\' | \'stop\' | \'check\' | \'clock\' | \'pause\' | \'deploying\' | \'blocked\' | \'saved\' | \'failed\';',
   },
   {
     name: 'SessionStatusTone',
@@ -5623,7 +5623,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionSummary',
-    declaration: 'export interface SessionSummary {\n    readonly sessionId: SessionId;\n    readonly updatedAt: number;\n    readonly running: boolean;\n    readonly blank: boolean;\n    readonly parentSessionId?: SessionId;\n    readonly origin?: \'subagent\';\n    readonly cwd?: string;\n    readonly projections?: SessionProjectionHints;\n}',
+    declaration: 'export interface SessionSummary {\n    readonly sessionId: SessionId;\n    readonly updatedAt: number;\n    readonly running: boolean;\n    readonly blank: boolean;\n    readonly parentSessionId?: SessionId;\n    readonly origin?: \'subagent\';\n    readonly cwd?: string;\n    readonly dashboardUrl?: string;\n    readonly designProject?: string;\n    readonly projections?: SessionProjectionHints;\n}',
   },
   {
     name: 'SessionSurface',

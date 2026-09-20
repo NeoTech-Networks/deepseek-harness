@@ -80,11 +80,12 @@ describe('session-status service', () => {
   it('lists the shipped vocabulary in declaration order with its icon and tone', async () => {
     const { ctx } = await harness()
     expect(ctx.sessionStatus.list()).toEqual([
-      { id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'right-up', tone: 'attention' },
-      { id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error' },
-      { id: 'finished', label: 'Finished', icon: 'check', tone: 'success' },
-      { id: 'waiting-external', label: 'Waiting on someone else', icon: 'clock', tone: 'attention' },
+      { id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'deploying', tone: 'attention' },
+      { id: 'stuck', label: 'Stuck', icon: 'blocked', tone: 'error' },
+      { id: 'finished', label: 'Finished', icon: 'saved', tone: 'success' },
+      { id: 'waiting-external', label: 'Waiting on someone else', icon: 'blocked', tone: 'attention' },
       { id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral' },
+      { id: 'failed', label: 'Failed', icon: 'failed', tone: 'error' },
     ])
   })
 

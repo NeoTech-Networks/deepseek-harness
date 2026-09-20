@@ -154,15 +154,16 @@ describe('SessionsPanel', () => {
       pending,
     })
 
-    // Plan mode and running descendants get their own glyph rather than a
-    // dot, so this panel says the same thing about them as the workspace
-    // sidebar does: an amber dot for plan mode and a plain ongoing dot for a
-    // delegating parent told the operator neither fact.
-    expect(view.container.querySelectorAll('[data-state="warning"]')).toHaveLength(1)
-    expect(view.container.querySelectorAll('[data-state="ongoing"]')).toHaveLength(1)
+    // Every phase a glyph can name now draws one instead of a dot, so this
+    // panel says the same thing about a session as the workspace sidebar does.
+    expect(view.container.querySelectorAll('[data-phase="awaiting"]')).toHaveLength(1)
+    expect(view.container.querySelectorAll('[data-phase="running"]')).toHaveLength(1)
     expect(view.container.querySelectorAll('[data-state="done"]')).toHaveLength(1)
     expect(view.container.querySelectorAll('[data-phase="planning"]')).toHaveLength(1)
     expect(view.container.querySelectorAll('[data-phase="subagents"][data-active="true"]')).toHaveLength(1)
+    // None of those four phases falls back to a state dot any more.
+    expect(view.container.querySelectorAll('[data-state="warning"]')).toHaveLength(0)
+    expect(view.container.querySelectorAll('[data-state="ongoing"]')).toHaveLength(0)
 
     // The idle row renders no mark at all until it is shown under All.
     fireEvent.click(view.getByText('filter.all'))
@@ -173,7 +174,7 @@ describe('SessionsPanel', () => {
 
   it('shows a declared status with its own glyph and tone, below live activity', () => {
     const now = Date.now()
-    const status = { id: 'waiting-production', label: 'Waiting', icon: 'right-up' as const, tone: 'attention' as const }
+    const status = { id: 'waiting-production', label: 'Waiting', icon: 'deploying' as const, tone: 'attention' as const }
     const held = { ...summary('held', now), projectionValues: { sessionStatus: status } }
     // Same status, but this one is still working: the work wins the mark.
     const busy = {
@@ -186,7 +187,7 @@ describe('SessionsPanel', () => {
     const heldRow = view.container.querySelector('[data-sessions-panel-row="held"]')
     expect(heldRow?.querySelector('[data-tone="attention"]')).not.toBeNull()
     const busyRow = view.container.querySelector('[data-sessions-panel-row="busy"]')
-    expect(busyRow?.querySelector('[data-state="ongoing"]')).not.toBeNull()
+    expect(busyRow?.querySelector('[data-phase="running"]')).not.toBeNull()
     expect(busyRow?.querySelector('[data-tone]')).toBeNull()
   })
 

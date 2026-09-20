@@ -8,12 +8,12 @@
 import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
-  HoverCard, IconAlarmClockOutline16, IconAgentPresetOutline16, IconArchiveOutline20,
-  IconBranchOutline16, IconCheckOutline16, IconChecklistOutline14, IconClockOutline16,
-  IconEditOutline16, IconEllipsisOutline16, IconFolderClose16, IconFolderOpen16,
-  IconListPenOutline16, IconPauseOutline16, IconPlusOutline16, IconQuestionOutline14,
-  IconRightUpOutline16, IconStopFill16, IconTrashOutline16, IconTriangleRightFill14,
-  IconWarningOutline16, Menu, relativeTime, StateDot,
+  HoverCard, IconAgentPresetOutline16, IconAlarmClockOutline16, IconArchiveOutline20,
+  IconBranchOutline16, IconEditOutline16, IconEllipsisOutline16, IconFolderClose16,
+  IconFolderOpen16, IconPauseOutline16, IconPlusOutline16, IconStageAwaitingInputOutline24,
+  IconStageBlockedOutline24, IconStageDeployingOutline24, IconStageFailedOutline24,
+  IconStagePlanReadyOutline24, IconStageSavedOutline24, IconStageWorkingOutline24,
+  IconStopFill16, IconTrashOutline16, IconTriangleRightFill14, Menu, relativeTime, StateDot,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { IconProps, StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
@@ -289,40 +289,61 @@ export function sessionStatuses(node: SessionRowFacts, t: RowTranslate): readonl
 }
 
 /**
- * Phases the status slot names with a glyph instead of the state dot: the ones
- * a color alone cannot tell apart, because all three awaiting-* phases block
- * this operator and plan mode is a session mode rather than an outcome. Every
- * remaining phase keeps the dot, whose animation carries liveness.
+ * Phases the status slot names with a glyph instead of the state dot, drawn from
+ * the session stage marks (Claude Design project "dsh icons", 2026-09-19).
+ *
+ * Every phase that means "this session is doing something" or "this session is
+ * blocked on you" is here, which is the point: the mark now changes with the
+ * state during the run rather than only at the end of it. `running` used to fall
+ * through to the bare animated dot, so the busiest state on the list said the
+ * least about itself.
+ *
+ * `subagents` keeps its own agent mark: the design covers eight session stages
+ * and delegated work is not one of them.
  */
-const PHASE_GLYPHS: Partial<Record<SessionPhase, (props: IconProps) => ReturnType<typeof IconWarningOutline16>>> = {
-  'awaiting-approval': IconWarningOutline16,
-  'awaiting-plan-review': IconChecklistOutline14,
-  'awaiting-answer': IconQuestionOutline14,
-  planning: IconListPenOutline16,
+const PHASE_GLYPHS: Partial<Record<SessionPhase, (props: IconProps) => ReturnType<typeof IconStageWorkingOutline24>>> = {
+  'awaiting-approval': IconStageAwaitingInputOutline24,
+  'awaiting-plan-review': IconStagePlanReadyOutline24,
+  'awaiting-answer': IconStageAwaitingInputOutline24,
+  planning: IconStagePlanReadyOutline24,
+  running: IconStageWorkingOutline24,
   subagents: IconAgentPresetOutline16,
 }
 
-/** Status icon id to glyph component, drawn for the declared phase. */
-const STATUS_ICONS: Record<SessionStatusIconId, (props: IconProps) => ReturnType<typeof IconWarningOutline16>> = {
-  'right-up': IconRightUpOutline16,
-  stop: IconStopFill16,
-  check: IconCheckOutline16,
-  clock: IconClockOutline16,
+/**
+ * Status icon id to glyph component, drawn for the declared phase.
+ *
+ * The allowlist only ever grows. The five ids that shipped before the stage
+ * marks stay valid and keep drawing, mapped to the nearest new mark, because an
+ * icon id is a durable wire value that a stored `session/status` event still
+ * carries: shrinking this table would make an old session's status undrawable.
+ */
+const STATUS_ICONS: Record<SessionStatusIconId, (props: IconProps) => ReturnType<typeof IconStageWorkingOutline24>> = {
+  'right-up': IconStageDeployingOutline24,
+  stop: IconStageBlockedOutline24,
+  check: IconStageSavedOutline24,
+  clock: IconStageAwaitingInputOutline24,
   pause: IconPauseOutline16,
+  deploying: IconStageDeployingOutline24,
+  blocked: IconStageBlockedOutline24,
+  saved: IconStageSavedOutline24,
+  failed: IconStageFailedOutline24,
 }
 
 /** Neutral fallback for an icon id this client does not know (never throws). */
 const UNKNOWN_STATUS_ICON = IconEllipsisOutline16
 
 /**
- * Whether a glyph phase should carry the live treatment (pulse plus the
- * ongoing colour).
+ * Whether a glyph phase should carry the live treatment (the ongoing colour,
+ * plus the wrapper pulse).
  *
- * Only the two phases whose glyph replaces a running indicator qualify. Plan
- * mode outranks `running`, so a working plan-mode session would otherwise show
- * the same still grey pen as an idle one, and that is the whole liveness
- * signal for the majority of sessions here. `subagents` is running by
- * definition, and used to render completely static.
+ * Every phase whose glyph stands in for a running indicator qualifies. Plan mode
+ * outranks `running`, so a working plan-mode session would otherwise show the
+ * same still grey mark as an idle one, and that is the whole liveness signal for
+ * the majority of sessions here. `running` itself now draws the stage mark's own
+ * spin, so the stylesheet cancels the wrapper pulse for it: two loops on one 14px
+ * mark reads as flicker, not as information. `subagents` is running by
+ * definition and keeps both.
  *
  * The awaiting-* phases deliberately stay still even though the agent is
  * technically running behind an open approval: they mean "you are blocking
@@ -333,6 +354,7 @@ const UNKNOWN_STATUS_ICON = IconEllipsisOutline16
  */
 function liveGlyph(phase: SessionPhase, running: boolean): boolean {
   if (phase === 'subagents') return true
+  if (phase === 'running') return true
   return phase === 'planning' && running
 }
 

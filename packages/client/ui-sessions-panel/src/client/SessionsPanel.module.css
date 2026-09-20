@@ -114,6 +114,22 @@
   animation: dsh-sessions-panel-live 1.6s var(--ds-ease-in-out) infinite;
 }
 
+/* A hold that blocks the operator reads in the warning colour, the same ink the
+   amber dot used for it before the stage marks replaced that dot. */
+.glyph[data-phase='awaiting'] {
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+/* The stage marks are drawn complete at rest, so the panel carries no dash-draw
+   loop. The design switches those off below 13px because a growing stroke reads
+   as flicker, and this panel draws at 12px; the transform loops are absent for
+   the same reason, and the pulse above is the liveness it keeps. */
+.glyph [data-part='detail'],
+.glyph [data-part='check'],
+.glyph [data-part='check-3'] {
+  display: none;
+}
+
 @keyframes dsh-sessions-panel-live {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }

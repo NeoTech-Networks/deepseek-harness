@@ -552,7 +552,7 @@ Source: [`packages/llm/llm-retry/src/types.ts:11`](../packages/llm/llm-retry/src
 'model/selection': ModelSelection
 ```
 
-Source: [`packages/api/session-controller/src/types.ts:41`](../packages/api/session-controller/src/types.ts)
+Source: [`packages/api/session-controller/src/types.ts:45`](../packages/api/session-controller/src/types.ts)
 
 ### `permission/*`
 
@@ -717,7 +717,7 @@ Source: [`packages/core/session/src/types.ts:400`](../packages/core/session/src/
 'session/status': { status: SessionStatusValue | null; note?: string }
 ```
 
-Source: [`packages/session-status/session-status/src/types.ts:96`](../packages/session-status/session-status/src/types.ts)
+Source: [`packages/session-status/session-status/src/types.ts:106`](../packages/session-status/session-status/src/types.ts)
 
 <a id="sessiontitle--log-only"></a>
 

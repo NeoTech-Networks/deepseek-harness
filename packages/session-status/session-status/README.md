@@ -31,22 +31,23 @@ Choose it when the status vocabulary is small, operator-authored, and whole-valu
 
 ### Minimal configuration
 
-`vocabulary` is optional with the shipped default. Every entry is `{ id, label, icon, tone }`; `id` is kebab-case and unique, `icon` is one of `right-up`, `stop`, `check`, `clock`, or `pause`, and `tone` is one of `attention`, `error`, `success`, or `neutral`.
+`vocabulary` is optional with the shipped default. Every entry is `{ id, label, icon, tone }`; `id` is kebab-case and unique, `icon` is one of `right-up`, `stop`, `check`, `clock`, `pause`, `deploying`, `blocked`, `saved`, or `failed`, and `tone` is one of `attention`, `error`, `success`, or `neutral`.
 
 ```yaml
 - name: '@deepseek-ai/dsh-session-status'
   config:
     vocabulary:
-      - { id: waiting-production, label: 'Waiting on you: deploy to production', icon: right-up, tone: attention }
-      - { id: stuck, label: Stuck, icon: stop, tone: error }
-      - { id: finished, label: Finished, icon: check, tone: success }
-      - { id: waiting-external, label: 'Waiting on someone else', icon: clock, tone: attention }
+      - { id: waiting-production, label: 'Waiting on you: deploy to production', icon: deploying, tone: attention }
+      - { id: stuck, label: Stuck, icon: blocked, tone: error }
+      - { id: finished, label: Finished, icon: saved, tone: success }
+      - { id: waiting-external, label: 'Waiting on someone else', icon: blocked, tone: attention }
       - { id: paused, label: Paused, icon: pause, tone: neutral }
+      - { id: failed, label: Failed, icon: failed, tone: error }
 ```
 
 | Field | Default | Meaning |
 |---|---|---|
-| `vocabulary` | the five shipped statuses | The allowed statuses; ids must be unique, and every icon and tone must be in its allowlist |
+| `vocabulary` | the six shipped statuses | The allowed statuses; ids must be unique, and every icon and tone must be in its allowlist |
 
 ### What each operation does
 

@@ -60,7 +60,7 @@ describe('dsh-tool-session-status', () => {
     expect(schema).toBeDefined()
     const props = (schema!.parameters as { properties?: Record<string, { enum?: string[] }> }).properties ?? {}
     expect(props.status?.enum).toEqual([
-      'waiting-production', 'stuck', 'finished', 'waiting-external', 'paused', 'clear',
+      'waiting-production', 'stuck', 'finished', 'waiting-external', 'paused', 'failed', 'clear',
     ])
   })
 
@@ -74,7 +74,7 @@ describe('dsh-tool-session-status', () => {
 
     const event = agent.session.snapshotEvents().findLast(e => e.type === 'session/status')
     expect(event?.type === 'session/status' && event.data.status).toEqual({
-      id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error',
+      id: 'stuck', label: 'Stuck', icon: 'blocked', tone: 'error',
     })
     expect(event?.type === 'session/status' && event.data.note).toBe('blocked on vendor')
   })

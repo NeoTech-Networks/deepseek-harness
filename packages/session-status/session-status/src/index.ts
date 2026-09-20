@@ -44,18 +44,31 @@ export class SessionStatusUnknownError extends Error {
 }
 
 /** The shipped icon-id allowlist, so a malformed entry fails at load. */
-const ICON_IDS: readonly SessionStatusIconId[] = ['right-up', 'stop', 'check', 'clock', 'pause']
+const ICON_IDS: readonly SessionStatusIconId[] = [
+  'right-up', 'stop', 'check', 'clock', 'pause',
+  'deploying', 'blocked', 'saved', 'failed',
+]
 
 /** The shipped tone allowlist, so a malformed entry fails at load. */
 const TONES: readonly SessionStatusTone[] = ['attention', 'error', 'success', 'neutral']
 
-/** The shipped default vocabulary; a deployment overrides it through config. */
+/**
+ * The shipped default vocabulary; a deployment overrides it through config.
+ *
+ * The icon ids point at the session stage marks (Claude Design project "dsh
+ * icons", 2026-09-19): the deploy hold carries the tray, both "waiting on
+ * someone" holds carry the hourglass because identity rides the glyph and
+ * urgency rides the tone, a save carries the card-and-check, and a failure
+ * carries the cross. `paused` is the one status the design has no stage for, so
+ * it keeps the pause glyph it has always had.
+ */
 const DEFAULT_VOCABULARY: readonly SessionStatusVocabularyEntry[] = [
-  { id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'right-up', tone: 'attention' },
-  { id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error' },
-  { id: 'finished', label: 'Finished', icon: 'check', tone: 'success' },
-  { id: 'waiting-external', label: 'Waiting on someone else', icon: 'clock', tone: 'attention' },
+  { id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'deploying', tone: 'attention' },
+  { id: 'stuck', label: 'Stuck', icon: 'blocked', tone: 'error' },
+  { id: 'finished', label: 'Finished', icon: 'saved', tone: 'success' },
+  { id: 'waiting-external', label: 'Waiting on someone else', icon: 'blocked', tone: 'attention' },
   { id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral' },
+  { id: 'failed', label: 'Failed', icon: 'failed', tone: 'error' },
 ]
 
 /** The projection key and its wire form share the same value type. */
@@ -66,6 +79,8 @@ const sessionStatusSchema: ZodType<SessionStatusValue | null> = zod.union([
     icon: zod.union([
       zod.literal('right-up'), zod.literal('stop'), zod.literal('check'),
       zod.literal('clock'), zod.literal('pause'),
+      zod.literal('deploying'), zod.literal('blocked'), zod.literal('saved'),
+      zod.literal('failed'),
     ]),
     tone: zod.union([
       zod.literal('attention'), zod.literal('error'),

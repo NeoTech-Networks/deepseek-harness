@@ -17,8 +17,8 @@ const icons = Object.fromEntries(
 const iconNames = Object.keys(icons)
 
 describe('ic_ds_ icon set', () => {
-  it('exports the full icon set (46 deepsuite + 21 figma extracts + eight product glyphs outside those sets)', () => {
-    expect(iconNames.length).toBe(75)
+  it('exports the full icon set (46 deepsuite + 21 figma extracts + eight product glyphs + eight session stage marks)', () => {
+    expect(iconNames.length).toBe(83)
   })
 
   it.each(iconNames)('%s renders an svg with currentColor fills and no hardcoded palette', (name) => {
@@ -54,6 +54,50 @@ describe('ic_ds_ icon set', () => {
     const { container } = render(<><IconGoalOutline16 /><IconGoalOutline16 /></>)
     expect(container.querySelector('[id]')).toBeNull()
     expect(container.querySelector('[clip-path]')).toBeNull()
+  })
+})
+
+/**
+ * The session stage marks carry no inline animation: the row's stylesheet owns
+ * the loops, keyed on these `data-part` names. That makes the plain render the
+ * MOTION-OFF case, and the design's contract for it is that the resting frame is
+ * the complete glyph, so every defining stroke must be present and visible.
+ */
+describe('session stage marks', () => {
+  const stages = {
+    IconStageWorkingOutline24: ['arc', 'arc-back', 'core'],
+    IconStageWritingOutline24: ['nib', 'ink', 'ink2'],
+    IconStageAwaitingInputOutline24: ['caret'],
+    IconStageBlockedOutline24: ['glass', 'grain', 'detail'],
+    IconStageFailedOutline24: ['cross', 'cross-a', 'cross-b'],
+    IconStageSavedOutline24: ['card', 'check'],
+    IconStagePlanReadyOutline24: ['check', 'check-2', 'check-3'],
+    IconStageDeployingOutline24: ['arrow', 'sweep'],
+  } as const
+
+  it('ships eight stage marks on the 24px grid at the 14px row size', () => {
+    expect(Object.keys(stages)).toHaveLength(8)
+    const { container } = render(<primitives.IconStageWorkingOutline24 />)
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('width')).toBe('14')
+    expect(svg.getAttribute('viewBox')).toBe('0 0 24 24')
+    expect(svg.getAttribute('stroke')).toBe('currentColor')
+    expect(svg.getAttribute('fill')).toBe('none')
+    expect(svg.getAttribute('stroke-width')).toBe('2.2')
+  })
+
+  it.each(Object.entries(stages))('%s shows its complete resting frame', (name, parts) => {
+    const Icon = icons[name]!
+    const { container } = render(<Icon />)
+    for (const part of parts) {
+      expect(container.querySelector(`[data-part="${part}"]`)).not.toBeNull()
+    }
+    // Nothing is invisible before a loop starts, which is what makes motion-off
+    // and prefers-reduced-motion safe: the keyframes were reworked so 0% is the
+    // drawn mark, and the mark itself never depends on the animation.
+    for (const el of container.querySelectorAll('[opacity]')) {
+      expect(Number(el.getAttribute('opacity'))).toBeGreaterThan(0)
+    }
   })
 })
 

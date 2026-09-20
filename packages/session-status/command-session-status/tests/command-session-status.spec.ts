@@ -83,7 +83,7 @@ describe('/status human command', () => {
     const result = await run(test)
     expect(result.kind).toBe('success')
     expect(result.text).toContain('No status is currently set.')
-    expect(result.text).toContain('waiting-production, stuck, finished, waiting-external, paused | clear')
+    expect(result.text).toContain('waiting-production, stuck, finished, waiting-external, paused, failed | clear')
     expect(test.session.snapshotEvents().filter(e => e.type === 'session/status')).toHaveLength(0)
   })
 

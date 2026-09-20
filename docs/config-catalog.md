@@ -257,7 +257,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/api/session-controller/src/index.ts:74`](../packages/api/session-controller/src/index.ts)
+Source: [`packages/api/session-controller/src/index.ts:75`](../packages/api/session-controller/src/index.ts)
 
 <a id="deepseek-aidsh-api-settings-controller"></a>
 
@@ -2164,6 +2164,12 @@ export interface SessionStatusValue {
  * through its own allowlist so a deployment that authors a new icon id keeps
  * working, and a client that does not know an id falls back to a neutral
  * generic glyph instead of throwing.
+ *
+ * The allowlist ONLY grows. The five ids below `deploying` shipped before the
+ * session stage marks and stay valid forever, because a `session/status` event
+ * already written to a session log names its icon id durably: dropping one would
+ * make an old row's status undrawable on replay. The client maps the legacy ids
+ * to the nearest stage mark so an old session still draws the current set.
  */
 export type SessionStatusIconId =
   | 'right-up'
@@ -2171,6 +2177,10 @@ export type SessionStatusIconId =
   | 'check'
   | 'clock'
   | 'pause'
+  | 'deploying'
+  | 'blocked'
+  | 'saved'
+  | 'failed'
 
 /**
  * Colour urgency of one status glyph. Identity lives in the glyph, urgency in
@@ -2179,7 +2189,7 @@ export type SessionStatusIconId =
 export type SessionStatusTone = 'attention' | 'error' | 'success' | 'neutral'
 ```
 
-Source: [`packages/session-status/session-status/src/types.ts:77`](../packages/session-status/session-status/src/types.ts)
+Source: [`packages/session-status/session-status/src/types.ts:87`](../packages/session-status/session-status/src/types.ts)
 
 <a id="deepseek-aidsh-session-telemetry-otel"></a>
 

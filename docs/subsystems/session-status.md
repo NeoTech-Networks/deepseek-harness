@@ -17,6 +17,12 @@ The shipped glyph identifiers are stable wire values, never components: the clie
  * through its own allowlist so a deployment that authors a new icon id keeps
  * working, and a client that does not know an id falls back to a neutral
  * generic glyph instead of throwing.
+ *
+ * The allowlist ONLY grows. The five ids below `deploying` shipped before the
+ * session stage marks and stay valid forever, because a `session/status` event
+ * already written to a session log names its icon id durably: dropping one would
+ * make an old row's status undrawable on replay. The client maps the legacy ids
+ * to the nearest stage mark so an old session still draws the current set.
  */
 type SessionStatusIconId =
   | 'right-up'
@@ -24,6 +30,10 @@ type SessionStatusIconId =
   | 'check'
   | 'clock'
   | 'pause'
+  | 'deploying'
+  | 'blocked'
+  | 'saved'
+  | 'failed'
 ```
 
 ```ts type-equiv

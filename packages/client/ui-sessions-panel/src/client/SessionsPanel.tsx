@@ -13,9 +13,10 @@ import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  IconAgentPresetOutline16, IconCheckOutline16, IconClockOutline16, IconEllipsisOutline16,
-  IconListPenOutline16, IconPauseOutline16, IconRightUpOutline16, IconStopFill16,
-  StateDot, relativeTime,
+  IconAgentPresetOutline16, IconEllipsisOutline16, IconPauseOutline16,
+  IconStageAwaitingInputOutline24, IconStageBlockedOutline24, IconStageDeployingOutline24,
+  IconStageFailedOutline24, IconStagePlanReadyOutline24, IconStageSavedOutline24,
+  IconStageWorkingOutline24, StateDot, relativeTime,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { IconProps, StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { SessionStatusIconId, SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
@@ -59,23 +60,38 @@ function phaseDot(phase: SessionPanelPhase): StateDotState | undefined {
 
 /**
  * Phases this panel names with a glyph instead of a dot, matching the
- * workspace sidebar. Plan mode is a session MODE, not an outcome, and running
- * descendants are not the same thing as this session running: an amber dot for
- * the first and the plain ongoing dot for the second (what this panel used to
- * draw) told the operator neither fact.
+ * workspace sidebar AND its new stage marks (Claude Design project "dsh icons",
+ * 2026-09-19). Plan mode is a session MODE, not an outcome; running descendants
+ * are not the same thing as this session running; and a session that is working
+ * or blocked on the operator says more with a mark than with a dot that means
+ * "busy".
+ *
+ * `subagents` keeps its own agent mark: the design covers eight session stages
+ * and delegated work is not one of them.
  */
 const PHASE_GLYPHS: Partial<Record<SessionPanelPhase, (props: IconProps) => ReactNode>> = {
-  planning: IconListPenOutline16,
+  awaiting: IconStageAwaitingInputOutline24,
+  running: IconStageWorkingOutline24,
+  planning: IconStagePlanReadyOutline24,
   subagents: IconAgentPresetOutline16,
 }
 
-/** Status icon id to glyph, matching the workspace sidebar's table. */
+/**
+ * Status icon id to glyph, the same table the workspace sidebar draws from.
+ * Legacy ids stay valid and map to the nearest stage mark, because an icon id
+ * rides a stored `session/status` event: dropping one would make an old row's
+ * status undrawable.
+ */
 const STATUS_ICONS: Record<SessionStatusIconId, (props: IconProps) => ReactNode> = {
-  'right-up': IconRightUpOutline16,
-  stop: IconStopFill16,
-  check: IconCheckOutline16,
-  clock: IconClockOutline16,
+  'right-up': IconStageDeployingOutline24,
+  stop: IconStageBlockedOutline24,
+  check: IconStageSavedOutline24,
+  clock: IconStageAwaitingInputOutline24,
   pause: IconPauseOutline16,
+  deploying: IconStageDeployingOutline24,
+  blocked: IconStageBlockedOutline24,
+  saved: IconStageSavedOutline24,
+  failed: IconStageFailedOutline24,
 }
 
 /** Neutral fallback for an icon id this client does not know (never throws). */
@@ -92,11 +108,13 @@ function RowMark({ phase, declared }: {
   }
   const Glyph = PHASE_GLYPHS[phase]
   if (Glyph !== undefined) {
-    // `subagents` is running by definition; plan mode is live only while the
-    // session's own turn runs, which this coarser phase cannot see (plan mode
-    // outranks running here too), so it stays still rather than lying.
+    // A running turn and running descendants are live by definition. Plan mode
+    // is live only while the session's own turn runs, which this coarser phase
+    // cannot see (plan mode outranks running here too), so it stays still
+    // rather than lying.
+    const live = phase === 'subagents' || phase === 'running'
     return (
-      <span className={css.glyph} data-phase={phase} data-active={phase === 'subagents' ? 'true' : undefined}>
+      <span className={css.glyph} data-phase={phase} data-active={live ? 'true' : undefined}>
         <Glyph size={12} />
       </span>
     )

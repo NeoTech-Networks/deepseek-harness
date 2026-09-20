@@ -31,22 +31,23 @@ kind: "package-reference"
 
 ### Minimal configuration
 
-`vocabulary` 可选，带有内置默认值。每个条目为 `{ id, label, icon, tone }`；`id` 为短横线命名且唯一，`icon` 为 `right-up`、`stop`、`check`、`clock`、`pause` 之一，`tone` 为 `attention`、`error`、`success`、`neutral` 之一。
+`vocabulary` 可选，带有内置默认值。每个条目为 `{ id, label, icon, tone }`；`id` 为短横线命名且唯一，`icon` 为 `right-up`、`stop`、`check`、`clock`、`pause`、`deploying`、`blocked`、`saved`、`failed` 之一，`tone` 为 `attention`、`error`、`success`、`neutral` 之一。
 
 ```yaml
 - name: '@deepseek-ai/dsh-session-status'
   config:
     vocabulary:
-      - { id: waiting-production, label: 'Waiting on you: deploy to production', icon: right-up, tone: attention }
-      - { id: stuck, label: Stuck, icon: stop, tone: error }
-      - { id: finished, label: Finished, icon: check, tone: success }
-      - { id: waiting-external, label: 'Waiting on someone else', icon: clock, tone: attention }
+      - { id: waiting-production, label: 'Waiting on you: deploy to production', icon: deploying, tone: attention }
+      - { id: stuck, label: Stuck, icon: blocked, tone: error }
+      - { id: finished, label: Finished, icon: saved, tone: success }
+      - { id: waiting-external, label: 'Waiting on someone else', icon: blocked, tone: attention }
       - { id: paused, label: Paused, icon: pause, tone: neutral }
+      - { id: failed, label: Failed, icon: failed, tone: error }
 ```
 
 | Field | Default | Meaning |
 |---|---|---|
-| `vocabulary` | 五个内置状态 | 允许的状态；id 必须唯一，每个 icon 和 tone 都必须在各自允许列表中 |
+| `vocabulary` | 六个内置状态 | 允许的状态；id 必须唯一，每个 icon 和 tone 都必须在各自允许列表中 |
 
 ### What each operation does
 

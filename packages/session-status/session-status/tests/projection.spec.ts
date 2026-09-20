@@ -93,7 +93,7 @@ describe('sessionStatus projection provider', () => {
   it('serves the latest whole value after a set', async () => {
     const bench = await harness(true)
     bench.ctx.sessionStatus.set(bench.session, 'stuck', 'waiting on you')
-    expect(bench.values().sessionStatus).toEqual({ id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error' })
+    expect(bench.values().sessionStatus).toEqual({ id: 'stuck', label: 'Stuck', icon: 'blocked', tone: 'error' })
   })
 
   it('clears on a later human user/message', async () => {
@@ -109,7 +109,7 @@ describe('sessionStatus projection provider', () => {
     bench.ctx.sessionStatus.set(bench.session, 'waiting-production')
     pluginMessage(bench.session)
     expect(bench.values().sessionStatus).toEqual({
-      id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'right-up', tone: 'attention',
+      id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'deploying', tone: 'attention',
     })
   })
 
@@ -126,10 +126,10 @@ describe('sessionStatus projection provider', () => {
     expect(bench.values().sessionStatus).toBeNull()
     goalPhase(bench.session, 'complete', 2)
     expect(bench.values().sessionStatus).toEqual({
-      id: 'finished', label: 'Finished', icon: 'check', tone: 'success',
+      id: 'finished', label: 'Finished', icon: 'saved', tone: 'success',
     })
     goalPhase(bench.session, 'blocked', 3)
-    expect(bench.values().sessionStatus).toEqual({ id: 'stuck', label: 'Stuck', icon: 'stop', tone: 'error' })
+    expect(bench.values().sessionStatus).toEqual({ id: 'stuck', label: 'Stuck', icon: 'blocked', tone: 'error' })
     goalPhase(bench.session, 'paused', 4)
     expect(bench.values().sessionStatus).toEqual({ id: 'paused', label: 'Paused', icon: 'pause', tone: 'neutral' })
   })
@@ -159,7 +159,7 @@ describe('sessionStatus projection provider', () => {
     bench.ctx.sessionStatus.set(bench.session, 'waiting-production')
     goalPhase(bench.session, 'active', 2)
     expect(bench.values().sessionStatus).toEqual({
-      id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'right-up', tone: 'attention',
+      id: 'waiting-production', label: 'Waiting on you: deploy to production', icon: 'deploying', tone: 'attention',
     })
   })
 

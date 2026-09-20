@@ -2148,6 +2148,7 @@ Set a durable status on the current session so the operator's sidebar shows what
         "finished",
         "waiting-external",
         "paused",
+        "failed",
         "clear"
       ]
     },
