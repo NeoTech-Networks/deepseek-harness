@@ -1,5 +1,16 @@
 
 
+## 2026-09-20 - the footer live-intent change, re-verified live in the running build
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Installed build | the 0.1.5-rc.2 stage-marks build | `resources\seed\desktop-release.json` version `0.1.5-rc.2`; four `DeepSeek Harness` processes running | VERIFIED |
+| The footer change is in the RUNNING code | the projection key in both bundles | `dsh-api-session-controller\lib\index.js` carries `workspaceLinks` (10 matches); `dsh-client-ui-conversation\lib\client.js` carries it (1) | VERIFIED |
+| The running registry actually FOLDS it | the key registered for a live Session | this Session's projection-cache row lists `workspaceLinks` beside `title`, `sessionStatus`, `modelSelection` and the rest: `~\.dsh\storages\session_projcache\sessions\session-d1fe2a05-1d71-434f-98ea-e80b07188da0.json` | VERIFIED |
+| Populated footer SEEN | two labelled rows under the message box | photographed by the 2026-09-20 sessions: `Dashboard: https://ops.theseoitguy.net/backlinks` and `Design Project: Backlinks`, the exact route the `byAddress` fix was built for. Evidence `C:\Projects\logs\2026-09-20\dsh-settings-retention\` | VERIFIED |
+| Stage glyphs render and animate | a moving mark on a running row | five visible `All Sessions` rows draw the WORKING glyph and animate: 408, 423, 424 and 374 pixels differ between two frames 600ms apart inside a 72x40 glyph box, against 0 of 2880 in two static control regions measured in the SAME frame pair. Evidence `C:\Projects\logs\2026-09-20\dsh-stage-marks\` | VERIFIED |
+| Hook bridge fires | a new `emitted-context` file after the install | newest is `s.json`, 2026-09-19 18:21:55, which PREDATES the 2026-09-20 install; this Session predates the `standard-hooks` preset, so its prompts cannot prove it | UNVERIFIED |
+
 ## 2026-09-20 - the sidebar stage marks SEEN in the running app, against a pre-install control
 
 | Check | Expected | Result | Status |

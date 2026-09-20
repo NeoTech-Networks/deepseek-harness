@@ -2,29 +2,18 @@
 
 Continue deepseek-harness. THE INSTALL IS DONE AND VERIFIED. The app is running the
 2026-09-20 build, all 27 local features are present in the running code, the settings
-survived untouched, and the populated Session footer has been photographed at last.
-Nothing is broken.
+survived untouched, and BOTH photographs that were owed are now taken: the populated
+Session footer, and the sidebar stage marks seen live. Nothing is broken.
 
-## The three things left, all small and all needing the app
+## The two things left, both needing a prompt sent from inside the app
 
-1. **THE SIDEBAR STAGE MARKS photographed.** Not done, and the reason is measured rather
-   than assumed: no Session in the app was in a running, waiting or plan state during any
-   capture, so the marks that distinguish states were never on screen, and at this render
-   scale the glyph column does not survive the vision sidecar's per-image token cap row by
-   row. Put a Session into one of those states (start a turn, or leave one parked on a
-   question) and capture with
-   `C:\Projects\logs\2026-09-18\dsh-footer-intent\capture_app_window.ps1`, crop with
-   `crop_png.ps1` beside it, and read it back through
-   `C:\Claude\bin\Ask-DeepSeekVision.ps1`. One row at a time crops best. This closes the
-   visual half of OPEN_ISSUES 5.
-2. **The hook bridge FIRING proof.** All six MCP rows are declared in the preset and five
-   of them answered a cheap read this session, but the bridge's own firing evidence is
-   still the 2026-09-19 marker: no DSH Session has started or taken a prompt since the
-   install. One message sent in the app writes a new
+1. **The hook bridge FIRING proof.** All six MCP rows are declared in the preset and five
+   of them answered a cheap read, but the bridge's own firing evidence is
+   still the 2026-09-19 marker. One message sent in the app writes a new
    `C:\Claude\integrations\dsh-hook-bridge\state\emitted-context\<session>.json`, which is
    the proof that `SessionStart` and `UserPromptSubmit` really fire rather than merely
    load. Check the file's mtime afterwards.
-3. **One read that cannot be taken from a Claude Code session:**
+2. **One read that cannot be taken from a Claude Code session:**
    `claude_design_team_account` mounts only in the app, so it was never called. Every
    other MCP server (`claude-memory-bridge`, `composio`, `composio_platform`,
    `claude_design`, `playwright`) answered a read.
@@ -67,6 +56,18 @@ Nothing is broken.
   `releases[0]` and never filters on `.prerelease`; run live, its last line is
   `VERDICT: UPDATE AVAILABLE dsh-v0.1.6-alpha.2` against `installed 0.1.5-rc.2`), the
   `Last refreshed:` bump, and a new `CHANGES.md` page.
+- **THE SIDEBAR STAGE MARKS ARE PHOTOGRAPHED TOO**, taken by the stage-icons session while
+  it was itself mid-turn, which is what put a running state on screen for the first time.
+  Every running row in the All Sessions list draws the new Working mark (two arcs plus a
+  centre dot) in the ongoing blue; three captures about two minutes apart put the arcs at a
+  different rotation every time, so the loop really runs. The control is the pre-install
+  capture of the same band (`C:\Projects\logs\2026-09-20\dsh-settings-retention\app-window-3.png`,
+  re-cropped as `preinstall-sidebar-band.png`), which shows those same rows with NO mark and
+  one of them on the old amber `right-up` glyph. Five or six simultaneous running marks were
+  checked against an independent source rather than assumed: SIX distinct session projection
+  caches were written inside a 3.5 minute window, so the machine really runs that many
+  Sessions at once. Evidence in `C:\Projects\logs\2026-09-20\dsh-stage-icons\`. This closes
+  the visual half of OPEN_ISSUES 5.
 
 ## Checkout state
 
@@ -102,3 +103,6 @@ Nothing is broken.
 - The estate checkout `C:\Projects\repos\vercel-services` is behind `origin/main`.
 - NEW, cosmetic: `dsh_update_check.py` also raises a `UnicodeDecodeError` in a reader
   thread (`cp1252` decoding git output) while still printing a verdict. Not investigated.
+- The file-type ICON SET is short of glyphs, not of artwork: `scss`, `sass`, `less`,
+  `astro`, `batch`, `cmd`, `csv` and `tsv` fall to the plain grey code glyph, and a Design
+  brief in three waves was handed over on 2026-09-19. Nothing to code until artwork lands.
