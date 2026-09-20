@@ -870,27 +870,38 @@ describe('exit_plan_mode', () => {
 
     const headingless = await callExit(ctx, agent, 'do things')
     expect(headingless.isError).toBe(true)
-    expect(headingless.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the first content line is not a heading ("do things")' }])
+    expect(headingless.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the plan has no markdown heading at all (it opens "do things")' }])
 
-    // A level-2-or-deeper opener is still refused, and the message names the
-    // level it found so the model fixes the heading instead of the plan.
+    // A plan with sub-headings but no title is still refused, and the message
+    // names the highest heading it found so the model adds a title instead of
+    // rewriting the plan.
     const subheading = await callExit(ctx, agent, '### Contract gap list\n\nbody')
     expect(subheading.isError).toBe(true)
-    expect(subheading.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the first heading is level 3 ("### Contract gap list"), but the plan must open with a single "#" title' }])
+    expect(subheading.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the plan has no "#" title; its highest heading is "### Contract gap list"' }])
+
+    // A `#` line inside a fenced block is a shell comment, not a title.
+    const fencedOnly = await callExit(ctx, agent, 'setup notes\n\n```sh\n# Real title\n```\n')
+    expect(fencedOnly.isError).toBe(true)
+    expect(fencedOnly.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the plan has no markdown heading at all (it opens "setup notes")' }])
 
     expect(asked).toHaveLength(0)
     expect(foldPlanMode(agent.session.snapshotEvents())).toBe(true)
   })
 
-  it('accepts a plan whose # heading follows blank or blockquote lines', async () => {
-    // Both shapes were rejected before 2026-09-08. The blockquote one is the
-    // costly case: a deployment whose plan format puts operator metadata in a
-    // leading `>` block had its own house style refused, and the message said
-    // the plan was empty.
+  it('accepts a plan whose # title follows any lead-in', async () => {
+    // Every shape here was refused at some point by a check that tested one
+    // line instead of looking for a title. The blockquote case was a
+    // deployment's operator-metadata block (fixed 2026-09-08); the rest are
+    // how models actually open a plan, and each one cost a whole turn.
     for (const plan of [
       '> _Operator metadata only._\n\n# Real title\n\nbody',
       '\n\n# Real title\n\nbody',
       '> one\n> two\n\n# Real title\n\nbody',
+      '_Note: this plan builds on an earlier review._\n\n# Real title\n\nbody',
+      'This plan covers two repos.\n\n# Real title\n\nbody',
+      '- context one\n- context two\n\n# Real title\n\nbody',
+      '<!-- generated from the review -->\n\n# Real title\n\nbody',
+      '```sh\n# not a title\n```\n\n# Real title\n\nbody',
     ]) {
       const { ctx, agent, asked } = await setupWithReview({ selected: ['Approve'] })
       const result = await callExit(ctx, agent, plan)
