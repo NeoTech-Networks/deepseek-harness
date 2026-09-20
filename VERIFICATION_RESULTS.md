@@ -1,5 +1,28 @@
 
 
+## 2026-09-20 - 0.1.6 blocked by upstream deletion; vault widened to 20 files and the hardlink guard proven
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| 0.1.6 desktop provisioning layer | present | `seed-store.ts` and `provision-log.ts` ABSENT at `dsh-v0.1.6-alpha.2`; 12 files under `apps/desktop/` gone | VERIFIED |
+| 0.1.6 provision milestones | present | all four return 0 files on the tag; `verifySeedIntegrity` and `integrity.json` NOT FOUND | VERIFIED |
+| Is the deletion a dropped commit? | local stack never touched it | `git log dsh-v0.1.5-rc.2..42db6c8038 -- apps/desktop/src/seed-store.ts` is EMPTY | VERIFIED |
+| 0.1.6 packages the fork uses | present | `session-status/*`, `ui-sessions-panel`, `vision/routing`, `llm/account-usage`, `api/pinned-files`, `ui-sidebar-explorer`, `e2b/*` and more all ABSENT; `derivePhase` NOT FOUND | VERIFIED |
+| Vault widened | 20 files | `snapshot: 20 files, 2 changed (2 added, 0 updated, 0 removed) commit 4d83d54` | VERIFIED |
+| Vault verify | exit 0 over 20 | `verify: 20 files, all same` | VERIFIED |
+| Vault pushed | on `main` at origin | `1d5ddc3..4d83d54 wt/session-4560821c-4ca -> main`, then `.gitignore` `4d83d54..0c6bde2` | VERIFIED |
+| Hardlink guard committed | on the release line | `42db6c8038` on `update/v0.1.5-rc.2`; `grep -c "HARDLINK OK"` = 1 | VERIFIED |
+| Hardlink guard behaviour | 4 modes correct | live -> `HARDLINK OK ... 2 links, id 0x...7ad594`; severed -> `REFUSING TO RUN`, exit 2; missing -> re-linked then OK; missing-both -> warn only | VERIFIED |
+| Hardlink identity by file id | shortname must NOT false-fail | `HARDLINK OK (shortname-test)` through `C:\Users\STEVED~1\...`; the first version compared path strings and DID false-fail | VERIFIED |
+| Install script parses | no syntax errors | `PARSE OK` on `dsh-stage-icons\finish-install.ps1` | VERIFIED |
+| Three missing features in the packaged seed | all present | `workspaceLinks` 1, `dsw-stage-arc-spin` 3, `deploying` 12, read out of the `.tgz` archives | VERIFIED |
+| Stage-icons carries the guard | at least 1 | `fe3a1a3c14..42db6c8038` fast-forward, `grep -c "HARDLINK OK"` = 1, tree clean | VERIFIED |
+| Pre-install fingerprint | 21 files, 0 missing | `fingerprint: 21 files hashed, 0 missing`, `hardlink: 2 link(s), same_file=yes` | VERIFIED |
+| Rollback installer on disk | untouched | `dsh-footer-intent\...\deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,901,646 bytes | VERIFIED |
+| App rollback dir | present, pending absent | `~\.dsh\desktop\rollback` exists (empty); `pending.json` No such file | VERIFIED |
+| The install itself | not run | exe still 244,440,576 bytes at 2026-09-17 23:52; newest provision log 2026-09-19T14-38-53Z; processes started 9/19 | UNVERIFIED |
+| 0.1.6 reachable at all | - | 8 of 53 commits replayed before the structural stop | BLOCKED |
+
 ## 2026-09-20 - the session stage marks: live, built, tested, merged, packaged
 
 | Check | Expected | Result | Status |
@@ -203,43 +226,3 @@
 | Built bundles carry every change | all markers present | `SINGLE-quoted`, `param(...)` wrap, `at most two sentences`, `headingInBody`, `data-all-sessions-error`, `data-session-count`, `commandText` all found in `lib/` | VERIFIED |
 | Running build carries all changes | 18/18 markers | NOT DONE: install pending | UNVERIFIED |
 | All Sessions root cause | named | NOT CAPTURED: the recovery row ships; the crash message is now on screen | UNVERIFIED |
-
-## 2026-09-12 - llm-route-fallback disabled, verified
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| Change in running code | `enabled: false` | running profile's `dsh-base/cordis.patch.yml` reads `enabled: false` (was `true`) | VERIFIED |
-| Boot after reinstall | applyRelease finished | provision log ends `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished` | VERIFIED |
-| Post-fix request stays on flash | model = `deepseek-flash` | this session's 5th `request/header` (23:20:53Z) is `deepseek-flash`; the four before the install were `deepseek-v4-pro` | VERIFIED |
-| Processes running | 4+ | 4 `DeepSeek Harness` processes | VERIFIED |
-| Installer packaged | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe` 194,826,890 bytes | VERIFIED |
-
-## 2026-09-12 - session footer + workspace UI shipped and installed
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| All local features in running build | 15/15 | `dsh_local_features_check.py` -> all 15 present incl `workspace-unarchived-count`, `session-footer`, `llm-route-fallback` | VERIFIED |
-| Boot after reinstall | applyRelease finished | newest provision log ends `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished` | VERIFIED |
-| ui-workspace tests | pass | 85 passed (46 tree + 39 rows incl count-badge test) | VERIFIED |
-| session-controller + ui-conversation tests | pass | 455 passed | VERIFIED |
-| Installer packaged | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe` 194,791,959 bytes | VERIFIED |
-| Footer visual rendering (summary + dashboard link) | renders under message box | not eyeballed | UNVERIFIED |
-
-## 2026-09-11 - version trap fix: archived branch, trunk checkout, reconciled state
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| Installed version | 0.1.5-rc.2 | exe FileVersion `0.1.5-rc.2`, registry `DisplayVersion` `0.1.5-rc.2`, installed seed and active profile `desktop-release.json` both `0.1.5-rc.2` | VERIFIED |
-| Newest upstream release | newest tag | `dsh-v0.1.5-rc.2` (2026-09-10) | VERIFIED |
-| Nothing newer available | up to date | `dsh_update_check.py` -> `VERDICT: UP TO DATE` | VERIFIED |
-| Parked branch pushed | durable copy | `origin/fix/account-usage-remote-mount` = `d77def1b70` | VERIFIED |
-| Uncommitted delta preserved | patch outside the repo | `2026-09-11_dsh-primary-checkout-uncommitted-delta.patch`, 47,852 bytes, `git apply --numstat` names the 12 files | VERIFIED |
-| Delta was a duplicate, not lost work | already shipped | same 12 files are commit `55c15a6af4` on `update/v0.1.5-rc.2`; `rightbarBySession` x7 on the branch and x6 in the RUNNING profile client.js | VERIFIED |
-| Compiled artifacts removed | 484 files, compiled only | `git clean -fdn -- packages vendor` printed 484 entries, 0 non-compiled; a clean sibling worktree (`dsh-update-v0.1.5-rc.2`) carries none of them, and `npm run build:lib:host` exits 0 afterwards with no tracked file touched | VERIFIED |
-| Primary checkout on trunk | branch master, clean | `## master...origin/master`, `git status --porcelain` empty, HEAD `5d2e7b087b` | VERIFIED |
-| State files reconciled | rc.2 section on origin/master, nothing dropped | `CURRENT_STATE.md` 43 to 46 sections, archive 26 to 29, all five files identical disk vs `origin/master` | VERIFIED |
-| rc.2 record on origin/master | present | `git show origin/master:CURRENT_STATE.md` carries `2026-09-11 - 0.1.5-rc.2 INSTALLED` | VERIFIED |
-| Worktrees intact | 18 entries, same branches | 18 listed, one per expected branch, primary now `[master]` | VERIFIED |
-| Version answer documented | README Version section | `C:\Projects\general\DS harness\README.md` rewritten with the version, the check command and the warning | VERIFIED |
-| Windows console flashing item | carry check | the hide-consoles fix `7fab040065` is in the `update/v0.1.5-rc.2` stack, so the remote-only OPEN_ISSUES line is obsolete rather than lost | VERIFIED |
-| Pre-push `typecheck` hook on `master` | runs | CANNOT RUN: `pnpm run typecheck` first does a deps-status install whose postinstall (`install-lefthook.mjs`) refuses to replace Steve's global `core.hooksPath`, so the typecheck never starts. This markdown-only state commit was therefore pushed with `--no-verify`, per the OPEN_ISSUES item 22 precedent. `DSH_LEFTHOOK_ALLOW_HOOKS_PATH_OVERRIDE=1` was deliberately NOT set | ENVIRONMENTAL, not a code fault |
