@@ -1,5 +1,22 @@
 
 
+## 2026-09-20 - the session stage marks: live, built, tested, merged, packaged
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| The row mark follows the live state, not the ending | one mark that moves twice in a turn | New row cases pass: a running session with a declared hold draws `[data-phase="running"]` and NO tone element, and the same session once quiet draws `[data-tone="error"]` with no running phase | VERIFIED |
+| Every "doing something" phase draws a glyph | no bare dot left for a live state | `PHASE_GLYPHS` covers awaiting-approval, awaiting-plan-review, awaiting-answer, planning, running and subagents; the done dot and the idle dot are the only dots left, asserted in `rows.client.spec.tsx` | VERIFIED |
+| The eight glyphs are the design's, and complete at rest | every defining stroke present with motion off | The icon spec renders all eight and asserts each `data-part` exists and no element sits at zero opacity; the standalone render shows all eight shapes, the single plan check and the hourglass without its base line (`C:\Projects\logs\2026-09-20\dsh-stage-icons\shot_1100.png`, `zoom-14px-paused.png`) | VERIFIED |
+| The declared vocabulary points at the marks and `failed` exists | six statuses, new icon ids | `session-status.spec.ts` reads the shipped list in order with `deploying`, `blocked`, `saved`, `blocked`, `pause`, `failed`; the tool enum and the `/status` command text carry all six; the client fixture matches | VERIFIED |
+| A legacy icon id still draws | old stored statuses survive replay | The allowlist only grew and the five legacy ids map to the nearest new mark, so `right-up`/`stop`/`check`/`clock`/`pause` all still resolve; the unknown-id fallback case still passes | VERIFIED |
+| Touched suites | green | 252 passed across 11 files: `ui-primitives` (98), `ui-workspace` rows (40) and tree, `ui-sessions-panel` (10), the three `session-status` packages | VERIFIED |
+| Typecheck, build, lint | exit 0, 0 new findings | `pnpm run typecheck` exit 0; `pnpm run build` exit 0, "recorded 240 client artifact(s)"; oxlint 0 warnings 0 errors on the staged set. Two pre-existing `no-unnecessary-condition` findings remain on lines this diff does not touch | VERIFIED |
+| Pre-existing gate findings unchanged | identical to the base commit | `verify-client-ui-i18n` 2 (`ui-sidebar-explorer`), oxlint repo-wide 52 errors, `verify-module-graph` and `verify-doc-graphs` stale (the base commit already lacks `pkg_session_status` in its committed graph) | VERIFIED |
+| Generated artifacts that this change touches | verifiers pass | `verify-tool-catalog`, `verify-cordis-catalog`, `verify-config-catalog`, `verify-persistence-catalog` all exit 0 after regeneration | VERIFIED |
+| Refs on the fork | both at the commit | `git ls-remote origin` reads `fe3a1a3c148e69b76aba6ec7bd812eee22b76a5a` for BOTH `refs/heads/feat/session-stage-icons` and `refs/heads/update/v0.1.5-rc.2` | VERIFIED |
+| Installer carries the change | markers INSIDE the packaged seed | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,849,563 bytes, 2026-09-20 11:55:36; `...seed/desktop-packages/deepseek-ai-dsh-client-ui-workspace-0.1.5-rc.2.tgz -> package/lib/client.js` carries `dsw-stage-arc-spin` (3); `...dsh-session-status...tgz -> package/lib/index.js` carries `deploying` (3); `...dsh-client-ui-sessions-panel...tgz -> package/lib/client.js` carries `IconStageWorkingOutline24` (1); all eight glyph paths are in the packed `web-frontend` `index-CkHN3ty-.js` | VERIFIED |
+| The marks SEEN in the sidebar | the app shows them live | PENDING the operator install. Only a component render inside the shipped stylesheet has been looked at; the sidebar itself and the theme colours have not | UNVERIFIED |
+
 ## 2026-09-19 - the footer follows the dashboard a Session names, live: built, tested, merged, packaged
 
 | Check | Expected | Result | Status |
