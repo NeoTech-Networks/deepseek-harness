@@ -62,6 +62,10 @@ $appDir   = Join-Path $env:LOCALAPPDATA 'Programs\DeepSeek Harness'
 $exe      = Join-Path $appDir 'DeepSeek Harness.exe'
 $seedDir  = Join-Path $appDir 'resources\seed'
 $dshHome  = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPROFILE '.dsh' }
+# The shared rules file, under both of its names. ONE file with TWO names, so
+# both are resolved here and never hardcoded to a profile.
+$agentsMd = Join-Path $dshHome 'AGENTS.md'
+$claudeMd = Join-Path $env:USERPROFILE '.claude\CLAUDE.md'
 $checker  = Join-Path $PSScriptRoot 'check-seed-integrity.py'
 $logDir   = Join-Path $dshHome 'desktop\logs'
 $selfLock = Join-Path $env:TEMP 'dsh-finish-install.lock'
@@ -108,6 +112,97 @@ function Stop-Guard($reason, $advice) {
   Write-Host ""
   Write-Host "If you are certain this is wrong, re-run with -Force." -ForegroundColor DarkGray
   exit 2
+}
+
+# ---------------------------------------------------------------------------
+# THE SHARED RULES FILE. $dshHome\AGENTS.md and $env:USERPROFILE\.claude\
+# CLAUDE.md are ONE file with TWO names (a hardlink), deliberately: DSH reads
+# AGENTS.md, Claude Code reads CLAUDE.md, and a COPY instead of a link means
+# the two drift apart with nobody noticing. It has already severed twice on
+# this machine, which is why AGENTS.md.bak-severed-* files sit next to it.
+#
+# The vault makes it worse in exactly one way, and this is what the guard is
+# for: the vault stores AGENTS.md as an ORDINARY file, so if an install deletes
+# it, `restore` opens the path "wb" and creates a FRESH SEPARATE FILE. The link
+# is then gone, both readers keep working, and nothing reports a fault. So a
+# missing AGENTS.md is re-linked BEFORE any restore can create a file, and the
+# link is asserted after.
+#
+# Writing THROUGH the link is safe here: the vault's copy of AGENTS.md was
+# taken by the pre-install snapshot above, at a moment when the two names were
+# still the same file, so a restore can only write back bytes CLAUDE.md
+# already had.
+# ---------------------------------------------------------------------------
+
+function Get-LinkNormalisedPath($p) {
+  # fsutil prints hardlink paths WITHOUT a drive letter, e.g.
+  #   \Users\SteveDempsey\.claude\CLAUDE.md
+  # so drop any drive and compare the rest case-insensitively.
+  $s = $p -replace '^[A-Za-z]:', ''
+  return (($s -replace '\\', '/').TrimStart('/')).ToLowerInvariant()
+}
+
+function Get-LinkPaths($path) {
+  $lines = & fsutil hardlink list $path 2>$null
+  if ($LASTEXITCODE -ne 0) { return @() }
+  return @($lines | Where-Object { $_ } | ForEach-Object { Get-LinkNormalisedPath $_ })
+}
+
+function Get-FileId($path) {
+  # Prints "File ID is 0x000000000000000000050000007ad594".
+  #
+  # Identity is compared by FILE ID and never by path STRING, and that is not
+  # fussiness: fsutil reports LONG names, while $env:USERPROFILE / $env:TEMP can
+  # hand back 8.3 short ones (C:\Users\STEVED~1\...). A string comparison
+  # therefore false-fails on a link that is perfectly good, and here a false
+  # failure stops the install. Measured on this machine 2026-09-20: both names
+  # resolve to 0x000000000000000000050000007ad594.
+  $out = & fsutil file queryfileid $path 2>$null
+  if ($LASTEXITCODE -ne 0) { return $null }
+  $text = ($out | Out-String)
+  if ($text -match '(?i)(0x[0-9a-f]+)') { return $Matches[1].ToLowerInvariant() }
+  return $null
+}
+
+function Restore-AgentsHardlink {
+  # Call this IMMEDIATELY BEFORE any vault restore. Recreating a missing
+  # AGENTS.md as a LINK is the only way to stop the restore from turning it
+  # into a separate file.
+  if (Test-Path $agentsMd) { return }
+  if (-not (Test-Path $claudeMd)) {
+    Write-Warning "$claudeMd is missing too, so $agentsMd cannot be re-linked. A restore will leave them as two separate files."
+    return
+  }
+  New-Item -ItemType HardLink -Path $agentsMd -Target $claudeMd | Out-Null
+  Write-Host "AGENTS.md was missing; re-linked it to .claude\CLAUDE.md (one file, two names)" -ForegroundColor Yellow
+}
+
+function Assert-AgentsHardlink($when) {
+  $links = @(Get-LinkPaths $agentsMd)
+  $idAgents = Get-FileId $agentsMd
+  $idClaude = Get-FileId $claudeMd
+  if ($links.Count -eq 2 -and $idAgents -and $idClaude -and $idAgents -eq $idClaude) {
+    Write-Host "HARDLINK OK ($when): AGENTS.md and .claude\CLAUDE.md are one file, 2 links, id $idAgents." -ForegroundColor Green
+    return
+  }
+  $foundText = if ($links.Count) { $links -join ', ' } else { '(fsutil returned nothing)' }
+  $idText = "AGENTS.md id: $(if ($idAgents) { $idAgents } else { 'unreadable' })  /  CLAUDE.md id: $(if ($idClaude) { $idClaude } else { 'unreadable' })"
+  Stop-Guard "the shared rules file is no longer one file with two names ($when)." @"
+  $claudeMd
+  $agentsMd
+  are meant to be ONE file with TWO names. They are not any more.
+
+  links seen from AGENTS.md : $($links.Count)
+    $foundText
+  $idText
+
+  Claude Code reads CLAUDE.md and DeepSeek Harness reads AGENTS.md, so from
+  this point an edit to one is invisible to the other. Put the link back by
+  hand, then run this script again:
+
+    del "$agentsMd"
+    New-Item -ItemType HardLink -Path "$agentsMd" -Target "$claudeMd"
+"@
 }
 
 # Guard 1: never run from inside the app this script force-closes.
@@ -321,7 +416,11 @@ if (Test-Path $VaultTool) {
   & py $VaultTool verify 2>&1 | ForEach-Object { Write-Host "  $_" }
   if ($LASTEXITCODE -eq 3) {
     Write-Warning "[dsh-config-vault] drift before first launch; restoring from the pre-install snapshot"
+    # Re-link FIRST: if the install deleted AGENTS.md, the restore below would
+    # open the path "wb" and create a fresh SEPARATE file, severing the link.
+    Restore-AgentsHardlink
     & py $VaultTool restore --all 2>&1 | ForEach-Object { Write-Host "  $_" }
+    Assert-AgentsHardlink 'after the pre-launch repair'
   }
 }
 
@@ -410,10 +509,13 @@ if (Test-Path $VaultTool) {
     Write-Host "  A .bak is written beside each repaired file, so this is itself undoable."
     taskkill /F /IM "DeepSeek Harness.exe" /T 2>$null | Out-Null
     Start-Sleep -Seconds 3
+    # Re-link FIRST, for the same reason as the pre-launch repair above.
+    Restore-AgentsHardlink
     & py $VaultTool restore --all 2>&1 | ForEach-Object { Write-Host "  $_" }
     Start-Process $exe
     Start-Sleep -Seconds 15
     & py $VaultTool verify 2>&1 | ForEach-Object { Write-Host "  $_" }
+    Assert-AgentsHardlink 'after the post-install repair'
     if ($LASTEXITCODE -eq 0) {
       Write-Host "[dsh-config-vault] REPAIRED: every protected file matches the snapshot again, and the app is running." -ForegroundColor Green
     } else {
@@ -421,7 +523,7 @@ if (Test-Path $VaultTool) {
       Write-Host "    Close DeepSeek Harness, then run: py $VaultTool restore --all" -ForegroundColor Yellow
     }
   } elseif ($VaultCode -eq 0) {
-    Write-Host "[dsh-config-vault] all of your custom settings survived the install (18 files, all same)." -ForegroundColor Green
+    Write-Host "[dsh-config-vault] all of your custom settings survived the install (every protected file matches)." -ForegroundColor Green
   } else {
     Write-Warning "[dsh-config-vault] could not check (exit $VaultCode). Run: py $VaultTool verify"
   }
@@ -430,6 +532,12 @@ if (Test-Path $VaultTool) {
 Write-Host ""
 Write-Host "Check that every one of your own features made it into this build:"
 Write-Host "    py C:\Claude\bin\dsh_local_features_check.py"
+
+# Final assertion, UNCONDITIONAL. The two above sit inside the vault blocks, and
+# in any case `verify` cannot see a severed link: it compares BYTES, and the two
+# names hold identical bytes whether they are one file or two. Link identity is
+# the one fault only this assert can catch, so it runs on every path out of here.
+Assert-AgentsHardlink 'final'
 
 Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
 Write-Host "done"
