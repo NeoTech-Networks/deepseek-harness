@@ -1,3 +1,17 @@
+## 2026-09-21 - plan lead-in tolerance: INSTALLED and proven in the running build
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Installer taken | exit 0, fresh seed | `finish-install.ps1` exit 0; log tail `old seed cleared` / `installer exit code: 0` / `done` | VERIFIED |
+| Seed integrity asserted before relaunch | matches integrity.json | `check-seed-integrity.py` passed inside the script, so it proceeded to relaunch; no `SEED INTEGRITY FAILED` | VERIFIED |
+| The RUNNING build accepts a lead-in | first two cases ACCEPTED | `node C:\Projects\temp\plan-fault-proof.mjs`, which imports the installed profile's `@deepseek-ai/dsh-plan-mode/lib/types/index.js`: `ACCEPTED  lead-in note then title` and `ACCEPTED  sentence then title` | VERIFIED |
+| The RUNNING build still refuses real faults | the other four REFUSED | Same run: `REFUSED  bare prose, no heading  the plan has no markdown heading at all`; `REFUSED  sub-headings only  the plan has no "#" title; its highest heading is "## Summary"`; `REFUSED  title only inside a fence  the plan has no content outside code fences`; `REFUSED  empty  the plan is empty` | VERIFIED |
+| Feature registry | 28 of 28, exit 0 | `dsh_local_features_check.py` exit 0, `all 28 local features are present in the running build`, including `plan-lead-in-tolerated` | VERIFIED |
+| Settings survived the install | 20 files all same, exit 0 | `dsh_config_vault.py verify` exit 0 twice: once on the closed app before first launch, once after setup | VERIFIED |
+| Shared rules file still one file with two names | 2 links, one file id | `HARDLINK OK (final): AGENTS.md and .claude\CLAUDE.md are one file, 2 links, id 0x0000000000000000000a000000849fff` | VERIFIED |
+| The app actually relaunched | new processes and a real window | The pre-install set (09-20 14:16) is gone; 4 processes started 13:02:45 to 13:08:48, `MainWindowTitle` populated and `MainWindowHandle` non-zero on the host process | VERIFIED |
+| Profile re-extracted from the new seed | fresh provisioning run | `pnpm install started as pid 35812` at `17:08:24Z`, `staged health check started`, then `SETUP COMPLETE. Running 0.1.5-rc.2` | VERIFIED |
+
 ## 2026-09-20 - plan lead-in tolerance: built and packaged, install not taken
 
 | Check | Expected | Result | Status |
