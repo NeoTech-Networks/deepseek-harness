@@ -78,7 +78,7 @@ export function applyEditTool(ctx: Context, sandbox: FsSandboxController): void 
     order: ctx.systemPrompt.getSectionOrder('TOOL_EDIT'),
     text: ({ scope }) => ctx.tools.get('edit', scope) === undefined
       ? ''
-      : 'Use the edit tool for targeted changes to existing UTF-8 text files. It replaces literal old_string with new_string; by default old_string must appear exactly once. If old_string appears multiple times, provide a more specific old_string or set replace_all to true. Read the file first (the default fs-observation-policy requires it), unless you just created or edited it in this session.',
+      : 'Use the edit tool for targeted changes to existing UTF-8 text files. It replaces literal old_string with new_string; by default old_string must appear exactly once. If old_string appears multiple times, provide a more specific old_string or set replace_all to true. Read the file first so old_string matches exactly; an unread edit is allowed and is anchored on that exact match (overwriting an existing file with write still requires a read).',
   })
 
   ctx.tools.register(defineTool({

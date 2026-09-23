@@ -71,16 +71,28 @@ class ObservedStateGate {
   }
 
   /**
-   * Decide the edit version guard: unseen rejects with `FS_NOT_OBSERVED`,
-   * confirmed absence rejects with `FS_NOT_FOUND`, and presence supplies the
+   * Decide the edit version guard: an actor with no session rejects with
+   * `FS_NOT_OBSERVED`; a session's unseen target resolves `undefined` (an
+   * unconditional atomic edit anchored on the exact, unique `old_string`);
+   * confirmed absence rejects with `FS_NOT_FOUND`; presence supplies the
    * observed version as the CAS basis.
+   *
+   * EDIT_SELF_OBSERVE (NeoTech fork, 2026-09-23). Upstream rejects an unseen
+   * edit outright. Over 7 days that refused 248 edits whose `old_string`
+   * matched: files read at another path (a git worktree copy), created or
+   * changed through the shell, or read before a session resume (observed state
+   * is not persisted). An edit carries its own content anchor, so the unique
+   * literal match is the safety check; a stale view still fails through the
+   * CAS once the file has been observed. `write` over an unseen existing file
+   * stays guarded by `createIfAbsent`.
    */
-  editIntent(target: FsTarget, actor: object | undefined): { version: FsVersion } {
+  editIntent(target: FsTarget, actor: object | undefined): { version: FsVersion } | undefined {
     const owner = this.owner(actor)
-    const prior = owner ? this.get(owner, target.targetKey) : undefined
-    if (!owner || prior === undefined) {
+    if (!owner) {
       throw new FsError(`edit requires reading "${target.displayPath}" first`, 'FS_NOT_OBSERVED')
     }
+    const prior = this.get(owner, target.targetKey)
+    if (prior === undefined) return undefined
     if (prior.kind === 'absent') {
       throw new FsError(`cannot edit "${target.displayPath}": not found`, 'FS_NOT_FOUND')
     }
