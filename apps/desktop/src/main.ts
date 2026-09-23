@@ -10,8 +10,10 @@ import {
   ipcMain,
   Menu,
   protocol,
+  shell,
   type IpcMainInvokeEvent,
 } from 'electron'
+import { routeExternalLinks } from './external-links.ts'
 import { resolveDesktopPaths } from './paths.ts'
 import { DesktopProjectManager, type DesktopProjectHooks } from './project-manager.ts'
 import { DesktopHostProcess } from './host-process.ts'
@@ -94,10 +96,7 @@ function createWindow(preload: string): BrowserWindow {
       webSecurity: true,
     },
   })
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  window.webContents.on('will-navigate', (event, url) => {
-    if (new URL(url).protocol !== `${SCHEME}:`) event.preventDefault()
-  })
+  routeExternalLinks(window.webContents, `${SCHEME}:`, url => shell.openExternal(url))
   return window
 }
 
