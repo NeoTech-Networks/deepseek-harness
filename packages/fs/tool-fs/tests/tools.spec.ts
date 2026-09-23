@@ -469,10 +469,17 @@ describe('edit tool', () => {
     expect(text(result)).toContain('file_path must be a non-empty string')
   })
 
-  it('propagates FS_NOT_OBSERVED when the file was never read (the gate decides)', async () => {
+  it('lets a session edit a never-read file, anchored on old_string (EDIT_SELF_OBSERVE; the gate decides)', async () => {
     const { ctx, fs } = await setup()
     fs.files.set('key:a.txt', 'hello')
-    const result = await call(ctx, 'edit', { file_path: 'a.txt', old_string: 'a', new_string: 'b' }, { session: { header: {} } })
+    const result = await call(ctx, 'edit', { file_path: 'a.txt', old_string: 'hello', new_string: 'bye' }, { session: { header: {} } })
+    expect(result.isError).toBe(false)
+  })
+
+  it('propagates FS_NOT_OBSERVED for a never-read file when the caller has no session', async () => {
+    const { ctx, fs } = await setup()
+    fs.files.set('key:a.txt', 'hello')
+    const result = await call(ctx, 'edit', { file_path: 'a.txt', old_string: 'hello', new_string: 'bye' })
     expect(result.isError).toBe(true)
     expect(result.error).toMatchObject({ info: { code: 'FS_NOT_OBSERVED' } })
   })
@@ -994,7 +1001,7 @@ async function guidanceScope(ctx: Context) {
 const originalGuidance = {
   read: 'Use the read tool — not shell commands like cat — to inspect text files. Results include line numbers. Use offset and limit to continue reading large files.',
   write: 'Use the write tool to create files or completely replace file contents. Existing files are overwritten, so read an existing file first (the default fs-observation-policy requires it) and prefer edit for targeted changes.',
-  edit: 'Use the edit tool for targeted changes to existing UTF-8 text files. It replaces literal old_string with new_string; by default old_string must appear exactly once. If old_string appears multiple times, provide a more specific old_string or set replace_all to true. Read the file first (the default fs-observation-policy requires it), unless you just created or edited it in this session.',
+  edit: 'Use the edit tool for targeted changes to existing UTF-8 text files. It replaces literal old_string with new_string; by default old_string must appear exactly once. If old_string appears multiple times, provide a more specific old_string or set replace_all to true. Read the file first so old_string matches exactly; an unread edit is allowed and is anchored on that exact match (overwriting an existing file with write still requires a read).',
 }
 
 describe('scope-aware filesystem guidance', () => {
