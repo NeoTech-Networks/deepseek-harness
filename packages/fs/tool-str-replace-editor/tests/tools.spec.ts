@@ -530,20 +530,21 @@ describe('tool-str-replace-editor', () => {
     const created = join(root, 'created.txt')
     await writeFile(existing, 'before')
 
+    // EDIT_SELF_OBSERVE: an unread str_replace is anchored on its unique old_str.
     const blindEdit = await call(ctx, owner, {
       command: 'str_replace',
       path: existing,
       old_str: 'before',
-      new_str: 'after',
+      new_str: 'middle',
     })
-    expect(blindEdit.error).toMatchObject({ info: { code: 'FS_NOT_OBSERVED' } })
-    expect(await readFile(existing, 'utf8')).toBe('before')
+    expect(blindEdit.isError).toBe(false)
+    expect(await readFile(existing, 'utf8')).toBe('middle')
 
     await call(ctx, owner, { command: 'view', path: existing })
     expect((await call(ctx, owner, {
       command: 'str_replace',
       path: existing,
-      old_str: 'before',
+      old_str: 'middle',
       new_str: 'after',
     })).isError).toBe(false)
     expect(await readFile(existing, 'utf8')).toBe('after')

@@ -150,7 +150,7 @@ Read an existing file before overwriting it with write (the default fs-observati
 ##### Edit 指导
 
 ```markdown
-Read a file before editing it (the default fs-observation-policy requires it), unless you just created or edited it in this session.
+Read a file before editing it so old_string matches exactly; an unread edit is allowed and is anchored on that exact match (overwriting an existing file with write still requires a read).
 ```
 
 #### Token 影响
