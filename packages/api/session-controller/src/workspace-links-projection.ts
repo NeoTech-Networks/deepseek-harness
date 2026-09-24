@@ -45,15 +45,35 @@ const candidateSchema = z.object({
   target: z.string().min(1).nullable(),
 }).strict()
 
-const stateSchema = z.object({
+const stateSchema: z.ZodType<WorkspaceLinksProjectionState> = z.object({
   cwd: z.string(),
   candidates: z.array(candidateSchema).max(MAX_RETAINED_CANDIDATES),
-}).strict() as unknown as z.ZodType<WorkspaceLinksProjectionState>
+}).strict()
 
-const viewSchema = z.object({
+const viewShape = z.object({
   dashboardUrl: z.string().min(1).optional(),
   designProject: z.string().min(1).optional(),
-}) as unknown as z.ZodType<WorkspaceLinks>
+}).strict()
+
+/**
+ * Whether a value is a well-formed wire view: at most the two named fields,
+ * each a non-empty string when present.
+ *
+ * zod types `.optional()` as `?: string | undefined`, which
+ * `exactOptionalPropertyTypes` will not assign to {@link WorkspaceLinks}'
+ * `?: string`, so the shape validates and this guard supplies the declared type.
+ * An explicitly `undefined` field is refused, which is what `?: string` means.
+ *
+ * @param value - candidate view.
+ * @returns true when `value` is a {@link WorkspaceLinks}.
+ */
+function isWorkspaceLinks(value: unknown): value is WorkspaceLinks {
+  const parsed = viewShape.safeParse(value)
+  return parsed.success && Object.values(parsed.data).every(field => field !== undefined)
+}
+
+/** The view passes through unchanged, so the memoised reference survives the parse. */
+const viewSchema = z.custom<WorkspaceLinks>(isWorkspaceLinks)
 
 /**
  * Read one operator message's exact text content, or nothing.
