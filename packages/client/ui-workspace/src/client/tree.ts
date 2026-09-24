@@ -10,6 +10,9 @@ import type { WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-
 import type {
   SessionStatusSnapshot,
 } from '@deepseek-ai/dsh-client-ui-session/client'
+// Type-only: the `plan` and `sessionStatus` list projection merges the stage marks read.
+import type {} from '@deepseek-ai/dsh-plan-mode/client'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
 import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
@@ -40,6 +43,94 @@ function mainSessionId(list: SessionListState): SessionId | undefined {
     .find(session => (session.retainedBy.mainView ?? 0) > 0)?.id
 }
 
+/**
+ * The single phase a session row's status slot presents (fork stage marks), in
+ * the precedence {@link derivePhase} applies. `subagents` is descendant-only
+ * activity; `done` is the finished-but-unopened reminder, distinct from `idle`.
+ */
+export type SessionPhase =
+  | 'awaiting-approval'
+  | 'awaiting-plan-review'
+  | 'awaiting-answer'
+  | 'planning'
+  | 'running'
+  | 'subagents'
+  | 'declared'
+  | 'done'
+  | 'idle'
+
+/** Live facts every session row surface derives identically (tree, flat list, search, All Sessions). */
+export interface SessionRowFacts {
+  /** A Session-scoped UI consumer is awaiting this user. */
+  pendingInteraction?: SessionPendingInteractionStatus
+  running: boolean
+  /** Running direct children in the loaded subagent catalog. */
+  runningSubagentCount: number
+  /** Finished running while not selected and not yet opened. */
+  completed: boolean
+  /** Logged plan mode is in force (the `plan` list projection's `active`); absent reads as off. */
+  planActive?: boolean
+  /** A declared status, from the `sessionStatus` list projection. */
+  declaredStatus?: SessionStatusValue
+}
+
+/**
+ * Resolve the one phase a row presents: the mark says what the session is doing
+ * now, and a declared status is what an idle session says about why it is idle.
+ * Anything blocking the operator outranks everything the agent does alone; then
+ * plan mode, then own activity, then descendant activity; a declared status sits
+ * below all of those (the model sets it before its turn actually ends), and the
+ * finished-but-unopened reminder is last before idle.
+ * @param facts - the row's derived live facts.
+ * @returns the winning phase.
+ */
+export function derivePhase(facts: SessionRowFacts): SessionPhase {
+  switch (facts.pendingInteraction) {
+    case 'approval': return 'awaiting-approval'
+    case 'plan-review': return 'awaiting-plan-review'
+    case 'question': return 'awaiting-answer'
+    case undefined: break
+    /* v8 ignore next -- closed SessionPendingInteractionStatus union */
+    default: return assertNever(facts.pendingInteraction)
+  }
+  if (facts.planActive === true) return 'planning'
+  if (facts.running) return 'running'
+  if (facts.runningSubagentCount > 0) return 'subagents'
+  if (facts.declaredStatus !== undefined) return 'declared'
+  return facts.completed ? 'done' : 'idle'
+}
+
+/** Plan mode in force; an absent key (plan-mode not composed, hints not warmed) reads as false. */
+function planActiveOf(session: SessionSummary): boolean {
+  return session.projectionValues?.plan?.active === true
+}
+
+/** The declared status, whole; an absent key reads as no status. */
+function declaredStatusOf(session: SessionSummary): SessionStatusValue | undefined {
+  return session.projectionValues?.sessionStatus ?? undefined
+}
+
+/** Shared live facts plus the phase, for one Session summary. */
+function rowFacts(
+  s: SessionSummary,
+  list: SessionListState,
+  statuses: SessionStatuses,
+): SessionRowFacts {
+  const status = statuses.get(s.id)
+  const pendingInteraction = visiblePendingKind(status?.pendingInteraction?.kind)
+  const declaredStatus = declaredStatusOf(s)
+  const facts: SessionRowFacts = {
+    running: status?.running ?? s.running,
+    runningSubagentCount: runningChildCount(list, s.id, statuses),
+    completed: status?.completionUnread === true,
+    // Present only while on, so rows without plan mode keep upstream's shape.
+    ...(planActiveOf(s) ? { planActive: true } : {}),
+    ...(pendingInteraction === undefined ? {} : { pendingInteraction }),
+    ...(declaredStatus === undefined ? {} : { declaredStatus }),
+  }
+  return facts
+}
+
 /** One top-level session row in a group or the flat list. */
 export interface SessionNode {
   id: SessionId
@@ -59,6 +150,10 @@ export interface SessionNode {
   /** In the registry-global archive set: shown grayed in place and not openable. */
   archived: boolean
   updatedAt: number
+  /** Logged plan mode is in force (fork stage marks); absent reads as off. */
+  planActive?: boolean
+  /** A declared status from the `sessionStatus` projection (fork). */
+  declaredStatus?: SessionStatusValue
 }
 
 /** Session order selected by the Workspace browser. */
@@ -105,6 +200,10 @@ export interface SearchResultNode {
   /** In the registry-global archive set: shown grayed and not openable. */
   archived: boolean
   snippet?: string
+  /** Logged plan mode is in force (fork stage marks); absent reads as off. */
+  planActive?: boolean
+  /** A declared status from the `sessionStatus` projection (fork). */
+  declaredStatus?: SessionStatusValue
 }
 
 /** Bounded merged search projection plus the refine-query hint bit. */
@@ -420,19 +519,14 @@ function sessionNode(
   pinned: ReadonlySet<SessionId>,
   archived: ReadonlySet<SessionId>,
 ): SessionNode {
-  const status = statuses.get(s.id)
-  const pendingInteraction = visiblePendingKind(status?.pendingInteraction?.kind)
   return {
+    ...rowFacts(s, list, statuses),
     id: s.id,
     title: sessionTitle(s),
     blank: s.blank,
-    running: status?.running ?? s.running,
-    runningSubagentCount: runningChildCount(list, s.id, statuses),
-    completed: status?.completionUnread === true,
     pinned: !archived.has(s.id) && pinned.has(s.id),
     archived: archived.has(s.id),
     updatedAt: s.updatedAt,
-    ...(pendingInteraction === undefined ? {} : { pendingInteraction }),
   }
 }
 
@@ -753,18 +847,11 @@ export function deriveSearchResults(
   return {
     items: ordered.slice(0, limit).map((summary) => {
       const match = contentBySession.get(summary.id)
-      const status = statuses.get(summary.id)
-      const pendingInteraction = visiblePendingKind(status?.pendingInteraction?.kind)
       return {
+        ...rowFacts(summary, list, statuses),
         id: summary.id,
         title: sessionTitle(summary),
         workspace: labelOf(summary),
-        running: status?.running ?? summary.running,
-        runningSubagentCount: runningChildCount(list, summary.id, statuses),
-        ...(pendingInteraction === undefined
-          ? {}
-          : { pendingInteraction }),
-        completed: status?.completionUnread === true,
         archived: archived.has(summary.id),
         ...match === undefined ? {} : { snippet: match.snippet },
       }

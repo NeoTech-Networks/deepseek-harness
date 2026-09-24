@@ -2,7 +2,7 @@
  * Shared current-color product icons. Names identify the glyph and weight;
  * rendered size remains a prop instead of part of the component name.
  */
-import { useId } from 'react'
+import { type ReactNode, useId } from 'react'
 import type { IconProps } from './props.ts'
 import {
   BrowseOutlineArtwork, ChatLinesOutlineArtwork, CodeBracketsArtwork, FolderCloseArtwork,
@@ -1655,4 +1655,209 @@ export const IconMicrophoneOutlineRegular = (props: IconProps) => (
 /** Microphone with uniform 1.3px strokes. */
 export const IconMicrophoneOutlineMedium = (props: IconProps) => (
   <IconMicrophoneOutlineArtwork {...props} strokeWidth={ICON_MEDIUM_STROKE} />
+)
+
+/**
+ * The session stage marks (fork), drawn for the sidebar's status slot from the
+ * Claude Design project "dsh icons" (`Session Stage Icons`, read 2026-09-19).
+ * Stroke glyphs on a 24px grid rendered at the rows' 14px slot, which is why
+ * the regular weight is the design's 14px stroke of 2.2.
+ *
+ * Motion is deliberately NOT here: every element the design animates carries
+ * a `data-part` name, and the session row's stylesheet owns the keyframes and
+ * transform origins, so one rule honours `prefers-reduced-motion` for all
+ * eight and a still consumer draws the design's complete resting frame.
+ * `data-part="detail"` and the numbered plan checks mark the strokes the design
+ * drops below 16px.
+ */
+
+/** Design stroke of the stage marks at their 14px working size. */
+const STAGE_REGULAR_STROKE = 2.2
+
+/** Emphasized stage-mark stroke. */
+const STAGE_MEDIUM_STROKE = 2.6
+
+const StageSvg = ({ size = 14, className, strokeWidth, children }: WeightedIconProps & { children: ReactNode }) => (
+  <svg
+    width={size}
+    height={size}
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    {children}
+  </svg>
+)
+
+const IconStageWorkingOutlineArtwork = (props: WeightedIconProps) => (
+  <StageSvg {...props}>
+    <g data-part="arc">
+      <path d="M12 2.9a9.1 9.1 0 0 1 9.1 9.1" />
+      <path d="M12 21.1A9.1 9.1 0 0 1 2.9 12" opacity=".95" />
+    </g>
+    <g data-part="arc-back">
+      <path d="M12 6.6a5.4 5.4 0 0 1 5.4 5.4" opacity=".4" />
+    </g>
+    <circle data-part="core" cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+  </StageSvg>
+)
+
+/** Regular stage.working mark: a run in flight with no finer stage to report. */
+export const IconStageWorkingOutlineRegular = (props: IconProps) => (
+  <IconStageWorkingOutlineArtwork {...props} strokeWidth={STAGE_REGULAR_STROKE} />
+)
+
+/** Medium stage.working mark. */
+export const IconStageWorkingOutlineMedium = (props: IconProps) => (
+  <IconStageWorkingOutlineArtwork {...props} strokeWidth={STAGE_MEDIUM_STROKE} />
+)
+
+const IconStageWritingOutlineArtwork = (props: WeightedIconProps) => (
+  <StageSvg {...props}>
+    <g data-part="nib">
+      <path d="M18.5 3.5a2.1 2.1 0 0 1 3 3L11 17l-4 1 1-4Z" />
+    </g>
+    <path data-part="ink" d="M4 20.5h9" strokeDasharray="14" />
+    <path data-part="ink2" d="M4 16.5h4" strokeDasharray="14" opacity=".45" />
+  </StageSvg>
+)
+
+/** Regular stage.writing mark: the model is producing output into the transcript. */
+export const IconStageWritingOutlineRegular = (props: IconProps) => (
+  <IconStageWritingOutlineArtwork {...props} strokeWidth={STAGE_REGULAR_STROKE} />
+)
+
+/** Medium stage.writing mark. */
+export const IconStageWritingOutlineMedium = (props: IconProps) => (
+  <IconStageWritingOutlineArtwork {...props} strokeWidth={STAGE_MEDIUM_STROKE} />
+)
+
+const IconStageAwaitingInputOutlineArtwork = (props: WeightedIconProps) => (
+  <StageSvg {...props}>
+    <path d="M3.4 6.1a2 2 0 0 1 2-2h13.2a2 2 0 0 1 2 2v8.6a2 2 0 0 1-2 2h-8.3L5.6 20.4v-3.7h-.2a2 2 0 0 1-2-2Z" />
+    <path d="M7.6 9.1h6.4" opacity=".5" />
+    <path data-part="caret" d="M16.6 9.1v3.4" strokeWidth="2.6" />
+    <path d="M7.6 12.5h6.4" opacity=".5" />
+  </StageSvg>
+)
+
+/** Regular stage.awaiting_input mark: the run is halted until a person answers or approves. */
+export const IconStageAwaitingInputOutlineRegular = (props: IconProps) => (
+  <IconStageAwaitingInputOutlineArtwork {...props} strokeWidth={STAGE_REGULAR_STROKE} />
+)
+
+/** Medium stage.awaiting_input mark. */
+export const IconStageAwaitingInputOutlineMedium = (props: IconProps) => (
+  <IconStageAwaitingInputOutlineArtwork {...props} strokeWidth={STAGE_MEDIUM_STROKE} />
+)
+
+const IconStageBlockedOutlineArtwork = (props: WeightedIconProps) => (
+  <StageSvg {...props}>
+    <g data-part="glass">
+      <path d="M6.6 3.2h10.8M6.6 20.8h10.8" />
+      <path d="M8.2 3.2v3.3c0 2.1 3.8 3.4 3.8 5.5s-3.8 3.4-3.8 5.5v3.3" />
+      <path d="M15.8 3.2v3.3c0 2.1-3.8 3.4-3.8 5.5s3.8 3.4 3.8 5.5v3.3" />
+      <path data-part="detail" d="M9.6 18.6c.8-1.5 3.9-1.5 4.8 0" opacity=".55" />
+      <circle data-part="grain" cx="12" cy="10.4" r=".95" fill="currentColor" stroke="none" />
+    </g>
+  </StageSvg>
+)
+
+/** Regular stage.blocked mark: work is queued behind a gate or a provider limit. */
+export const IconStageBlockedOutlineRegular = (props: IconProps) => (
+  <IconStageBlockedOutlineArtwork {...props} strokeWidth={STAGE_REGULAR_STROKE} />
+)
+
+/** Medium stage.blocked mark. */
+export const IconStageBlockedOutlineMedium = (props: IconProps) => (
+  <IconStageBlockedOutlineArtwork {...props} strokeWidth={STAGE_MEDIUM_STROKE} />
+)
+
+const IconStageFailedOutlineArtwork = (props: WeightedIconProps) => (
+  <StageSvg {...props}>
+    <g data-part="cross">
+      <circle cx="12" cy="12" r="8.6" />
+      <path data-part="cross-a" d="m9 9 6 6" strokeDasharray="10" />
+      <path data-part="cross-b" d="m15 9-6 6" strokeDasharray="10" />
+    </g>
+  </StageSvg>
+)
+
+/** Regular stage.failed mark: the session ended on an error; nothing further will run. */
+export const IconStageFailedOutlineRegular = (props: IconProps) => (
+  <IconStageFailedOutlineArtwork {...props} strokeWidth={STAGE_REGULAR_STROKE} />
+)
+
+/** Medium stage.failed mark. */
+export const IconStageFailedOutlineMedium = (props: IconProps) => (
+  <IconStageFailedOutlineArtwork {...props} strokeWidth={STAGE_MEDIUM_STROKE} />
+)
+
+const IconStageSavedOutlineArtwork = (props: WeightedIconProps) => (
+  <StageSvg {...props}>
+    <g data-part="card">
+      <path d="M4.5 6.2A1.7 1.7 0 0 1 6.2 4.5h9.4L19.5 8.4v9.4a1.7 1.7 0 0 1-1.7 1.7H6.2a1.7 1.7 0 0 1-1.7-1.7Z" />
+      <path d="M8.2 4.5v4h6v-4" opacity=".45" />
+    </g>
+    <path data-part="check" d="m8.6 14.4 2.2 2.2 4.6-4.6" strokeDasharray="12" />
+  </StageSvg>
+)
+
+/** Regular stage.saved mark: state written to the handoff file; safe to resume later. */
+export const IconStageSavedOutlineRegular = (props: IconProps) => (
+  <IconStageSavedOutlineArtwork {...props} strokeWidth={STAGE_REGULAR_STROKE} />
+)
+
+/** Medium stage.saved mark. */
+export const IconStageSavedOutlineMedium = (props: IconProps) => (
+  <IconStageSavedOutlineArtwork {...props} strokeWidth={STAGE_MEDIUM_STROKE} />
+)
+
+const IconStagePlanReadyOutlineArtwork = (props: WeightedIconProps) => (
+  <StageSvg {...props}>
+    <path d="M4 5.6h10" opacity=".5" />
+    <path d="M4 12h10" opacity=".5" />
+    <path d="M4 18.4h6" opacity=".5" />
+    <path data-part="check" d="m17 4.2 1.6 1.6 3-3" strokeDasharray="12" />
+    <path data-part="check-2" d="m17 10.6 1.6 1.6 3-3" strokeDasharray="12" />
+    <path data-part="check-3" d="m17 17 1.6 1.6 3-3" strokeDasharray="12" />
+  </StageSvg>
+)
+
+/** Regular stage.plan_ready mark: every step resolved and approved, awaiting the go command. */
+export const IconStagePlanReadyOutlineRegular = (props: IconProps) => (
+  <IconStagePlanReadyOutlineArtwork {...props} strokeWidth={STAGE_REGULAR_STROKE} />
+)
+
+/** Medium stage.plan_ready mark. */
+export const IconStagePlanReadyOutlineMedium = (props: IconProps) => (
+  <IconStagePlanReadyOutlineArtwork {...props} strokeWidth={STAGE_MEDIUM_STROKE} />
+)
+
+const IconStageDeployingOutlineArtwork = (props: WeightedIconProps) => (
+  <StageSvg {...props}>
+    <path d="M4.5 15.5v3.2a1.3 1.3 0 0 0 1.3 1.3h12.4a1.3 1.3 0 0 0 1.3-1.3v-3.2" />
+    <path d="M7.6 17.9h.01M11 17.9h.01" opacity=".5" />
+    <g data-part="arrow">
+      <path d="M12 12.6V3.6" />
+      <path d="m8.4 7.2 3.6-3.6 3.6 3.6" />
+    </g>
+    <path data-part="sweep" d="M8.6 12.9h6.8" opacity=".3" />
+  </StageSvg>
+)
+
+/** Regular stage.deploying mark: the publish command is running against the live target. */
+export const IconStageDeployingOutlineRegular = (props: IconProps) => (
+  <IconStageDeployingOutlineArtwork {...props} strokeWidth={STAGE_REGULAR_STROKE} />
+)
+
+/** Medium stage.deploying mark. */
+export const IconStageDeployingOutlineMedium = (props: IconProps) => (
+  <IconStageDeployingOutlineArtwork {...props} strokeWidth={STAGE_MEDIUM_STROKE} />
 )

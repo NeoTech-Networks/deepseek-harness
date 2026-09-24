@@ -9,7 +9,7 @@ import type { SessionProjectionSnapshot } from '@deepseek-ai/dsh-api-session-con
 import {
   type ArchivedFilter,
   deriveFlat, deriveGroups, deriveSearchResults, orderByRecency, owningGroupKey, owningParentFolder,
-  pinCurrentBlank, reconcileManualOrder, sectionize, sectionShowsWorkspaces, sessionMemberIds, visibleSessionIds,
+  derivePhase, pinCurrentBlank, reconcileManualOrder, sectionize, sectionShowsWorkspaces, sessionMemberIds, visibleSessionIds,
   workspaceLabel, LOOSE_SECTION_KEY, UNGROUPED_KEY, UNGROUPED_SECTION_KEY,
 } from '../src/client/tree.ts'
 import { createWorkspaceViewStore } from '../src/client/stores.ts'
@@ -876,6 +876,28 @@ describe('parent folder membership', () => {
     ['/Git/app', ['/git'], undefined],
   ])('groups %s under its nearest registered ancestor', (path, parents, expected) => {
     expect(owningParentFolder(path, parents)).toBe(expected)
+  })
+})
+
+describe('derivePhase (fork stage marks)', () => {
+  const base = { running: false, runningSubagentCount: 0, completed: false }
+  const status = { id: 'waiting-production', label: 'Deploy', icon: 'deploying' as const, tone: 'attention' as const }
+  it('orders operator holds, plan mode, own work, descendants, declared status, then completion', () => {
+    expect(derivePhase({ ...base, pendingInteraction: 'approval', planActive: true, running: true })).toBe('awaiting-approval')
+    expect(derivePhase({ ...base, pendingInteraction: 'plan-review' })).toBe('awaiting-plan-review')
+    expect(derivePhase({ ...base, pendingInteraction: 'question' })).toBe('awaiting-answer')
+    expect(derivePhase({ ...base, planActive: true, running: true })).toBe('planning')
+    expect(derivePhase({ ...base, running: true, declaredStatus: status })).toBe('running')
+    expect(derivePhase({ ...base, runningSubagentCount: 2, declaredStatus: status })).toBe('subagents')
+    expect(derivePhase({ ...base, completed: true, declaredStatus: status })).toBe('declared')
+    expect(derivePhase({ ...base, completed: true })).toBe('done')
+    expect(derivePhase(base)).toBe('idle')
+  })
+
+  it('reads plan mode and the declared status from the list projections', () => {
+    const planning = { ...summary('p', 1), projectionValues: { plan: { active: true, pending: false }, sessionStatus: status } }
+    const [group] = deriveGroups(list(planning), [workspace('w', ['p'])], noRows, noAttention, view(['w']))
+    expect(group?.sessions[0]).toMatchObject({ planActive: true, declaredStatus: status })
   })
 })
 

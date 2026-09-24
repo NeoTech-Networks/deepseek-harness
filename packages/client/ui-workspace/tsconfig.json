@@ -45,6 +45,9 @@
       "path": "../../session-status/session-status"
     },
     {
+      "path": "../../plan/plan-mode"
+    },
+    {
       "path": "../../subagent/subagent"
     },
     {

@@ -6150,6 +6150,9 @@ importers:
       '@deepseek-ai/dsh-jobs':
         specifier: workspace:*
         version: link:../../jobs/jobs
+      '@deepseek-ai/dsh-plan-mode':
+        specifier: workspace:*
+        version: link:../../plan/plan-mode
       '@deepseek-ai/dsh-schedule':
         specifier: workspace:*
         version: link:../../schedule/schedule

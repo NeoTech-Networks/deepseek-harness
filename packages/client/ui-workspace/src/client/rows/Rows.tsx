@@ -15,17 +15,20 @@ import type { RefObject } from 'react'
 import clsx from 'clsx'
 import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  HoverCard, IconArchiveOutlineRegular, IconEditOutlineRegular,
-  IconEllipsisOutlineRegular, IconFolderCloseRegular, IconFolderOpenOutlineRegular,
-  IconFolderOpenRegular,
-  IconNewChatOutlineRegular, IconPinFillRegular, IconTrashOutlineRegular,
+  HoverCard, IconAgentPresetOutlineRegular, IconArchiveOutlineRegular, IconEditOutlineRegular,
+  IconEllipsisOutlineMedium, IconEllipsisOutlineRegular, IconFolderCloseRegular, IconFolderOpenOutlineRegular,
+  IconFolderOpenRegular, IconNewChatOutlineRegular, IconPauseOutlineRegular, IconPinFillRegular,
+  IconStageAwaitingInputOutlineRegular, IconStageBlockedOutlineRegular, IconStageDeployingOutlineRegular,
+  IconStageFailedOutlineRegular, IconStagePlanReadyOutlineRegular, IconStageSavedOutlineRegular,
+  IconStageWorkingOutlineRegular, IconTrashOutlineRegular,
   IconTriangleRightFillRegular, IconUnarchiveOutlineRegular, Menu, relativeTime, StateDot, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ShortcutCatalogEntry } from '@deepseek-ai/dsh-client-shortcuts/client'
-import type { StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { IconProps, StateDotState } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { SessionStatusIconId, SessionStatusTone, SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import { abbreviateHomePath } from '@deepseek-ai/dsh-util-workspace-path'
 import type { MenuOpenState, WorkspaceBrowserProps } from '../contract/slots.ts'
-import type { GroupNode, SearchResultNode, SessionNode } from '../tree.ts'
+import { derivePhase, type GroupNode, type SearchResultNode, type SessionNode, type SessionPhase, type SessionRowFacts } from '../tree.ts'
 import css from './Rows.module.css'
 
 /** The standard locale seat, prop-passed from the browser root. */
@@ -353,12 +356,25 @@ interface SessionStatus {
   trailingLabel?: string
 }
 
+/** Map a declared status tone to the state-dot colour the hover labels use. */
+function toneState(tone: SessionStatusTone): StateDotState {
+  switch (tone) {
+    case 'attention': return 'warning'
+    case 'error': return 'error'
+    case 'success': return 'done'
+    case 'neutral': return 'idle'
+    /* v8 ignore next 2 -- closed tone union; a forged wire value reads neutral */
+    default: return 'idle'
+  }
+}
+
 /**
- * Session status presentation; pending interaction is primary and live activity
- * outranks completion reminders.
+ * Session status presentation, in the same precedence `derivePhase` applies so
+ * the first entry describes the row's phase: pending interaction, plan mode,
+ * own activity, descendants, then the declared status (fork), then completion.
  */
 function sessionStatuses(
-  node: Pick<SessionNode, 'pendingInteraction' | 'running' | 'runningSubagentCount' | 'completed'>,
+  node: SessionRowFacts,
   t: RowTranslate,
 ): readonly [SessionStatus, ...SessionStatus[]] {
   const subagents: SessionStatus | undefined = node.runningSubagentCount === 0
@@ -399,27 +415,119 @@ function sessionStatuses(
     /* v8 ignore next -- closed PendingInteractionStatus union */
     default: return assertNever(node.pendingInteraction)
   }
-  if (pending !== undefined) return subagents === undefined ? [pending] : [pending, subagents]
-  if (node.running) {
-    const primary: SessionStatus = { state: 'ongoing', label: t('status.running') }
-    return subagents === undefined ? [primary] : [primary, subagents]
+  const active: SessionStatus[] = []
+  if (pending !== undefined) active.push(pending)
+  if (node.planActive === true) active.push({ state: 'warning', label: t('status.planning') })
+  if (node.running) active.push({ state: 'ongoing', label: t('status.running') })
+  if (subagents !== undefined) active.push(subagents)
+  // Last of the active facts: a declared status is what an idle session says
+  // about why it is idle; it still rides the labels while work runs.
+  if (node.declaredStatus !== undefined) {
+    active.push({ state: toneState(node.declaredStatus.tone), label: node.declaredStatus.label })
   }
-  if (subagents !== undefined) return [subagents]
+  const [primary, ...rest] = active
+  if (primary !== undefined) return [primary, ...rest]
   if (node.completed) return [{ state: 'done', label: t('status.completed') }]
   return [{ state: 'idle', label: t('status.idle') }]
 }
 
-/** Primary status dot plus every status's screen-reader label, shared by the search and session rows. */
-function SessionStatusDots({ statuses }: { statuses: readonly [SessionStatus, ...SessionStatus[]] }) {
+/** One stage-mark glyph at the rows' 14px slot. */
+type StageGlyph = (props: IconProps) => ReturnType<typeof IconStageWorkingOutlineRegular>
+
+/**
+ * Phases the status slot names with a stage mark instead of the state dot
+ * (fork; Claude Design project "dsh icons", 2026-09-19): working, waiting on
+ * you, and plan ready. `subagents` keeps the agent mark (the design has no
+ * delegation stage); `done` and `idle` keep the dot.
+ */
+const PHASE_GLYPHS: Partial<Record<SessionPhase, StageGlyph>> = {
+  'awaiting-approval': IconStageAwaitingInputOutlineRegular,
+  'awaiting-plan-review': IconStagePlanReadyOutlineRegular,
+  'awaiting-answer': IconStageAwaitingInputOutlineRegular,
+  planning: IconStagePlanReadyOutlineRegular,
+  running: IconStageWorkingOutlineRegular,
+  subagents: IconAgentPresetOutlineRegular,
+}
+
+/**
+ * Declared-status icon id to glyph. The allowlist only grows: the five ids
+ * that shipped before the stage marks stay drawable, mapped to the nearest
+ * mark, because an icon id rides a stored `session/status` event.
+ */
+const STATUS_ICONS: Record<SessionStatusIconId, StageGlyph> = {
+  'right-up': IconStageDeployingOutlineRegular,
+  stop: IconStageBlockedOutlineRegular,
+  check: IconStageSavedOutlineRegular,
+  clock: IconStageAwaitingInputOutlineRegular,
+  pause: IconPauseOutlineRegular,
+  deploying: IconStageDeployingOutlineRegular,
+  blocked: IconStageBlockedOutlineRegular,
+  saved: IconStageSavedOutlineRegular,
+  failed: IconStageFailedOutlineRegular,
+}
+
+/** Neutral glyph for an icon id this client does not know (never throws). */
+const UNKNOWN_STATUS_ICON: StageGlyph = IconEllipsisOutlineMedium
+
+/**
+ * Whether a glyph phase carries the live treatment (ongoing colour and the
+ * wrapper pulse; `running` swaps the pulse for its own spin). The awaiting
+ * phases stay still: they mean "you are blocking me".
+ */
+function liveGlyph(phase: SessionPhase, running: boolean): boolean {
+  if (phase === 'subagents' || phase === 'running') return true
+  return phase === 'planning' && running
+}
+
+/**
+ * The row's phase mark plus every status's screen-reader label, shared by the
+ * search, session, and All Sessions rows. The mark stays `aria-hidden`; the
+ * labels are the accessible text. The declared phase draws the status's own
+ * glyph in its tone colour, because that vocabulary is deployment-owned. A
+ * glyph repeats the primary `data-state` the dot would have carried, so state
+ * queries keep one answer whichever mark draws.
+ */
+function SessionStatusDots({ phase, statuses, declared, running }: {
+  phase: SessionPhase
+  statuses: readonly [SessionStatus, ...SessionStatus[]]
+  declared: SessionStatusValue | undefined
+  running: boolean
+}) {
+  const labels = statuses.map(status => (
+    <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
+  ))
+  if (phase === 'declared' && declared !== undefined) {
+    const Glyph = (STATUS_ICONS as Partial<Record<string, StageGlyph>>)[declared.icon] ?? UNKNOWN_STATUS_ICON
+    return (
+      <>
+        <span className={css.phaseIcon} data-phase={phase} data-state={statuses[0].state} data-tone={declared.tone} aria-hidden="true">
+          <Glyph size={14} />
+        </span>
+        {labels}
+      </>
+    )
+  }
+  const Glyph = PHASE_GLYPHS[phase]
   return (
     <>
-      <StateDot state={statuses[0].state} />
-      {statuses.map(status => (
-        <span className={css.visuallyHidden} key={status.label}>{status.label}</span>
-      ))}
+      {Glyph === undefined
+        ? <StateDot state={statuses[0].state} />
+        : (
+          <span
+            className={css.phaseIcon}
+            data-phase={phase}
+            data-state={statuses[0].state}
+            data-active={liveGlyph(phase, running) ? 'true' : undefined}
+            aria-hidden="true"
+          >
+            <Glyph size={14} />
+          </span>
+        )}
+      {labels}
     </>
   )
 }
+
 
 /**
  * The row's live status mark for surfaces outside the tree (the fork's All
@@ -428,12 +536,16 @@ function SessionStatusDots({ statuses }: { statuses: readonly [SessionStatus, ..
  * @returns the mark, or null.
  */
 export function SessionMark({ node, t }: {
-  node: Pick<SessionNode, 'pendingInteraction' | 'running' | 'runningSubagentCount' | 'completed'>
+  node: SessionRowFacts
   t: RowTranslate
 }) {
-  const statuses = sessionStatuses(node, t)
-  if (statuses[0].state === 'idle') return null
-  return <SessionStatusDots statuses={statuses} />
+  const phase = derivePhase(node)
+  if (phase === 'idle') return null
+  return (
+    <SessionStatusDots
+      phase={phase} statuses={sessionStatuses(node, t)} declared={node.declaredStatus} running={node.running}
+    />
+  )
 }
 
 /** Non-interactive pinned-row marker; the enclosing row remains the only action. */
@@ -505,7 +617,7 @@ export function SearchResultItem({ result, currentId, onOpen, onUnarchive, t }: 
 }) {
   const selected = result.id === currentId
   const statuses = sessionStatuses(result, t)
-  const primaryStatus = statuses[0]
+  const resultPhase = derivePhase(result)
   return (
     <div
       className={clsx(css.searchResultRow, selected && css.selected, result.archived && css.archived)}
@@ -519,8 +631,10 @@ export function SearchResultItem({ result, currentId, onOpen, onUnarchive, t }: 
             archived rows it stays blank — the grayed row carries the
             archived look. */}
         <span className={css.slot}>
-          {!result.archived && primaryStatus.state !== 'idle' && (
-            <SessionStatusDots statuses={statuses} />
+          {!result.archived && resultPhase !== 'idle' && (
+            <SessionStatusDots
+              phase={resultPhase} statuses={statuses} declared={result.declaredStatus} running={result.running}
+            />
           )}
         </span>
         <span className={css.searchResultTitle}>{result.title}</span>
@@ -594,7 +708,8 @@ export function SessionNodeItem({
   const selected = node.id === currentId
   const statuses = sessionStatuses(node, t)
   const primaryStatus = statuses[0]
-  const showStatus = primaryStatus.state !== 'idle'
+  const phase = derivePhase(node)
+  const showStatus = phase !== 'idle'
   // Archived rows hold their in-place grayed slot, so manual reorder cannot
   // move them. Pinned rows drag within the pinned block: the browser gates
   // their drop targets to fellow pinned rows.
@@ -658,7 +773,7 @@ export function SessionNodeItem({
           status stays on the hover card only. */}
       <span className={css.slot}>
         {!row.archived && !row.blank && (showStatus
-          ? <SessionStatusDots statuses={statuses} />
+          ? <SessionStatusDots phase={phase} statuses={statuses} declared={row.declaredStatus} running={row.running} />
           : renderSlot('sidebar.session.row.leading', { sessionId: node.id }))}
       </span>
       <span
