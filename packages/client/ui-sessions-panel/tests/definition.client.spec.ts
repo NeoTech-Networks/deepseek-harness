@@ -15,10 +15,11 @@ describe('sessionsDefinition', () => {
     expect(definition.patterns).toBeUndefined()
     expect(definition.title('sidebar://sessions')).toBe('tab.title')
     expect(definition.guide).toHaveLength(1)
+    const functionMatcher: unknown = expect.any(Function)
     expect(definition.guide?.[0]).toMatchObject({
       order: 10,
-      title: expect.any(Function),
-      icon: expect.any(Function),
+      title: functionMatcher,
+      icon: functionMatcher,
     })
     expect(definition.guide?.[0]?.title()).toBe('guide.title')
   })
