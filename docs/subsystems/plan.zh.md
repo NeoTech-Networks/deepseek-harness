@@ -23,10 +23,14 @@ agent 运行时，唯一的追加点是前置（prepend）注册的 `agent/pre-s
 interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Pin plan mode active on every newly created non-subagent session whose log carries no plan state. Defaults to false. */
+  defaultActive?: boolean
 }
 ```
 
 `section` 缺失、为空白或不是字符串，以及任何未知键，都会在插件加载时失败，而不是被忽略。计划模式激活期间，确切的 `section` 文本以 order 50 渲染为 `plan:policy` [系统提示词段落](system-prompt.zh.md)；未激活的计划模式不贡献任何文本。
+
+`defaultActive: true` 让每个新建的非 subagent 会话以计划模式启动，但仅限其日志中尚无计划状态时，因此已记录过 `plan/mode` 选择的会话在回放时保持原有选择。默认值为 false。
 
 ## 退出工具与 `/plan` 命令
 
