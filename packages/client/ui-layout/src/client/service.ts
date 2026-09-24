@@ -47,8 +47,10 @@ export interface ILayout {
    *   including beneath a fullscreen overlay.
    * @param fullscreen - whether the panel covers the frame and hides its outer
    *   resize handle; independent of the underlying grid track.
+   * @param sessionId - the session whose panel reports (fork); the frame keys
+   *   the saved width by it. Omitted, the one shared width applies.
    */
-  openRightbar(track: boolean, fullscreen: boolean): void
+  openRightbar(track: boolean, fullscreen: boolean, sessionId?: string): void
   /** Report the right panel as hidden: no track, no handle. */
   closeRightbar(): void
 }
@@ -95,8 +97,9 @@ export class LayoutController implements ILayout {
   }
 
   /** Report the right panel's track and fullscreen presentation. */
-  openRightbar(track: boolean, fullscreen: boolean): void {
-    this.panels.openRightbar(track, fullscreen)
+  openRightbar(track: boolean, fullscreen: boolean, sessionId?: string): void {
+    if (sessionId === undefined) this.panels.openRightbar(track, fullscreen)
+    else this.panels.openRightbar(track, fullscreen, sessionId)
   }
 
   /** Report the right panel as hidden: no track, no handle. */
