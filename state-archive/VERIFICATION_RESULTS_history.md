@@ -2,6 +2,25 @@
 
 Auto-archived by state_file_cap.py when VERIFICATION_RESULTS.md exceeded 32 KB. Newest-first. On-demand only; not read at session start.
 
+## 2026-09-17 - the two-line session footer: built, tested, merged, packaged
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Resolver unit suite | pass | `packages/api/session-controller/tests/workspace-links.host.spec.ts`: 10 cases pass (exact folder, subfolder, worktree tail, lookalike key, unmapped, missing design file, malformed dashboard file, non-string values, separators and case) | VERIFIED |
+| Footer component suite | pass | `packages/client/ui-conversation/tests/skeleton.client.spec.tsx`: 5 new cases pass (both values, both labels empty, one half only, no footer in the hero, exact English labels) | VERIFIED |
+| Touched package suites | pass | 70 files, 1166 passed, 1 skipped, 1 FAILED: `media-references.host.spec.ts` symlink `EPERM`, reproduced identically on `1a77e844ad`, the known no-symlink-privilege environment | VERIFIED (failure pre-existing) |
+| typecheck | exit 0 | `pnpm run typecheck` exit 0 after `src/workspace-links.ts` was added to the package `tsconfig.host.json` `files` list, which the first run named as the missing entry | VERIFIED |
+| build | exit 0 | `pnpm run build` exit 0, 240 client artifacts | VERIFIED |
+| i18n gate | exit 0 | exits 1 on two `ui-sidebar-explorer/src/client/definition.ts` strings; identical output on `1a77e844ad`, and zero findings in the changed files | VERIFIED (failure pre-existing) |
+| Built bundles carry the change | present | `lib/index.js` reads `dashboard-links.json` and `design-links.json`; `lib/client.js` carries `data-session-footer-line` (2) and no `sessionFooterSummary` (0) | VERIFIED |
+| Maps regenerated | both written | `~\.dsh\dashboard-links.json` 89 entries (66 dashboard folders + 23 unambiguous producer service folders); `~\.dsh\design-links.json` 83 entries; 51 names read from Claude Design across both accounts, 0 fell back to a contract title | VERIFIED |
+| Producer service mapping | resolves, and skips the ambiguous | live resolver over the real maps: `services\youtube-creator` and a folder inside it resolve to the URL and `YouTube`; `services\content-planner` (17 dashboards behind it) resolves to nothing, as designed; 10 ambiguous services named in the generator's output | VERIFIED |
+| Release line | carries the commits | `feat/session-footer-links` and `update/v0.1.5-rc.2` both read back from the fork at `e15a4fc5f4` | VERIFIED |
+| Seed proof before handover | markers inside the packaged seed | conversation `.tgz`: `data-session-footer-line` (2), `sessionFooterSummary` (0); session-controller `.tgz`: both map filenames | VERIFIED |
+| Installer | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,884,537 bytes, 2026-09-17 01:20:22 | VERIFIED |
+| Running app after the install | 21 of 21 markers | `dsh_local_features_check.py`: "all 21 local features are present in the running build", exit 0; profile client.js (01:48:52) marker 2 and old class 0; profile host bundle reads `design-links.json`; provision log ends `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished`; 4 processes from 01:43:54; release file `0.1.5-rc.2` | VERIFIED |
+| Footer seen on screen | two labelled lines | PARTIAL: the app window was captured but it was on the NEW SESSION screen, where no footer renders by design (correct), and no current workspace points at a mapped folder. Evidence: `C:\Projects\logs\2026-09-17\dsh-session-footer-lines\` | UNVERIFIED |
+
 ## 2026-09-14 - stream-stall fix: built, installed, and proven against the live broken route
 
 | Check | Expected | Result | Status |
