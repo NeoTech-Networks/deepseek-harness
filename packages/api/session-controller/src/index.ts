@@ -53,6 +53,9 @@ import type {
   SessionPromptValue,
   SessionRenameRequest,
   SessionRenameValue,
+  SessionListStatusesValue,
+  SessionSetStatusRequest,
+  SessionSetStatusValue,
   SessionSearchRequest,
   SessionSearchValue,
   SessionSelectModelRequest,
@@ -386,6 +389,25 @@ export class SessionController extends TypertRemoteService {
   @Remote('rename')
   rename(request: SessionRenameRequest): Promise<SessionRenameValue> {
     return this.commands.rename(request)
+  }
+
+  /**
+   * Set or clear one declared session status after explicitly resuming it.
+   * @param request - Session identity and the vocabulary id, or null to clear.
+   * @returns the resolved status and the durable event sequence.
+   */
+  @Remote('setStatus')
+  setStatus(request: SessionSetStatusRequest): Promise<SessionSetStatusValue> {
+    return this.commands.setStatus(request)
+  }
+
+  /**
+   * Read the deployment's declared status vocabulary, for the row menu.
+   * @returns the vocabulary in declaration order.
+   */
+  @Remote('listStatuses')
+  listStatuses(): SessionListStatusesValue {
+    return this.commands.listStatuses()
   }
 
   /**

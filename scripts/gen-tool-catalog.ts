@@ -53,6 +53,8 @@ import * as ToolStrReplaceEditor from '@deepseek-ai/dsh-tool-str-replace-editor'
 import TerminalSessionService from '@deepseek-ai/dsh-terminal'
 import * as ToolPty from '@deepseek-ai/dsh-tool-terminal'
 import * as ToolGoal from '@deepseek-ai/dsh-tool-goal'
+import * as ToolSessionStatus from '@deepseek-ai/dsh-tool-session-status'
+import SessionStatusService from '@deepseek-ai/dsh-session-status'
 import * as ToolSchedule from '@deepseek-ai/dsh-schedule'
 import Lsp from '@deepseek-ai/dsh-lsp'
 import * as ToolLsp from '@deepseek-ai/dsh-tool-lsp'
@@ -445,6 +447,19 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-session-status',
+    dir: 'tool-session-status',
+    source: 'packages/session-status/tool-session-status/src/index.ts',
+    requires: ['ctx.tools', 'ctx.sessionStatus', 'owning Agent session'],
+    writes: ['tool/call', 'session/status', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(SessionStatusService)
+      await ctx.plugin(ToolSessionStatus)
+    },
+    note:
+      'set_session_status is a harness tool over the session-status domain: the status enum is the live vocabulary plus a clear sentinel, so a model cannot invent an id the deployment does not declare.',
   },
   {
     pkg: '@deepseek-ai/dsh-schedule',

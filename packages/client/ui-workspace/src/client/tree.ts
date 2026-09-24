@@ -11,6 +11,9 @@ import type {
   SessionStatusSnapshot,
 } from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-schedule/client'
+// Type-only: the `plan` and `sessionStatus` list projection merges the stage marks read.
+import type {} from '@deepseek-ai/dsh-plan-mode/client'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
 import { workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
@@ -41,6 +44,94 @@ function mainSessionId(list: SessionListState): SessionId | undefined {
     .find(session => (session.retainedBy.mainView ?? 0) > 0)?.id
 }
 
+/**
+ * The single phase a session row's status slot presents (fork stage marks), in
+ * the precedence {@link derivePhase} applies. `subagents` is descendant-only
+ * activity; `done` is the finished-but-unopened reminder, distinct from `idle`.
+ */
+export type SessionPhase =
+  | 'awaiting-approval'
+  | 'awaiting-plan-review'
+  | 'awaiting-answer'
+  | 'planning'
+  | 'running'
+  | 'subagents'
+  | 'declared'
+  | 'done'
+  | 'idle'
+
+/** Live facts every session row surface derives identically (tree, flat list, search, All Sessions). */
+export interface SessionRowFacts {
+  /** A Session-scoped UI consumer is awaiting this user. */
+  pendingInteraction?: SessionPendingInteractionStatus
+  running: boolean
+  /** Running direct children in the loaded subagent catalog. */
+  runningSubagentCount: number
+  /** Finished running while not selected and not yet opened. */
+  completed: boolean
+  /** Logged plan mode is in force (the `plan` list projection's `active`); absent reads as off. */
+  planActive?: boolean
+  /** A declared status, from the `sessionStatus` list projection. */
+  declaredStatus?: SessionStatusValue
+}
+
+/**
+ * Resolve the one phase a row presents: the mark says what the session is doing
+ * now, and a declared status is what an idle session says about why it is idle.
+ * Anything blocking the operator outranks everything the agent does alone; then
+ * plan mode, then own activity, then descendant activity; a declared status sits
+ * below all of those (the model sets it before its turn actually ends), and the
+ * finished-but-unopened reminder is last before idle.
+ * @param facts - the row's derived live facts.
+ * @returns the winning phase.
+ */
+export function derivePhase(facts: SessionRowFacts): SessionPhase {
+  switch (facts.pendingInteraction) {
+    case 'approval': return 'awaiting-approval'
+    case 'plan-review': return 'awaiting-plan-review'
+    case 'question': return 'awaiting-answer'
+    case undefined: break
+    /* v8 ignore next -- closed SessionPendingInteractionStatus union */
+    default: return assertNever(facts.pendingInteraction)
+  }
+  if (facts.planActive === true) return 'planning'
+  if (facts.running) return 'running'
+  if (facts.runningSubagentCount > 0) return 'subagents'
+  if (facts.declaredStatus !== undefined) return 'declared'
+  return facts.completed ? 'done' : 'idle'
+}
+
+/** Plan mode in force; an absent key (plan-mode not composed, hints not warmed) reads as false. */
+function planActiveOf(session: SessionSummary): boolean {
+  return session.projectionValues?.plan?.active === true
+}
+
+/** The declared status, whole; an absent key reads as no status. */
+function declaredStatusOf(session: SessionSummary): SessionStatusValue | undefined {
+  return session.projectionValues?.sessionStatus ?? undefined
+}
+
+/** Shared live facts plus the phase, for one Session summary. */
+function rowFacts(
+  s: SessionSummary,
+  list: SessionListState,
+  statuses: SessionStatuses,
+): SessionRowFacts {
+  const status = statuses.get(s.id)
+  const pendingInteraction = visiblePendingKind(status?.pendingInteraction?.kind)
+  const declaredStatus = declaredStatusOf(s)
+  const facts: SessionRowFacts = {
+    running: status?.running ?? s.running,
+    runningSubagentCount: runningChildCount(list, s.id, statuses),
+    completed: status?.completionUnread === true,
+    // Present only while on, so rows without plan mode keep upstream's shape.
+    ...(planActiveOf(s) ? { planActive: true } : {}),
+    ...(pendingInteraction === undefined ? {} : { pendingInteraction }),
+    ...(declaredStatus === undefined ? {} : { declaredStatus }),
+  }
+  return facts
+}
+
 /** One top-level session row in a group or the flat list. */
 export interface SessionNode {
   id: SessionId
@@ -62,6 +153,10 @@ export interface SessionNode {
   /** In the registry-global archive set: shown grayed in place and not openable. */
   archived: boolean
   updatedAt: number
+  /** Logged plan mode is in force (fork stage marks); absent reads as off. */
+  planActive?: boolean
+  /** A declared status from the `sessionStatus` projection (fork). */
+  declaredStatus?: SessionStatusValue
 }
 
 /** Session order selected by the Workspace browser. */
@@ -77,8 +172,15 @@ export interface GroupNode {
   /** Workspace creation time (epoch ms); absent only for the ungrouped bucket. */
   createdAt: number | undefined
   label: string
+  /** Named Workspace group label (fork); empty for ungrouped Workspaces and the ungrouped bucket. */
+  group: string
   /** Total visible sessions in the group. */
   sessionCount: number
+  /**
+   * Unarchived ordinary Sessions the group accounts (fork's folder count
+   * badge), independent of the archived filter and of folding.
+   */
+  unarchivedCount: number
   expanded: boolean
   /** The group contains the selected session (active folder tint; supplied here so the renderer never scans). */
   containsCurrent: boolean
@@ -103,6 +205,10 @@ export interface SearchResultNode {
   /** In the registry-global archive set: shown grayed and not openable. */
   archived: boolean
   snippet?: string
+  /** Logged plan mode is in force (fork stage marks); absent reads as off. */
+  planActive?: boolean
+  /** A declared status from the `sessionStatus` projection (fork). */
+  declaredStatus?: SessionStatusValue
 }
 
 /** Bounded merged search projection plus the refine-query hint bit. */
@@ -124,7 +230,9 @@ interface Group {
   cwd: string | undefined
   createdAt: number | undefined
   label: string
+  group: string
   sessions: SessionSummary[]
+  unarchivedCount: number
 }
 
 /**
@@ -312,9 +420,16 @@ function buildGroup(
   cwd: string | undefined,
   createdAt: number | undefined,
   label: string,
+  group: string,
   members: readonly SessionSummary[],
+  unarchivedCount: number,
 ): Group {
-  return { key, workspaceId, cwd, createdAt, label, sessions: [...members] }
+  return { key, workspaceId, cwd, createdAt, label, group, sessions: [...members], unarchivedCount }
+}
+
+/** An account member the folder count badge counts: ordinary, not a blank placeholder, not archived. */
+function countsAsUnarchived(session: SessionSummary, archived: ReadonlySet<SessionId>): boolean {
+  return session.origin !== 'subagent' && !session.blank && !archived.has(session.id)
 }
 
 /** Apply a stored Ungrouped order and append newly loose Sessions by recency. */
@@ -352,16 +467,18 @@ function groupByWorkspace(
   const accounted = new Set<SessionId>()
   for (const workspace of workspaces) {
     const members: SessionSummary[] = []
+    let unarchivedCount = 0
     for (const id of workspace.sessionIds) {
       const summary = list.byId[id]
       if (summary === undefined) continue // account may lead the list pull; the row appears when the summary lands
       accounted.add(id)
+      if (countsAsUnarchived(summary, archived)) unarchivedCount += 1
       if (!sessionVisible(summary, current, archived, archivedFilter)) continue
       members.push(summary)
     }
     groups.push(buildGroup(
       workspace.workspaceId, workspace.workspaceId, workspace.path,
-      Date.parse(workspace.createdAt), workspace.title, members,
+      Date.parse(workspace.createdAt), workspace.title, workspace.group?.trim() ?? '', members, unarchivedCount,
     ))
   }
   const stray = list.ids
@@ -375,7 +492,9 @@ function groupByWorkspace(
       undefined,
       undefined,
       '',
+      '',
       orderedUngrouped(stray, ungroupedOrder, list.byId),
+      stray.filter(session => countsAsUnarchived(session, archived)).length,
     ))
   }
   return groups
@@ -407,20 +526,15 @@ function sessionNode(
   pinned: ReadonlySet<SessionId>,
   archived: ReadonlySet<SessionId>,
 ): SessionNode {
-  const status = statuses.get(s.id)
-  const pendingInteraction = visiblePendingKind(status?.pendingInteraction?.kind)
   return {
+    ...rowFacts(s, list, statuses),
     id: s.id,
     title: sessionTitle(s),
     blank: s.blank,
-    running: status?.running ?? s.running,
-    runningSubagentCount: runningChildCount(list, s.id, statuses),
-    completed: status?.completionUnread === true,
     hasActiveSchedule: hasActiveSchedule(s),
     pinned: !archived.has(s.id) && pinned.has(s.id),
     archived: archived.has(s.id),
     updatedAt: s.updatedAt,
-    ...(pendingInteraction === undefined ? {} : { pendingInteraction }),
   }
 }
 
@@ -462,7 +576,9 @@ export function deriveGroups(
       cwd: g.cwd,
       createdAt: g.createdAt,
       label: g.label,
+      group: g.group,
       sessionCount: g.sessions.length,
+      unarchivedCount: g.unarchivedCount,
       expanded,
       containsCurrent: g.key === currentGroup,
       sessions: expanded
@@ -472,6 +588,138 @@ export function deriveGroups(
     })
   }
   return groups
+}
+
+/** One section of the `workspace` grouping mode: an optional named header over its Workspace rows. */
+export interface GroupSectionNode {
+  /** Stable section key: the group label, or a reserved key for the unlabelled sections. */
+  key: string
+  /** Header label; undefined renders the section's Workspaces without a header. */
+  label: string | undefined
+  /** Some Workspace in the section contains the selected session. */
+  containsCurrent: boolean
+  /** Workspace rows in render order. */
+  workspaces: readonly GroupNode[]
+}
+
+/** Section key for Workspaces without a named group. */
+export const UNGROUPED_SECTION_KEY = '\u0000ungrouped'
+/** Section key for Sessions outside every Workspace. */
+export const LOOSE_SECTION_KEY = '\u0000loose'
+
+/** Natural, case-insensitive name order, the order the file explorer uses for its rows. */
+const NAME_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+
+/**
+ * Order Workspace rows by the name the row shows. A cleared title falls back
+ * to the path; equal names keep their Host order because Array.sort is stable.
+ * @param left - one Workspace row.
+ * @param right - the other Workspace row.
+ * @returns the collator's ordering of the two displayed names.
+ */
+export function byWorkspaceName(left: GroupNode, right: GroupNode): number {
+  const nameOf = (node: GroupNode): string => node.label.trim() === '' ? node.cwd ?? '' : node.label
+  return NAME_COLLATOR.compare(nameOf(left), nameOf(right))
+}
+
+/**
+ * Group root Workspace rows into sections: named groups first (headers and
+ * members both A-Z, so a folder added on disk slots into place), then the
+ * Workspaces without a group in their Host order (drag reorder stays live
+ * there), then the loose-Session bucket.
+ * @param nodes - root Workspace rows in Host order.
+ * @returns sections in render order.
+ */
+export function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
+  const named = new Map<string, GroupNode[]>()
+  const ungrouped: GroupNode[] = []
+  const loose: GroupNode[] = []
+  for (const node of nodes) {
+    if (node.workspaceId === undefined) loose.push(node)
+    else if (node.group === '') ungrouped.push(node)
+    else {
+      const bucket = named.get(node.group)
+      if (bucket === undefined) named.set(node.group, [node])
+      else bucket.push(node)
+    }
+  }
+  const sections: GroupSectionNode[] = [...named.keys()]
+    .sort((a, b) => NAME_COLLATOR.compare(a, b))
+    .map((label) => {
+      const workspaces = [...(named.get(label) ?? [])].sort(byWorkspaceName)
+      return { key: label, label, containsCurrent: workspaces.some(node => node.containsCurrent), workspaces }
+    })
+  if (ungrouped.length > 0) {
+    sections.push({
+      key: UNGROUPED_SECTION_KEY, label: undefined,
+      containsCurrent: ungrouped.some(node => node.containsCurrent), workspaces: ungrouped,
+    })
+  }
+  if (loose.length > 0) {
+    sections.push({
+      key: LOOSE_SECTION_KEY, label: undefined,
+      containsCurrent: loose.some(node => node.containsCurrent), workspaces: loose,
+    })
+  }
+  return sections
+}
+
+/**
+ * A named section shows its Workspaces unless the operator folded it; an
+ * unlabelled section has no header and always shows them.
+ * @param expansion - persisted fold state keyed by section key.
+ * @param section - the section to test.
+ * @returns whether the section's Workspace rows render.
+ */
+export function sectionShowsWorkspaces(
+  expansion: Readonly<Record<string, boolean>> | undefined,
+  section: GroupSectionNode,
+): boolean {
+  return section.label === undefined || expansion?.[section.key] !== false
+}
+
+/** One All Sessions quick-nav row (fork): a Session row plus the Workspace it belongs to. */
+export interface AllSessionNode extends SessionNode {
+  /** Owning Workspace title, the cwd basename for a loose session, or empty. */
+  workspace: string
+}
+
+/**
+ * Derive the All Sessions quick-nav rows (fork): every visible unarchived
+ * Session, newest first with pinned rows leading, each labelled with its
+ * Workspace. The archived filter of the browser below does not apply here.
+ * @param list - sessions list snapshot.
+ * @param workspaces - Workspace membership and display labels.
+ * @param rowState - registry-global pin and archive sets.
+ * @param statuses - unified UI status by Session.
+ * @returns flat rows in render order.
+ */
+export function deriveAllSessions(
+  list: SessionListState,
+  workspaces: readonly WorkspaceView[],
+  rowState: Pick<SessionRowState, 'pinnedSessionIds' | 'archivedSessionIds'>,
+  statuses: SessionStatuses,
+): AllSessionNode[] {
+  const archived = new Set(rowState.archivedSessionIds)
+  const pinned = new Set(rowState.pinnedSessionIds)
+  const current = mainSessionId(list)
+  const workspaceBySession = new Map<SessionId, string>()
+  for (const workspace of workspaces) {
+    for (const sessionId of workspace.sessionIds) {
+      if (!workspaceBySession.has(sessionId)) workspaceBySession.set(sessionId, workspace.title)
+    }
+  }
+  const visible = orderByRecency(list.ids.filter((id) => {
+    const summary = list.byId[id]
+    return summary !== undefined && sessionVisible(summary, current, archived, 'default')
+  }), list.byId).flatMap((id) => {
+    const summary = list.byId[id]
+    return summary === undefined ? [] : [summary]
+  })
+  return sectionMembers(visible, pinned, archived).map(summary => ({
+    ...sessionNode(summary, list, statuses, pinned, archived),
+    workspace: workspaceBySession.get(summary.id) ?? workspaceLabel(summary.cwd),
+  }))
 }
 
 /**
@@ -606,18 +854,11 @@ export function deriveSearchResults(
   return {
     items: ordered.slice(0, limit).map((summary) => {
       const match = contentBySession.get(summary.id)
-      const status = statuses.get(summary.id)
-      const pendingInteraction = visiblePendingKind(status?.pendingInteraction?.kind)
       return {
+        ...rowFacts(summary, list, statuses),
         id: summary.id,
         title: sessionTitle(summary),
         workspace: labelOf(summary),
-        running: status?.running ?? summary.running,
-        runningSubagentCount: runningChildCount(list, summary.id, statuses),
-        ...(pendingInteraction === undefined
-          ? {}
-          : { pendingInteraction }),
-        completed: status?.completionUnread === true,
         hasActiveSchedule: hasActiveSchedule(summary),
         archived: archived.has(summary.id),
         ...match === undefined ? {} : { snippet: match.snippet },

@@ -10,7 +10,8 @@ import type { SessionProjectionSnapshot } from '@deepseek-ai/dsh-api-session-con
 import {
   type ArchivedFilter,
   deriveFlat, deriveGroups, deriveSearchResults, orderByRecency, owningGroupKey, owningParentFolder,
-  pinCurrentBlank, reconcileManualOrder, sessionMemberIds, visibleSessionIds, workspaceLabel, UNGROUPED_KEY,
+  derivePhase, pinCurrentBlank, reconcileManualOrder, sectionize, sectionShowsWorkspaces, sessionMemberIds, visibleSessionIds,
+  workspaceLabel, LOOSE_SECTION_KEY, UNGROUPED_KEY, UNGROUPED_SECTION_KEY,
 } from '../src/client/tree.ts'
 import { createWorkspaceViewStore } from '../src/client/stores.ts'
 
@@ -892,5 +893,80 @@ describe('parent folder membership', () => {
     ['/Git/app', ['/git'], undefined],
   ])('groups %s under its nearest registered ancestor', (path, parents, expected) => {
     expect(owningParentFolder(path, parents)).toBe(expected)
+  })
+})
+
+describe('derivePhase (fork stage marks)', () => {
+  const base = { running: false, runningSubagentCount: 0, completed: false }
+  const status = { id: 'waiting-production', label: 'Deploy', icon: 'deploying' as const, tone: 'attention' as const }
+  it('orders operator holds, plan mode, own work, descendants, declared status, then completion', () => {
+    expect(derivePhase({ ...base, pendingInteraction: 'approval', planActive: true, running: true })).toBe('awaiting-approval')
+    expect(derivePhase({ ...base, pendingInteraction: 'plan-review' })).toBe('awaiting-plan-review')
+    expect(derivePhase({ ...base, pendingInteraction: 'question' })).toBe('awaiting-answer')
+    expect(derivePhase({ ...base, planActive: true, running: true })).toBe('planning')
+    expect(derivePhase({ ...base, running: true, declaredStatus: status })).toBe('running')
+    expect(derivePhase({ ...base, runningSubagentCount: 2, declaredStatus: status })).toBe('subagents')
+    expect(derivePhase({ ...base, completed: true, declaredStatus: status })).toBe('declared')
+    expect(derivePhase({ ...base, completed: true })).toBe('done')
+    expect(derivePhase(base)).toBe('idle')
+  })
+
+  it('reads plan mode and the declared status from the list projections', () => {
+    const planning = { ...summary('p', 1), projectionValues: { plan: { active: true, pending: false }, sessionStatus: status } }
+    const [group] = deriveGroups(list(planning), [workspace('w', ['p'])], noRows, noAttention, view(['w']))
+    expect(group?.sessions[0]).toMatchObject({ planActive: true, declaredStatus: status })
+  })
+})
+
+describe('named Workspace group sections (fork)', () => {
+  const grouped = (id: string, group?: string, title = id): WorkspaceView => ({
+    ...workspace(id, [id]), title, ...group === undefined ? {} : { group },
+  })
+
+  it('carries the Workspace group label into its node', () => {
+    const groups = deriveGroups(list(summary('a', 1)), [grouped('a', '  NeoTech ')], noRows, noAttention, view())
+    expect(groups[0]?.group).toBe('NeoTech')
+  })
+
+  it('sorts named headers and their folders A-Z, keeps ungrouped Host order, and trails loose sessions', () => {
+    const groups = deriveGroups(
+      list(summary('z10', 1), summary('z9', 2), summary('m', 3), summary('b', 4), summary('stray', 5)),
+      [grouped('z10', 'SIG', 'Site 10'), grouped('m', undefined, 'Mid'), grouped('z9', 'SIG', 'Site 9'), grouped('b', 'ABC')],
+      noRows, noAttention, view(),
+    )
+    const sections = sectionize(groups)
+    expect(sections.map(section => [section.key, section.label, section.workspaces.map(node => node.key)])).toEqual([
+      ['ABC', 'ABC', ['b']],
+      ['SIG', 'SIG', ['z9', 'z10']],
+      [UNGROUPED_SECTION_KEY, undefined, ['m']],
+      [LOOSE_SECTION_KEY, undefined, [UNGROUPED_KEY]],
+    ])
+  })
+
+  it('counts unarchived ordinary Sessions per folder regardless of the archived filter or folding', () => {
+    const blank = { ...summary('new', 4), blank: true }
+    const child = { ...summary('child', 5), origin: 'subagent' as const }
+    const state = list(summary('a', 1), summary('b', 2), summary('gone', 3), blank, child)
+    const ws = [{ ...workspace('w', ['a', 'b', 'gone', 'new', 'child']) }]
+    for (const archivedFilter of ['default', 'show', 'only'] as const) {
+      const [group] = deriveGroups(state, ws, rowState({ archived: ['gone'], archivedFilter }), noAttention, view())
+      expect(group?.unarchivedCount, archivedFilter).toBe(2)
+    }
+  })
+
+  it('folds only named sections', () => {
+    const [named, unlabelled] = sectionize(deriveGroups(
+      list(summary('a', 1), summary('b', 2)), [grouped('a', 'ABC'), grouped('b')], noRows, noAttention, view(),
+    ))
+    expect(sectionShowsWorkspaces(undefined, named!)).toBe(true)
+    expect(sectionShowsWorkspaces({ ABC: false }, named!)).toBe(false)
+    expect(sectionShowsWorkspaces({ [UNGROUPED_SECTION_KEY]: false }, unlabelled!)).toBe(true)
+  })
+
+  it('persists section folds beside the v5 view state without pruning them', () => {
+    const store = createWorkspaceViewStore().create()
+    store.actions.setSectionExpanded('ABC', false)
+    store.actions.retainAccountKeys([])
+    expect(store.getSnapshot().sectionExpansion).toEqual({ ABC: false })
   })
 })

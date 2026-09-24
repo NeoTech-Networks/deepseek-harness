@@ -27,10 +27,18 @@ type LayoutInfo = {
   viewportWidth: number
   narrowExpanded: boolean
   /**
-   * Saved right panel width in px, or null before its first opening. Resizing
-   * the frame and closing the panel preserve this preference.
+   * Right panel width in px for the session that last reported it open, or null
+   * before any opening. Resizing the frame and closing the panel preserve it.
    */
   rightbar: number | null
+  /**
+   * Saved right panel width per session id (fork): one session narrowing the
+   * panel never changes another's. A session's entry appears on its first
+   * opening; `rightbar` follows the reporting session's entry.
+   */
+  rightbarBySession: Record<string, number>
+  /** Session whose panel last reported open; drags write its entry. */
+  rightbarSession: string | null
   /**
    * Whether the right panel is drawn at all, in either presentation.
    *
@@ -62,7 +70,7 @@ type LayoutActions = {
   toggleSidebar: (draft: LayoutState) => void
   setViewportWidth: (draft: LayoutState, width: number) => void
   setRightbar: (draft: LayoutState, px: number) => void
-  openRightbar: (draft: LayoutState, track: boolean, fullscreen: boolean) => void
+  openRightbar: (draft: LayoutState, track: boolean, fullscreen: boolean, sessionId?: string) => void
   closeRightbar: (draft: LayoutState) => void
 }
 
@@ -84,6 +92,8 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
         viewportWidth: window.innerWidth,
         narrowExpanded: false,
         rightbar: null,
+        rightbarBySession: {},
+        rightbarSession: null,
         rightbarShown: false,
         rightbarTrack: false,
         rightbarFullscreen: false,
@@ -123,13 +133,26 @@ export function createLayoutStore(): EngineStoreHandle<LayoutState, LayoutAction
       setRightbar: (d, px: number) => {
         d.layoutInfo.rightbarInstant = false
         d.layoutInfo.rightbar = clampWidth(px, RIGHTBAR_MIN, Math.max(RIGHTBAR_MIN, d.layoutInfo.viewportWidth * RIGHTBAR_MAX_RATIO))
+        if (d.layoutInfo.rightbarSession !== null) {
+          d.layoutInfo.rightbarBySession[d.layoutInfo.rightbarSession] = d.layoutInfo.rightbar
+        }
       },
-      openRightbar: (d, track: boolean, fullscreen: boolean) => {
+      openRightbar: (d, track: boolean, fullscreen: boolean, sessionId?: string) => {
         if (!d.layoutInfo.rightbarShown || d.layoutInfo.rightbarTrack !== track || d.layoutInfo.rightbarFullscreen !== fullscreen) {
           d.layoutInfo.rightbarInstant = d.layoutInfo.rightbarFullscreen && !fullscreen
         }
         if (!d.layoutInfo.rightbarShown && d.layoutInfo.viewportWidth < SIDEBAR_AUTO_COLLAPSE) d.layoutInfo.narrowExpanded = false
-        d.layoutInfo.rightbar ??= Math.max(RIGHTBAR_MIN, Math.round(d.layoutInfo.viewportWidth * RIGHTBAR_DEFAULT_RATIO))
+        const initial = Math.max(RIGHTBAR_MIN, Math.round(d.layoutInfo.viewportWidth * RIGHTBAR_DEFAULT_RATIO))
+        if (sessionId === undefined) {
+          d.layoutInfo.rightbar ??= initial
+        } else {
+          // Per-session width (fork): a session's first opening takes the
+          // contract default, never the width another session dragged to.
+          const saved = d.layoutInfo.rightbarBySession[sessionId] ?? initial
+          d.layoutInfo.rightbarBySession[sessionId] = saved
+          d.layoutInfo.rightbarSession = sessionId
+          d.layoutInfo.rightbar = saved
+        }
         d.layoutInfo.rightbarShown = true
         d.layoutInfo.rightbarTrack = track
         d.layoutInfo.rightbarFullscreen = fullscreen

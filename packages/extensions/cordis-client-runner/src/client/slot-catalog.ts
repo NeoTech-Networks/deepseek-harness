@@ -697,7 +697,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.hero.workspace.directoryFlow\', () => ctx.slots.register(\n      { name: \'conversation.hero.workspace.directoryFlow\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:99',
+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:101',
   },
   {
     key: 'conversation.input.activity',
@@ -2798,6 +2798,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     declaredBy: 'an entry in \'root\' (client-ui-layout), so it exists while that entry is mounted',
     occupants: [
       'client-ui-workspace SessionRenameDialog id \'workspace.session-rename\'',
+      'client-ui-workspace SessionStatusDialog id \'workspace.session-status\'',
       'client-ui-workspace SessionArchiveConfirmDialog id \'workspace.session-archive\'',
       'client-ui-workspace RowActionToast id \'workspace.row-toast\'',
     ],
@@ -2835,6 +2836,37 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar\', () => ctx.slots.register(\n      { name: \'sidebar\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
     source: 'packages/client/ui-layout/src/client/index.ts:61',
+  },
+  {
+    key: 'sidebar.allSessions',
+    kind: 'single',
+    scope: 'root',
+    summary: 'The "All Sessions" quick-nav section (fork) rendered above the workspace browser: a collapsible header and a flat list of every unarchived session.',
+    doc: 'The "All Sessions" quick-nav section (fork) rendered above the workspace\nbrowser: a collapsible header and a flat list of every unarchived\nsession. Declared by this package\'s \'sidebar\' entry; ui-workspace\nregisters the section.',
+    registerOptions: [],
+    ownerProps: [
+      '/**\n * Owner share of the browser hole — the only facts crossing the shell/region\n * boundary. Business data and actions arrive through the region\'s own inject.\n */\nexport interface SidebarSectionOwnerProps {\n  /** Shell fold-state output: wide renders the full browser, rail the icon column. */\n  wide: boolean\n  /** Rail icons request expansion; the browser rides the wide flip for focus. */\n  expandSidebar: () => void\n}',
+    ],
+    ownerPropsReferences: [],
+    standardProps: [
+      'useResource: UseResource',
+      'useWorkspaces: SnapshotSelectorHook<WorkspaceSnapshot>',
+      'usePanelInfo: UsePanelInfo',
+      'useSessions: UseSessions',
+      'useSessionStatus: UseSessionStatus',
+      'useSessionRetainInfo: UseSessionRetainInfo',
+      'useWorkspaces: SnapshotSelectorHook<WorkspaceSnapshot>',
+    ],
+    keyDomain: '',
+    hookContext: '',
+    slotInject: '',
+    declaredBy: 'an entry in \'sidebar\' (client-ui-sidebar), so it exists while that entry is mounted',
+    occupants: [
+      'client-ui-workspace AllSessionsSection',
+    ],
+    replaceRisk: 'shadows-shipped-ui',
+    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.allSessions\', () => ctx.slots.register(\n      { name: \'sidebar.allSessions\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+    source: 'packages/client/ui-sidebar/src/client/contract/slots.ts:41',
   },
   {
     key: 'sidebar.brand.mark',
@@ -2983,7 +3015,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.footer.action\', () => ctx.slots.register(\n      { name: \'sidebar.footer.action\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-sidebar/src/client/contract/slots.ts:52',
+    source: 'packages/client/ui-sidebar/src/client/contract/slots.ts:59',
   },
   {
     key: 'sidebar.panellist',
@@ -3075,6 +3107,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     occupants: [
       'client-ui-deliverables ReviewTab',
       'client-ui-plan PlanPreview',
+      'client-ui-sessions-panel SessionsPanel',
       'client-ui-sidebar-browser BrowserBody',
       'client-ui-sidebar-documentpreview TextPreview',
       'client-ui-sidebar-files FilesBody',
@@ -3573,7 +3606,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.settings\', () => ctx.slots.register(\n      { name: \'sidebar.settings\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-sidebar/src/client/contract/slots.ts:47',
+    source: 'packages/client/ui-sidebar/src/client/contract/slots.ts:54',
   },
   {
     key: 'sidebar.toggle.badge',
@@ -3633,7 +3666,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.workspaces\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-sidebar/src/client/contract/slots.ts:41',
+    source: 'packages/client/ui-sidebar/src/client/contract/slots.ts:48',
   },
   {
     key: 'sidebar.workspaces.directoryFlow',
@@ -3665,7 +3698,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'shadows-shipped-ui',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.workspaces.directoryFlow\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces.directoryFlow\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:101',
+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:103',
   },
   {
     key: 'sidebar.workspaces.session.menu.item',
@@ -3716,11 +3749,13 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
       'client-ui-workspace PinSessionMenuItem id \'pin\'',
       'client-ui-workspace RenameSessionMenuItem id \'rename\'',
       'client-ui-workspace ForkSessionMenuItem id \'fork\'',
+      'client-ui-workspace SetSessionStatusMenuItem id \'set-status\'',
+      'client-ui-workspace ClearSessionStatusMenuItem id \'clear-status\'',
       'client-ui-workspace ArchiveSessionMenuItem id \'archive\'',
     ],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    const copyLabel = \'Copy Session ID\' // Localize in the contributing package.\n    ctx.slots.inject(\'sidebar.workspaces.session.menu.item\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces.session.menu.item\', id: \'copy-session-id\', order: 500 },\n      ({ sessionId, useMenuOpenState }) => {\n        const [, setMenuOpen] = useMenuOpenState()\n        return React.createElement(\n          \'button\',\n          { type: \'button\', role: \'menuitem\', onClick: () => { setMenuOpen(false); void navigator.clipboard.writeText(sessionId) } },\n          copyLabel,\n        )\n      },\n    ))\n  },\n}',
-    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:133',
+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:135',
   },
   {
     key: 'sidebar.workspaces.session.row.action',
@@ -3773,7 +3808,7 @@ export const CLIENT_SLOT_API: readonly ClientSlotEntry[] = [
     ],
     replaceRisk: 'none',
     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'sidebar.workspaces.session.row.action\', () => ctx.slots.register(\n      { name: \'sidebar.workspaces.session.row.action\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
-    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:148',
+    source: 'packages/client/ui-workspace/src/client/contract/slots.ts:150',
   },
   {
     key: 'tool.call.images',

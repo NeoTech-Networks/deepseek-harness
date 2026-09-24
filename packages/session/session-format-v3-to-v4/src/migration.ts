@@ -6,7 +6,7 @@ import { assertReleasedV3Header } from '@deepseek-ai/dsh-session-format-v2-to-v3
 import { mapEventMessages, rewriteV3MessageSource } from './sources.ts'
 import { liftToolResult } from './tool-role.ts'
 import { migrateV3EventContent } from './content.ts'
-import { namespaceV3OpaqueEvent, RELEASED_V3_EVENT_TYPES } from './extension-identities.ts'
+import { namespaceV3OpaqueEvent, READABLE_V3_EVENT_TYPES } from './extension-identities.ts'
 import { assertReleasedV4Header, validateDeliveryAccepted } from './validation.ts'
 import { catalogFact, childCatalogSource, childCatalogFact, childCatalogSubject } from './facts.ts'
 import { remapV3References } from './references.ts'
@@ -94,7 +94,7 @@ class ReleasedV3ToV4Stage implements SessionFormatMigrationStage {
       context.emitEvent(opaque.seq === targetSeq ? opaque : { ...opaque, seq: targetSeq })
       return
     }
-    if (!RELEASED_V3_EVENT_TYPES.has(event.type)) {
+    if (!READABLE_V3_EVENT_TYPES.has(event.type)) {
       throw new SessionFormatUnsupportedMigrationError(
         `format v3 contains unknown event type ${JSON.stringify(event.type)} at seq ${event.seq}`,
       )

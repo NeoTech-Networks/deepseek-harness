@@ -44,7 +44,9 @@ import type { SessionSearchResultItem } from '@deepseek-ai/dsh-api-session-contr
 import type { RemoteHostFacts } from '@deepseek-ai/dsh-api-remotes/client'
 import type { SessionActivity, WorkspaceId, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { createWorkspaceViewStore } from '../stores.ts'
+// Type-only: also pulls the `sessionStatus` projection merge into the Client face.
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
+import type { createAllSessionsStore, createWorkspaceViewStore } from '../stores.ts'
 
 /**
  * Owner share of the directory-flow holes: the complete conversation between
@@ -210,6 +212,8 @@ export type WorkspaceBrowserInjected = {
   notifyArchivedNotOpenable: () => void
   /** Rename a Host Workspace (rejects on name conflict; resolves on durability). */
   renameWorkspace: (workspaceId: WorkspaceId, title: string) => Promise<void>
+  /** Assign (or, with a blank label, clear) a Workspace's named group (fork). */
+  setGroupWorkspace: (workspaceId: WorkspaceId, group: string) => Promise<void>
   /** Delete only a Host Workspace registration; directory and Session logs remain. */
   deleteWorkspace: (workspaceId: WorkspaceId) => Promise<void>
   /**
@@ -222,6 +226,22 @@ export type WorkspaceBrowserInjected = {
   /** Adopt a picked host directory as a real Workspace before targeting a Session. */
   createWorkspace: (input: { path: string }) => Promise<WorkspaceView>
 }
+
+/**
+ * The fork's All Sessions section share: the one action its flat list drives.
+ * Data reads use the global framework hooks.
+ */
+export type AllSessionsInjected = {
+  /** Open a listed Session (the same navigation the browser rows use). */
+  open: (sessionId: SessionId) => void
+}
+
+/** Full All Sessions props: shell owner share + fold store + injected open + the locale seat. */
+export type AllSessionsProps =
+  PropsRuntime<'sidebar.allSessions'>
+  & PropsStore<ReturnType<typeof createAllSessionsStore>>
+  & AllSessionsInjected
+  & PropsLocale<'workspace'>
 
 /** The browser's declared viewing store handle, shared with the row actions that write view state. */
 export type WorkspaceViewStoreHandle = ReturnType<typeof createWorkspaceViewStore>
@@ -252,6 +272,10 @@ export type RowToast =
    * a report can be searched by it — and any other failure's own message.
    */
   | { kind: 'createFailed'; message: string }
+  /** The archive chord (fork) found no started current Session to archive. */
+  | { kind: 'nothingToArchive' }
+  /** The archive chord's archive failed for a reason other than running work (fork). */
+  | { kind: 'archiveFailed' }
 
 /** The notice on display; `seq` keys remounts so a repeated notice restarts its hold. */
 export type RowToastState = RowToast & { seq: number }
@@ -361,6 +385,43 @@ export interface SessionRenameDialogInjected {
   /** Rename a Session (explicit user title; resolves on host acceptance). */
   renameSession: (sessionId: SessionId, title: string) => Promise<void>
 }
+
+/** Declared-status menu share: raise the dialog, or clear the row's status directly. */
+export interface SessionStatusMenuInjected {
+  /** Ask for the status dialog for one row. */
+  requestSessionStatus: (sessionId: SessionId, displayTitle: string) => void
+  /** Clear the row's declared status. */
+  clearSessionStatus: (sessionId: SessionId) => void
+}
+
+/** A declared-status change the status action asked for; the dialog entry opens on it. */
+export interface SessionStatusTarget {
+  /** Session whose status is set. */
+  sessionId: SessionId
+  /** Row title named under the dialog heading. */
+  displayTitle: string
+}
+
+/** Status dialog share: the pending request, its settlement, and the two Host hops. */
+export interface SessionStatusDialogInjected {
+  hooks: {
+    /** The status change asked for, until the dialog consumes or cancels it. */
+    statusRequest: HostObservable<SessionStatusTarget | null>
+  }
+  /** Consume or cancel the pending request. */
+  settleSessionStatus: () => void
+  /** Set (vocabulary id) or clear (null) a Session's declared status. */
+  setSessionStatus: (sessionId: SessionId, statusId: string | null) => Promise<void>
+  /** Read the deployment's declared status vocabulary, in declaration order. */
+  listSessionStatuses: (sessionId: SessionId) => Promise<readonly SessionStatusValue[]>
+}
+
+/** Props of the status dialog entry in `shell.overlay`. */
+export type SessionStatusDialogProps =
+  PropsRuntime<'shell.overlay'>
+  & PropsLocale<'workspace'>
+  & Omit<SessionStatusDialogInjected, 'hooks'>
+  & PropsHooks<SessionStatusDialogInjected['hooks']>
 
 /** Row toast share: the notice on display, its dismissal, and the two actions the archived notice offers. */
 export interface RowToastInjected {

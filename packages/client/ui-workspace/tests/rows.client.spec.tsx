@@ -159,8 +159,8 @@ describe('workspace browser rows', () => {
     const onToggle = vi.fn()
     const onCreate = vi.fn()
     const group: GroupNode = {
-      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project',
-      sessionCount: 1, expanded: true, containsCurrent: true, sessions: [],
+      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, group: '', label: 'Project',
+      sessionCount: 1, unarchivedCount: 0, expanded: true, containsCurrent: true, sessions: [],
     }
     render(<ProjectRowItem group={group} onToggle={onToggle} onCreate={onCreate} t={t} />)
 
@@ -170,6 +170,19 @@ describe('workspace browser rows', () => {
     expect(onToggle).not.toHaveBeenCalled()
     fireEvent.click(screen.getByText('Project'))
     expect(onToggle).toHaveBeenCalledOnce()
+  })
+
+  it('shows the unarchived Session count badge only when the folder holds some (fork)', () => {
+    const group = (unarchivedCount: number): GroupNode => ({
+      key: 'counted', workspaceId: wid('counted'), cwd: '/projects/counted', createdAt: 0, group: '', label: 'Counted',
+      sessionCount: 0, unarchivedCount, expanded: false, containsCurrent: false, sessions: [],
+    })
+    const view = render(<ProjectRowItem group={group(3)} onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
+    const badge = view.container.querySelector('[data-session-count]')
+    expect(badge?.getAttribute('data-session-count')).toBe('3')
+    expect(badge?.textContent).toBe('3')
+    view.rerender(<ProjectRowItem group={group(0)} onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
+    expect(view.container.querySelector('[data-session-count]')).toBeNull()
   })
 
   it('renders and opens a selected running Session row', () => {
@@ -370,6 +383,54 @@ describe('workspace browser rows', () => {
     assertIndicator()
   })
 
+  it('draws the stage mark for each live phase and the declared status glyph in its tone (fork)', () => {
+    const idle: SessionNode = {
+      id: sid('stage'), title: 'Stage', blank: false, running: false,
+      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0, pinned: false, archived: false,
+    }
+    const renderRow = (over: Partial<SessionNode>) =>
+      render(<SessionNodeItem node={{ ...idle, ...over }} currentId={undefined} now={0} onOpen={vi.fn()} t={t} />)
+    const mark = (view: ReturnType<typeof renderRow>) => view.container.querySelector<HTMLElement>('[data-phase]')
+    const cases: Array<[Partial<SessionNode>, string, string | undefined]> = [
+      [{ running: true }, 'running', 'arc'],
+      [{ pendingInteraction: 'question', running: true }, 'awaiting-answer', 'caret'],
+      [{ pendingInteraction: 'approval' }, 'awaiting-approval', 'caret'],
+      [{ pendingInteraction: 'plan-review' }, 'awaiting-plan-review', 'check-2'],
+      [{ planActive: true, running: true }, 'planning', 'check-2'],
+    ]
+    for (const [over, phase, part] of cases) {
+      const view = renderRow(over)
+      expect(mark(view)?.dataset.phase, phase).toBe(phase)
+      if (part !== undefined) expect(mark(view)?.querySelector(`[data-part="${part}"]`), phase).not.toBeNull()
+      view.unmount()
+    }
+    // Plan mode during a running turn is live; a still plan-mode session is not.
+    const live = renderRow({ planActive: true, running: true })
+    expect(mark(live)?.dataset.active).toBe('true')
+    live.unmount()
+    const still = renderRow({ planActive: true })
+    expect(mark(still)?.dataset.active).toBeUndefined()
+    still.unmount()
+    // Declared statuses draw their own glyph in their tone, below live work.
+    const declared: Array<[string, string, string]> = [
+      ['deploying', 'attention', 'arrow'],
+      ['blocked', 'error', 'glass'],
+      ['saved', 'success', 'card'],
+      ['failed', 'error', 'cross'],
+    ]
+    for (const [icon, tone, part] of declared) {
+      const view = renderRow({ declaredStatus: { id: icon, label: icon, icon: icon as never, tone: tone as never } })
+      expect(mark(view)?.dataset.phase).toBe('declared')
+      expect(mark(view)?.dataset.tone).toBe(tone)
+      expect(mark(view)?.querySelector(`[data-part="${part}"]`), icon).not.toBeNull()
+      expect(view.container.textContent).toContain(icon)
+      view.unmount()
+    }
+    const busy = renderRow({ running: true, declaredStatus: { id: 'finished', label: 'Finished', icon: 'saved', tone: 'success' } })
+    expect(mark(busy)?.dataset.phase).toBe('running')
+    busy.unmount()
+  })
+
   it('shows the green done dot only on a finished, unviewed session (live activity wins the slot)', () => {
     const renderRow = (over: Partial<SessionNode>) => render(
       <SessionNodeItem
@@ -473,8 +534,8 @@ describe('workspace browser rows', () => {
     const onDelete = vi.fn()
     const onToggle = vi.fn()
     const group: GroupNode = {
-      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project',
-      sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
+      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, group: '', label: 'Project',
+      sessionCount: 0, unarchivedCount: 0, expanded: false, containsCurrent: false, sessions: [],
     }
     render(<ProjectRowItem
       group={group} onToggle={onToggle} onCreate={vi.fn()}
@@ -504,8 +565,8 @@ describe('workspace browser rows', () => {
     const restoreClipboard = installClipboard(writeText)
     try {
       const group: GroupNode = {
-        key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project',
-        sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
+        key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, group: '', label: 'Project',
+        sessionCount: 0, unarchivedCount: 0, expanded: false, containsCurrent: false, sessions: [],
       }
       render(<ProjectRowItem group={group} onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
       fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
@@ -529,8 +590,8 @@ describe('workspace browser rows', () => {
     const restoreClipboard = installClipboard(writeText)
     try {
       const group: GroupNode = {
-        key: 'project', workspaceId: wid('project'), cwd: '/home/u/Documents/project', createdAt: 0, label: 'Project',
-        sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
+        key: 'project', workspaceId: wid('project'), cwd: '/home/u/Documents/project', createdAt: 0, group: '', label: 'Project',
+        sessionCount: 0, unarchivedCount: 0, expanded: false, containsCurrent: false, sessions: [],
       }
       render(<ProjectRowItem group={group} home="/home/u" onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
       fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
@@ -549,8 +610,8 @@ describe('workspace browser rows', () => {
     vi.useFakeTimers()
     try {
       const group: GroupNode = {
-        key: 'project', workspaceId: wid('project'), cwd: undefined, createdAt: 0, label: 'Project',
-        sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
+        key: 'project', workspaceId: wid('project'), cwd: undefined, createdAt: 0, group: '', label: 'Project',
+        sessionCount: 0, unarchivedCount: 0, expanded: false, containsCurrent: false, sessions: [],
       }
       render(<ProjectRowItem group={group} home="/home/u" onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
       fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
@@ -567,8 +628,8 @@ describe('workspace browser rows', () => {
     vi.useFakeTimers()
     try {
       const group: GroupNode = {
-        key: 'project', workspaceId: wid('project'), cwd: 'C:\\Users\\u\\project', createdAt: 0, label: 'Project',
-        sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
+        key: 'project', workspaceId: wid('project'), cwd: 'C:\\Users\\u\\project', createdAt: 0, group: '', label: 'Project',
+        sessionCount: 0, unarchivedCount: 0, expanded: false, containsCurrent: false, sessions: [],
       }
       render(<ProjectRowItem group={group} home="C:\\Users\\u" onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
       fireEvent.pointerEnter(screen.getByRole('treeitem').parentElement as HTMLElement)
@@ -581,8 +642,8 @@ describe('workspace browser rows', () => {
 
   it('ungrouped bucket renders no workspace menu', () => {
     const group: GroupNode = {
-      key: '', workspaceId: undefined, cwd: undefined, createdAt: undefined, label: 'Ungrouped',
-      sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
+      key: '', workspaceId: undefined, cwd: undefined, createdAt: undefined, group: '', label: 'Ungrouped',
+      sessionCount: 0, unarchivedCount: 0, expanded: false, containsCurrent: false, sessions: [],
     }
     render(<ProjectRowItem group={group} onToggle={vi.fn()} onCreate={vi.fn()} t={t} />)
     expect(screen.queryByRole('button', { name: /工作区/ })).toBeNull()

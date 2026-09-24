@@ -587,3 +587,96 @@
     transition: none;
   }
 }
+
+/* Declared-status dialog (fork). */
+.statusList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statusOption {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.statusOption:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.statusOption:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.statusLoading {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* One named Workspace group header (fork), above its Workspace sections. The
+   label doubles as the fold control, so it is a full-width button. 13px/18px
+   is the built-in size for every group (operator, 2026-09-16). */
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 2px 8px 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dsw-static-deepseek-600);
+}
+
+.groupHeader:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+/* Expand arrow (filled triangle): points right folded, rotates down open. */
+.groupChevron {
+  flex: none;
+  color: var(--dsw-alias-label-caption);
+  transition: transform 150ms var(--ds-ease-in-out);
+}
+
+.groupChevronOpen {
+  transform: rotate(90deg);
+}
+
+.groupHeaderLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global([data-ds-dark-theme]) .groupHeader {
+  color: var(--dsw-static-deepseek-400);
+}
+
+/* Session rows nest under their Workspace folder (fork): an attribute selector
+   keeps the rows' own class and AnimatedRows keys untouched, and the
+   upstream depth variable still stacks for tree mode. Flat mode has no
+   group section, so its rows stay flush. */
+.groupSection [data-row-key^='session:'] {
+  padding-inline-start: calc(28px + var(--dsh-workspace-indent, 0px));
+}

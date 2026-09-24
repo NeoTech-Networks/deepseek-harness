@@ -126,6 +126,18 @@ describe('WorkspaceController commands', () => {
       .rejects.toMatchObject({ code: 'workspace/not-found' })
   })
 
+  it('assigns and clears a Workspace group, and maps unknown ids', async () => {
+    const { controller, root } = await harness()
+    const created = await controller.create({ path: stageDir(root, 'grouped') })
+    const id = created.workspace.workspaceId
+    await expect(controller.setGroup({ workspaceId: id, group: '  Railway  ' }))
+      .resolves.toMatchObject({ workspace: { group: 'Railway' } })
+    const cleared = await controller.setGroup({ workspaceId: id, group: '' })
+    expect(cleared.workspace.group).toBeUndefined()
+    await expect(controller.setGroup({ workspaceId: 'missing' as WorkspaceId, group: 'x' }))
+      .rejects.toMatchObject({ code: 'workspace/not-found' })
+  })
+
   it('preserves Remote failures and propagates unexpected registry failures', async () => {
     const { controller, ctx, root } = await harness()
     const remoteFailure = new RemoteError('fixture/failure', 'already mapped', {})
