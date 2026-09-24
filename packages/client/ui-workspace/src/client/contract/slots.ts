@@ -320,6 +320,10 @@ export type RowToast =
    * a report can be searched by it — and any other failure's own message.
    */
   | { kind: 'createFailed'; message: string }
+  /** The archive chord (fork) found no started current Session to archive. */
+  | { kind: 'nothingToArchive' }
+  /** The archive chord's archive failed for a reason other than running work (fork). */
+  | { kind: 'archiveFailed' }
 
 /** The notice on display; `seq` keys remounts so a repeated notice restarts its hold. */
 export type RowToastState = RowToast & { seq: number }
