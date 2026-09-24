@@ -449,7 +449,7 @@ Source: [`packages/experimental/browser-use-stagehand-native/src/index.ts`](../p
 
 ### `ask_user_question`
 
-Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. Send one or more questions, each with a stable id that will be echoed in the answer.
+Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. Send one or more questions, each with a stable id that will be echoed in the answer. Keep each paragraph to at most two sentences and separate paragraphs with a blank line; put background, tradeoffs and lists in `detail` instead of lengthening the question line.
 
 ```json
 {
@@ -468,7 +468,11 @@ Ask the user a concise question when you need confirmation, a choice, or missing
           },
           "question": {
             "type": "string",
-            "description": "The specific question to ask the user."
+            "description": "The question itself, written as short paragraphs of at most two sentences each."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Optional markdown rendered under the question. Use it for background, tradeoffs and lists rather than lengthening the question line."
           },
           "header": {
             "type": "string",

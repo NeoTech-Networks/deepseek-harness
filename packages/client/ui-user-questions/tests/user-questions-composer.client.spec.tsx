@@ -228,6 +228,29 @@ describe('QuestionComposer', () => {
     expect(screen.getByRole<HTMLButtonElement>('button', { name: '正在提交…' }).disabled).toBe(true)
   })
 
+  it('scrolls the whole question, keeping the actions and the submit row pinned', () => {
+    const { carrier } = wait()
+    const view = render(<QuestionComposer matched={carrier} {...kit} />)
+
+    const heading = screen.getByRole('heading', { level: 2, name: '选择候选人类型' })
+    const region = view.container.querySelector('[data-question-scroll]')
+    expect(region).toBeTruthy()
+    // Title, eyebrow, detail and every option ride the ONE scrollport.
+    expect(region?.contains(heading)).toBe(true)
+    expect(region?.contains(screen.getByText('偏好'))).toBe(true)
+    expect(region?.contains(screen.getByText('按当前空缺岗位的优先级选择。'))).toBe(true)
+    expect(region?.contains(screen.getByRole('radio', { name: /工程落地型/ }))).toBe(true)
+    // The card actions and the submit row stay outside it.
+    expect(region?.contains(screen.getByRole('button', { name: '收起问题卡片' }))).toBe(false)
+    expect(region?.contains(screen.getByText('下一题').closest('button'))).toBe(false)
+
+    // Collapsing returns the heading to the pinned strip, so the pending
+    // question stays identifiable while the card is small.
+    fireEvent.click(screen.getByRole('button', { name: '收起问题卡片' }))
+    expect(view.container.querySelector('[data-question-scroll]')).toBeNull()
+    expect(screen.getByRole('heading', { level: 2, name: '选择候选人类型' })).toBeTruthy()
+  })
+
   it('renders plan detail through the shared assistant Markdown primitive', () => {
     const { carrier } = wait([{
       id: 'plan',
