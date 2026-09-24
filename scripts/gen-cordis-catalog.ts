@@ -144,6 +144,9 @@ export const SERVICE_PAGE: Record<string, string> = {
   workspaceChanges: 'deliverables.md',
   terminalController: 'workspace.md',
   directoryPickerController: 'workspace.md',
+  accountUsage: 'account-usage.md',
+  pinnedFiles: 'sidebar-right.md',
+  visionRouting: 'vision.md',
 }
 
 /**
@@ -273,6 +276,9 @@ export const EVENT_WALK_EXEMPTIONS: Record<string, string> = {
  * appear on more than one page.
  */
 export const LINK_MAP: Readonly<Record<string, string>> = {
+  PinnedFileText: 'sidebar-right.md',
+  PinnedListing: 'sidebar-right.md',
+  PinnedState: 'sidebar-right.md',
   ProductTelemetryRecord: 'product-telemetry.md',
   ProductTelemetryScalar: 'product-telemetry.md',
   WorkspaceChangesSummary: 'deliverables.md',
@@ -817,6 +823,7 @@ export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   SessionSetStatusValue: 'status result is owned by packages/api/session-controller/README.md',
   SessionListStatusesValue: 'status vocabulary result is owned by packages/api/session-controller/README.md',
   WorkspaceSetGroupRequest: 'workspace group request is owned by packages/api/workspace-controller/README.md',
+  AccountUsageSnapshot: 'Host account usage endpoint contract is owned by packages/llm/account-usage/README.md',
   ConnectionFetchHandler: 'shared Fetch dispatch is owned by packages/client/connection/src/rpc.ts',
   ConnectionRequestRejection: 'transport rejection status is owned by packages/client/connection/src/rpc.ts',
   ConnectionTrustRequest: 'transport authentication input is owned by packages/client/connection/src/rpc.ts',

@@ -11,6 +11,32 @@
 
 `Requires:` 行列出插件通过 `inject` 注入的服务键：其 `cordis.yml` 树还必须加载这些服务的提供者。范围限定为 harness 层级（`packages/`）；配置树还可能加载的 vendored cordis 插件（控制台日志记录器等）固定为上游源代码（参见 [vendoring policy](../vendor/README.md)），未收录于此目录。
 
+<a id="deepseek-aidsh-account-usage"></a>
+
+## `@deepseek-ai/dsh-account-usage`
+
+需要： `typert`
+
+```ts config-catalog
+/** Where the account's usage report lives and how hard this service may ask. */
+export interface Config {
+  /** Full URL of the usage report. */
+  readonly endpoint: string
+  /** Beta opt-in header value sent with the request. */
+  readonly beta: string
+  /** Registered name of the plugin owning the credential record. */
+  readonly credentialScope: string
+  /** That plugin's own addressing unit for the record, its provider route key. */
+  readonly credentialId: string
+  /** Milliseconds one answer stays good for; every caller shares it. */
+  readonly cacheMs: number
+  /** Milliseconds before one read of the report is abandoned. */
+  readonly timeoutMs: number
+}
+```
+
+来源： [`packages/llm/account-usage/src/index.ts:58`](../packages/llm/account-usage/src/index.ts)
+
 <a id="deepseek-aidsh-acp"></a>
 
 ## `@deepseek-ai/dsh-acp`
@@ -216,6 +242,30 @@ export interface Config {
 
 Source: [`packages/api/job-controller/src/index.ts:35`](../packages/api/job-controller/src/index.ts)
 
+<a id="deepseek-aidsh-api-pinned-files"></a>
+
+## `@deepseek-ai/dsh-api-pinned-files`
+
+需要： `fs` · `typert`
+
+```ts config-catalog
+/** Deployment caps on one listing and one read, plus the operator's own live fields. */
+export interface Config {
+  /** Cap on returned directory entries; the rest is dropped and reported cut. */
+  readonly maxEntries: number
+  /** Inclusive byte cap on one file read. A larger file is refused, never truncated. */
+  readonly maxBytes: number
+  /** Absolute directory paths, in the order the operator added them (live, operator-editable). */
+  readonly roots: Volatile<string[]>
+  /** Whether the explorer opens itself in every Session (live, operator-editable; default off). */
+  readonly autoOpen: Volatile<boolean>
+}
+```
+
+Depends on: `Volatile` (`@deepseek-ai/cordis`)
+
+来源： [`packages/api/pinned-files/src/index.ts:55`](../packages/api/pinned-files/src/index.ts)
+
 <a id="deepseek-aidsh-api-session-controller"></a>
 
 ## `@deepseek-ai/dsh-api-session-controller`
@@ -230,7 +280,7 @@ export interface Config {
 }
 ```
 
-来源： [`packages/api/session-controller/src/index.ts:80`](../packages/api/session-controller/src/index.ts)
+来源： [`packages/api/session-controller/src/index.ts:83`](../packages/api/session-controller/src/index.ts)
 
 <a id="deepseek-aidsh-api-settings-controller"></a>
 
@@ -307,7 +357,7 @@ export interface Config {
 }
 ```
 
-源码：[`packages/api/workspace-controller/src/index.ts:34`](../packages/api/workspace-controller/src/index.ts)
+源码：[`packages/api/workspace-controller/src/index.ts:35`](../packages/api/workspace-controller/src/index.ts)
 
 <a id="deepseek-aidsh-api-workspace-files"></a>
 
@@ -1468,6 +1518,14 @@ export interface Config {
   models: Volatile<DeepSeekCatalogModel[]>
   /** Maximum provider idle time while one stream read is outstanding (default five minutes). */
   streamIdleTimeoutMs: Volatile<number>
+  /**
+   * Maximum wait from the response to the stream's first content event
+   * (default 25 seconds). Keep-alive comments, `ping` and `message_start` do not
+   * satisfy or extend it, so a provider that accepts the request and produces
+   * nothing fails as a retryable `TIMEOUT` instead of hanging until its own
+   * cut-off. `0` disables the bound and leaves `streamIdleTimeoutMs` alone.
+   */
+  streamFirstPayloadTimeoutMs: Volatile<number>
   /** Maximum accumulated file-referenced image bytes per chat request (default 128 MiB). */
   maxRequestFilesBytes: Volatile<number>
   /** Maximum accumulated base64 image payload after Files API fallback (default 20 MiB). */
@@ -1893,6 +1951,36 @@ export type Config = Readonly<Record<string, never>>
 ```
 
 来源： [`packages/llm/llm-retry/src/index.ts:25`](../packages/llm/llm-retry/src/index.ts)
+
+<a id="deepseek-aidsh-llm-route-fallback"></a>
+
+## `@deepseek-ai/dsh-llm-route-fallback`
+
+```ts config-catalog
+/**
+ * Plugin configuration. Every field is optional and defaulted; a value that
+ * cannot be honored fails plugin load rather than silently disabling the guard
+ * (see {@link resolveConfig}).
+ */
+export interface Config {
+  /** Master switch. `false` leaves every request exactly as the agent declared it. */
+  enabled?: boolean
+  /** Provider route the fallback applies to; requests on any other provider are untouched. */
+  provider?: string
+  /**
+   * Models the fallback moves a request OFF. A list, not one id, because a
+   * provider can serve the same underlying model under a current id and a
+   * legacy alias, and a request pinned to either must still be protected.
+   */
+  from?: string[]
+  /** Model the fallback moves a qualifying request ONTO. */
+  to?: string
+  /** Combined UTF-8 byte size of the tools' `function.parameters` above which the route moves. */
+  limitBytes?: number
+}
+```
+
+来源： [`packages/llm/llm-route-fallback/src/index.ts:40`](../packages/llm/llm-route-fallback/src/index.ts)
 
 <a id="deepseek-aidsh-lsp-stdio"></a>
 
@@ -2597,6 +2685,75 @@ export interface Config {
 ```
 
 来源： [`packages/context/session-reference/src/config.ts:11`](../packages/context/session-reference/src/config.ts)
+
+<a id="deepseek-aidsh-session-status"></a>
+
+## `@deepseek-ai/dsh-session-status`
+
+需要： `sessionProjections`
+
+```ts config-catalog
+/** Deployment-owned status vocabulary, validated at plugin load. */
+export interface SessionStatusConfig {
+  /**
+   * The allowed statuses. Ids must be non-empty and unique, every icon id must
+   * be one of {@link SessionStatusIconId}, and every tone must be one of
+   * {@link SessionStatusTone}; a malformed entry fails the plugin load loudly.
+   */
+  readonly vocabulary: readonly SessionStatusVocabularyEntry[]
+}
+
+/** One vocabulary entry the deployment declares; the folded value is the entry. */
+export interface SessionStatusVocabularyEntry extends SessionStatusValue {}
+
+/**
+ * One durable declared session status. The whole value travels in the
+ * `session/status` event so a later vocabulary edit cannot retroactively
+ * change or break a row already logged.
+ */
+export interface SessionStatusValue {
+  /** Stable kebab-case identity, resolved against the deployment vocabulary. */
+  readonly id: string
+  /** Human label shown in the row and hover card; operator-authored copy. */
+  readonly label: string
+  /** Glyph id the client resolves to a component. */
+  readonly icon: SessionStatusIconId
+  /** Colour urgency of the glyph. */
+  readonly tone: SessionStatusTone
+}
+
+/**
+ * The shipped glyph identifiers, drawn from the ui-primitives icon set. An id
+ * is a stable wire value, never a component: the client resolves the id
+ * through its own allowlist so a deployment that authors a new icon id keeps
+ * working, and a client that does not know an id falls back to a neutral
+ * generic glyph instead of throwing.
+ *
+ * The allowlist ONLY grows. The five ids below `deploying` shipped before the
+ * session stage marks and stay valid forever, because a `session/status` event
+ * already written to a session log names its icon id durably: dropping one would
+ * make an old row's status undrawable on replay. The client maps the legacy ids
+ * to the nearest stage mark so an old session still draws the current set.
+ */
+export type SessionStatusIconId =
+  | 'right-up'
+  | 'stop'
+  | 'check'
+  | 'clock'
+  | 'pause'
+  | 'deploying'
+  | 'blocked'
+  | 'saved'
+  | 'failed'
+
+/**
+ * Colour urgency of one status glyph. Identity lives in the glyph, urgency in
+ * the colour, matching the workspace row's existing phase-mark arrangement.
+ */
+export type SessionStatusTone = 'attention' | 'error' | 'success' | 'neutral'
+```
+
+来源： [`packages/session-status/session-status/src/types.ts:87`](../packages/session-status/session-status/src/types.ts)
 
 <a id="deepseek-aidsh-session-telemetry-otel"></a>
 
@@ -3889,6 +4046,34 @@ export type ApprovalPolicy = 'ask' | 'never'
 
 来源： [`packages/interaction/user-approval/src/index.ts:135`](../packages/interaction/user-approval/src/index.ts)
 
+<a id="deepseek-aidsh-vision-routing"></a>
+
+## `@deepseek-ai/dsh-vision-routing`
+
+```ts config-catalog
+/** Plugin configuration. Every field is optional; defaults point at the shipped vision model. */
+export interface Config {
+  /** Exact vision-model route. Defaults to `deepseek-official/deepseek-flash`. */
+  visionRoute?: VisionRoute
+  /** Instruction sent with the images. Defaults to the stable describe rubric. */
+  prompt?: string
+  /** Output-token cap for one description. Defaults to 4096. */
+  maxTokens?: number
+  /** End-to-end deadline for one description. Defaults to 60 seconds. */
+  timeoutMs?: number
+}
+
+/** Exact provider/model route the vision model runs on. */
+export interface VisionRoute {
+  /** Provider route key the vision model is served by. */
+  readonly provider: string
+  /** Exact model id on that provider. */
+  readonly model: string
+}
+```
+
+来源： [`packages/vision/vision-routing/src/index.ts:57`](../packages/vision/vision-routing/src/index.ts)
+
 <a id="deepseek-aidsh-web"></a>
 
 ## `@deepseek-ai/dsh-web`
@@ -4134,7 +4319,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-commands`（[`packages/client/ui-commands/src/index.ts`](../packages/client/ui-commands/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-conversation`（[`packages/client/ui-conversation/src/index.ts`](../packages/client/ui-conversation/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-cordis`（[`packages/extensions/ui-cordis/src/index.ts`](../packages/extensions/ui-cordis/src/index.ts)）
-- `@deepseek-ai/dsh-client-ui-deliverables` — 需要 `systemPrompt` · `connection` · `sessionQuery` · `sessionController`（[`packages/client/ui-deliverables/src/index.ts`](../packages/client/ui-deliverables/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-deliverables` — 需要 `systemPrompt` · `connection` · `sessionQuery` · `sessionController` · `workspaceFiles` · `fs` · `sandboxPolicy` · `workspaceChanges`（[`packages/client/ui-deliverables/src/index.ts`](../packages/client/ui-deliverables/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-directory-picker-browse`（[`packages/client/ui-directory-picker-browse/src/index.ts`](../packages/client/ui-directory-picker-browse/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-directory-picker-native`（[`packages/client/ui-directory-picker-native/src/index.ts`](../packages/client/ui-directory-picker-native/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-goal`（[`packages/client/ui-goal/src/index.ts`](../packages/client/ui-goal/src/index.ts)）
@@ -4150,6 +4335,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-renderer`（[`packages/client/ui-renderer/src/index.ts`](../packages/client/ui-renderer/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-schedule`（[`packages/client/ui-schedule/src/index.ts`](../packages/client/ui-schedule/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-session`（[`packages/client/ui-session/src/index.ts`](../packages/client/ui-session/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-sessions-panel`（[`packages/client/ui-sessions-panel/src/index.ts`](../packages/client/ui-sessions-panel/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-settings`（[`packages/client/ui-settings/src/index.ts`](../packages/client/ui-settings/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-settings-agent-loop`（[`packages/client/ui-settings-agent-loop/src/index.ts`](../packages/client/ui-settings-agent-loop/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-settings-general`（[`packages/client/ui-settings-general/src/index.ts`](../packages/client/ui-settings-general/src/index.ts)）
@@ -4160,6 +4346,7 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-settings-web-search`（[`packages/client/ui-settings-web-search/src/index.ts`](../packages/client/ui-settings-web-search/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-sidebar`（[`packages/client/ui-sidebar/src/index.ts`](../packages/client/ui-sidebar/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-sidebar-browser`（[`packages/client/ui-sidebar-browser/src/index.ts`](../packages/client/ui-sidebar-browser/src/index.ts)）
+- `@deepseek-ai/dsh-client-ui-sidebar-explorer`（[`packages/client/ui-sidebar-explorer/src/index.ts`](../packages/client/ui-sidebar-explorer/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-sidebar-files`（[`packages/client/ui-sidebar-files/src/index.ts`](../packages/client/ui-sidebar-files/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-sidebar-right`（[`packages/client/ui-sidebar-right/src/index.ts`](../packages/client/ui-sidebar-right/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-sidebar-terminal`（[`packages/client/ui-sidebar-terminal/src/index.ts`](../packages/client/ui-sidebar-terminal/src/index.ts)）
@@ -4170,9 +4357,10 @@ export interface Config {
 - `@deepseek-ai/dsh-client-ui-user-questions`（[`packages/client/ui-user-questions/src/index.ts`](../packages/client/ui-user-questions/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-workflow-run`（[`packages/client/ui-workflow-run/src/index.ts`](../packages/client/ui-workflow-run/src/index.ts)）
 - `@deepseek-ai/dsh-client-ui-workspace`（[`packages/client/ui-workspace/src/index.ts`](../packages/client/ui-workspace/src/index.ts)）
-- `@deepseek-ai/dsh-command-compact` — 需要 `commands` · `compact`（[`packages/compaction/command-compact/src/index.ts`](../packages/compaction/command-compact/src/index.ts)）
+- `@deepseek-ai/dsh-command-compact` — 需要 `commands` · `compaction`（[`packages/compaction/command-compact/src/index.ts`](../packages/compaction/command-compact/src/index.ts)）
 - `@deepseek-ai/dsh-command-feedback` — 需要 `commands`（[`packages/feedback/command-feedback/src/index.ts`](../packages/feedback/command-feedback/src/index.ts)）
 - `@deepseek-ai/dsh-command-goal` — 需要 `commands` · `goals`（[`packages/goal/command-goal/src/index.ts`](../packages/goal/command-goal/src/index.ts)）
+- `@deepseek-ai/dsh-command-session-status` — 需要 `commands` · `sessionStatus`（[`packages/session-status/command-session-status/src/index.ts`](../packages/session-status/command-session-status/src/index.ts)）
 - `@deepseek-ai/dsh-commands`（[`packages/interaction/commands/src/index.ts`](../packages/interaction/commands/src/index.ts)）
 - `@deepseek-ai/dsh-compaction-image-offload`，需要 `agents` 和 `sessions`（[`packages/compaction/compaction-image-offload/src/index.ts`](../packages/compaction/compaction-image-offload/src/index.ts)）
 - `@deepseek-ai/dsh-computer-use`（[`packages/computer-use/computer-use/src/index.ts`](../packages/computer-use/computer-use/src/index.ts)）
@@ -4205,9 +4393,10 @@ export interface Config {
 - `@deepseek-ai/dsh-subprocess-local`（[`packages/subprocess/subprocess-local/src/index.ts`](../packages/subprocess/subprocess-local/src/index.ts)）
 - `@deepseek-ai/dsh-subprocess-ssh` — 需要 `ssh`（[`packages/ssh/subprocess-ssh/src/index.ts`](../packages/ssh/subprocess-ssh/src/index.ts)）
 - `@deepseek-ai/dsh-terminal`（[`packages/terminal/terminal/src/index.ts`](../packages/terminal/terminal/src/index.ts)）
-- `@deepseek-ai/dsh-tool-ask-user` — 需要 `tools` · `userInteraction`（[`packages/interaction/tool-ask-user/src/index.ts`](../packages/interaction/tool-ask-user/src/index.ts)）
+- `@deepseek-ai/dsh-tool-ask-user` — 需要 `tools` · `userQuestions`（[`packages/interaction/tool-ask-user/src/index.ts`](../packages/interaction/tool-ask-user/src/index.ts)）
 - `@deepseek-ai/dsh-tool-call-timeout-policy` — 需要 `tools`（[`packages/guard/timeout-policy/src/index.ts`](../packages/guard/timeout-policy/src/index.ts)）
-- `@deepseek-ai/dsh-tool-cordis` — 需要 `tools` · `systemPrompt` · `cordisInspect`（[`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts)）
+- `@deepseek-ai/dsh-tool-cordis` — 需要 `tools` · `cordisInspect`（[`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts)）
+- `@deepseek-ai/dsh-tool-session-status` — 需要 `tools` · `sessionStatus`（[`packages/session-status/tool-session-status/src/index.ts`](../packages/session-status/tool-session-status/src/index.ts)）
 - `@deepseek-ai/dsh-tool-subagent-control` — 需要 `tools` · `subagents`（[`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts)）
 - `@deepseek-ai/dsh-user-questions`（[`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts)）
 - `@deepseek-ai/dsh-webhook` — 需要 `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry`（[`packages/webhook/webhook/src/index.ts`](../packages/webhook/webhook/src/index.ts)）

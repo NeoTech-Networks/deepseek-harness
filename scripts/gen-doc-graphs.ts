@@ -287,6 +287,27 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Serves stat, paged text, byte windows, directory listings, and the change feed for files inside a Session\'s workspace root, confined by lstat, containment, and a stat re-check.',
   },
   {
+    key: 'visionRouting',
+    pkg: 'vision-routing',
+    title: 'Automatic image description for text-only sessions',
+    mode: 'core',
+    note: 'Describes attached images with an image-capable route so a text-only model receives text instead of a rejected message.',
+  },
+  {
+    key: 'pinnedFiles',
+    pkg: 'api-pinned-files',
+    title: 'Operator pinned-directory Remote service',
+    mode: 'core',
+    note: 'Serves the operator-pinned roots anywhere on the Host, kept as the pinned-files entry live Config, deliberately outside the Session workspace fence.',
+  },
+  {
+    key: 'accountUsage',
+    pkg: 'account-usage',
+    title: 'Subscription account usage Remote service',
+    mode: 'core',
+    note: 'Reads the stored subscription grant Host-side and reports the rolling and weekly limit occupancy of the account as percentages; every fault degrades to a status carrying the last figures read.',
+  },
+  {
     key: 'workspaceChanges',
     pkg: 'workspace-changes',
     title: 'Host per-turn changed-file summaries',

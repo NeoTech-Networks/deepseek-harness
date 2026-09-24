@@ -9,6 +9,32 @@ This file is GENERATED from source (`scripts/gen-config-catalog.ts`) and verifie
 
 A `Requires:` line lists the service keys the plugin `inject`s: its `cordis.yml` tree must also load providers for those services. Scope is the harness tier (`packages/`); the vendored cordis plugins a config tree may also load (the console logger, …) are pinned upstream source ([vendoring policy](../vendor/README.md)) and not catalogued here.
 
+<a id="deepseek-aidsh-account-usage"></a>
+
+## `@deepseek-ai/dsh-account-usage`
+
+Requires: `typert`
+
+```ts config-catalog
+/** Where the account's usage report lives and how hard this service may ask. */
+export interface Config {
+  /** Full URL of the usage report. */
+  readonly endpoint: string
+  /** Beta opt-in header value sent with the request. */
+  readonly beta: string
+  /** Registered name of the plugin owning the credential record. */
+  readonly credentialScope: string
+  /** That plugin's own addressing unit for the record, its provider route key. */
+  readonly credentialId: string
+  /** Milliseconds one answer stays good for; every caller shares it. */
+  readonly cacheMs: number
+  /** Milliseconds before one read of the report is abandoned. */
+  readonly timeoutMs: number
+}
+```
+
+Source: [`packages/llm/account-usage/src/index.ts:58`](../packages/llm/account-usage/src/index.ts)
+
 <a id="deepseek-aidsh-acp"></a>
 
 ## `@deepseek-ai/dsh-acp`
@@ -214,6 +240,30 @@ export interface Config {
 
 Source: [`packages/api/job-controller/src/index.ts:35`](../packages/api/job-controller/src/index.ts)
 
+<a id="deepseek-aidsh-api-pinned-files"></a>
+
+## `@deepseek-ai/dsh-api-pinned-files`
+
+Requires: `fs` · `typert`
+
+```ts config-catalog
+/** Deployment caps on one listing and one read, plus the operator's own live fields. */
+export interface Config {
+  /** Cap on returned directory entries; the rest is dropped and reported cut. */
+  readonly maxEntries: number
+  /** Inclusive byte cap on one file read. A larger file is refused, never truncated. */
+  readonly maxBytes: number
+  /** Absolute directory paths, in the order the operator added them (live, operator-editable). */
+  readonly roots: Volatile<string[]>
+  /** Whether the explorer opens itself in every Session (live, operator-editable; default off). */
+  readonly autoOpen: Volatile<boolean>
+}
+```
+
+Depends on: `Volatile` (`@deepseek-ai/cordis`)
+
+Source: [`packages/api/pinned-files/src/index.ts:55`](../packages/api/pinned-files/src/index.ts)
+
 <a id="deepseek-aidsh-api-session-controller"></a>
 
 ## `@deepseek-ai/dsh-api-session-controller`
@@ -228,7 +278,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/api/session-controller/src/index.ts:82`](../packages/api/session-controller/src/index.ts)
+Source: [`packages/api/session-controller/src/index.ts:83`](../packages/api/session-controller/src/index.ts)
 
 <a id="deepseek-aidsh-api-settings-controller"></a>
 
@@ -1466,6 +1516,14 @@ export interface Config {
   models: Volatile<DeepSeekCatalogModel[]>
   /** Maximum provider idle time while one stream read is outstanding (default five minutes). */
   streamIdleTimeoutMs: Volatile<number>
+  /**
+   * Maximum wait from the response to the stream's first content event
+   * (default 25 seconds). Keep-alive comments, `ping` and `message_start` do not
+   * satisfy or extend it, so a provider that accepts the request and produces
+   * nothing fails as a retryable `TIMEOUT` instead of hanging until its own
+   * cut-off. `0` disables the bound and leaves `streamIdleTimeoutMs` alone.
+   */
+  streamFirstPayloadTimeoutMs: Volatile<number>
   /** Maximum accumulated file-referenced image bytes per chat request (default 128 MiB). */
   maxRequestFilesBytes: Volatile<number>
   /** Maximum accumulated base64 image payload after Files API fallback (default 20 MiB). */
@@ -1892,6 +1950,36 @@ export type Config = Readonly<Record<string, never>>
 
 Source: [`packages/llm/llm-retry/src/index.ts:25`](../packages/llm/llm-retry/src/index.ts)
 
+<a id="deepseek-aidsh-llm-route-fallback"></a>
+
+## `@deepseek-ai/dsh-llm-route-fallback`
+
+```ts config-catalog
+/**
+ * Plugin configuration. Every field is optional and defaulted; a value that
+ * cannot be honored fails plugin load rather than silently disabling the guard
+ * (see {@link resolveConfig}).
+ */
+export interface Config {
+  /** Master switch. `false` leaves every request exactly as the agent declared it. */
+  enabled?: boolean
+  /** Provider route the fallback applies to; requests on any other provider are untouched. */
+  provider?: string
+  /**
+   * Models the fallback moves a request OFF. A list, not one id, because a
+   * provider can serve the same underlying model under a current id and a
+   * legacy alias, and a request pinned to either must still be protected.
+   */
+  from?: string[]
+  /** Model the fallback moves a qualifying request ONTO. */
+  to?: string
+  /** Combined UTF-8 byte size of the tools' `function.parameters` above which the route moves. */
+  limitBytes?: number
+}
+```
+
+Source: [`packages/llm/llm-route-fallback/src/index.ts:40`](../packages/llm/llm-route-fallback/src/index.ts)
+
 <a id="deepseek-aidsh-lsp-stdio"></a>
 
 ## `@deepseek-ai/dsh-lsp-stdio`
@@ -2157,10 +2245,12 @@ Requires: `tools` · `systemPrompt` · `sessionProjections`
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Pin plan mode active on every newly created non-subagent session whose log carries no plan state. Defaults to false. */
+  defaultActive?: boolean
 }
 ```
 
-Source: [`packages/plan/plan-mode/src/index.ts:70`](../packages/plan/plan-mode/src/index.ts)
+Source: [`packages/plan/plan-mode/src/index.ts:130`](../packages/plan/plan-mode/src/index.ts)
 
 <a id="deepseek-aidsh-plugin-manager"></a>
 
@@ -2281,7 +2371,7 @@ export interface Config {
 
 Depends on: `Volatile` (`@deepseek-ai/cordis`)
 
-Source: [`packages/shell/pwsh-local/src/index.ts:58`](../packages/shell/pwsh-local/src/index.ts)
+Source: [`packages/shell/pwsh-local/src/index.ts:94`](../packages/shell/pwsh-local/src/index.ts)
 
 <a id="deepseek-aidsh-pwsh-sandbox"></a>
 
@@ -3954,6 +4044,34 @@ export type ApprovalPolicy = 'ask' | 'never'
 
 Source: [`packages/interaction/user-approval/src/index.ts:135`](../packages/interaction/user-approval/src/index.ts)
 
+<a id="deepseek-aidsh-vision-routing"></a>
+
+## `@deepseek-ai/dsh-vision-routing`
+
+```ts config-catalog
+/** Plugin configuration. Every field is optional; defaults point at the shipped vision model. */
+export interface Config {
+  /** Exact vision-model route. Defaults to `deepseek-official/deepseek-flash`. */
+  visionRoute?: VisionRoute
+  /** Instruction sent with the images. Defaults to the stable describe rubric. */
+  prompt?: string
+  /** Output-token cap for one description. Defaults to 4096. */
+  maxTokens?: number
+  /** End-to-end deadline for one description. Defaults to 60 seconds. */
+  timeoutMs?: number
+}
+
+/** Exact provider/model route the vision model runs on. */
+export interface VisionRoute {
+  /** Provider route key the vision model is served by. */
+  readonly provider: string
+  /** Exact model id on that provider. */
+  readonly model: string
+}
+```
+
+Source: [`packages/vision/vision-routing/src/index.ts:57`](../packages/vision/vision-routing/src/index.ts)
+
 <a id="deepseek-aidsh-web"></a>
 
 ## `@deepseek-ai/dsh-web`
@@ -4215,6 +4333,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-client-ui-renderer` ([`packages/client/ui-renderer/src/index.ts`](../packages/client/ui-renderer/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-schedule` ([`packages/client/ui-schedule/src/index.ts`](../packages/client/ui-schedule/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-session` ([`packages/client/ui-session/src/index.ts`](../packages/client/ui-session/src/index.ts))
+- `@deepseek-ai/dsh-client-ui-sessions-panel` ([`packages/client/ui-sessions-panel/src/index.ts`](../packages/client/ui-sessions-panel/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-settings` ([`packages/client/ui-settings/src/index.ts`](../packages/client/ui-settings/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-settings-agent-loop` ([`packages/client/ui-settings-agent-loop/src/index.ts`](../packages/client/ui-settings-agent-loop/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-settings-general` ([`packages/client/ui-settings-general/src/index.ts`](../packages/client/ui-settings-general/src/index.ts))
@@ -4225,6 +4344,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-client-ui-settings-web-search` ([`packages/client/ui-settings-web-search/src/index.ts`](../packages/client/ui-settings-web-search/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar` ([`packages/client/ui-sidebar/src/index.ts`](../packages/client/ui-sidebar/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar-browser` ([`packages/client/ui-sidebar-browser/src/index.ts`](../packages/client/ui-sidebar-browser/src/index.ts))
+- `@deepseek-ai/dsh-client-ui-sidebar-explorer` ([`packages/client/ui-sidebar-explorer/src/index.ts`](../packages/client/ui-sidebar-explorer/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar-files` ([`packages/client/ui-sidebar-files/src/index.ts`](../packages/client/ui-sidebar-files/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar-right` ([`packages/client/ui-sidebar-right/src/index.ts`](../packages/client/ui-sidebar-right/src/index.ts))
 - `@deepseek-ai/dsh-client-ui-sidebar-terminal` ([`packages/client/ui-sidebar-terminal/src/index.ts`](../packages/client/ui-sidebar-terminal/src/index.ts))

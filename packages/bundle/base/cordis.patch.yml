@@ -326,6 +326,26 @@
     - id: command-session-status
       name: '@deepseek-ai/dsh-command-session-status'
 
+    # Tool-schema route fallback: a request whose assembled tool parameters
+    # exceed `limitBytes` on a `from` route goes out on `to` instead, so a
+    # schema is never truncated. The decision is taken on the agent/request
+    # waterfall, before the loop logs its request header, so the session log
+    # records the route that actually ran. See the package README before
+    # changing the threshold: the provider documents no tool-schema limit, so
+    # `limitBytes` is this deployment's own budget.
+    - id: llm-route-fallback
+      name: '@deepseek-ai/dsh-llm-route-fallback'
+      config:
+        # Disabled 2026-09-12: the 3000-byte threshold sits below the real
+        # tool-catalog size, so every flash request was silently moved to pro.
+        # Pro is the manual escalation tier only; re-enable with a realistic
+        # limitBytes if an oversized schema ever actually needs the guard.
+        enabled: false
+        provider: deepseek-official
+        from: [deepseek-flash, deepseek-v4-flash]
+        to: deepseek-v4-pro
+        limitBytes: 3000
+
     - id: plan-mode
       name: '@deepseek-ai/dsh-plan-mode'
       config:
@@ -534,3 +554,31 @@
     # choice.
     - id: llm-deepseek
       name: '@deepseek-ai/dsh-llm-deepseek'
+      config:
+        # Added 2026-09-14 after a deepseek-flash outage that returned HTTP 200
+        # and then only `: keep-alive`, so fourteen turns in one day each burned
+        # about fifteen minutes and died on the one transport-class code the
+        # default policy does not retry.
+        #
+        # The full list is spelled out because supplying `retryableCodes`
+        # REPLACES the defaults rather than extending them. STREAM_CLOSED is the
+        # addition; the other five are the upstream defaults.
+        #
+        # Retrying a truncated stream is safe: the partial attempt is discarded
+        # (no assistant message is committed) and the identical request body is
+        # resent, exactly as the shipped EMPTY_RESPONSE recovery does.
+        #
+        # maxRetries is 3, not the default 5, so a route that is simply down
+        # costs about three attempts rather than five. Paired with
+        # streamFirstPayloadTimeoutMs, each attempt is bounded at 25 seconds
+        # instead of the provider's own cut-off.
+        retryPolicy:
+          mode: normal
+          maxRetries: 3
+          retryableCodes:
+            - EMPTY_RESPONSE
+            - RATE_LIMIT
+            - SERVER
+            - TIMEOUT
+            - TRANSPORT
+            - STREAM_CLOSED

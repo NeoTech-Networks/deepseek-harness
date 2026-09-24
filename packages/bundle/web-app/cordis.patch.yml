@@ -47,6 +47,14 @@
     - id: subagent-model-selection-settings
       name: '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
 
+    # Automatic image description for text-only model sessions (e.g.
+    # deepseek-v4-pro). Inert unless the subagent-model-selection preference
+    # above is enabled with at least one route; prompt admission then describes
+    # attached images through the first allowed image-capable route (falling
+    # back to deepseek-flash) instead of refusing them.
+    - id: vision-routing
+      name: '@deepseek-ai/dsh-vision-routing'
+
     - id: message-feedback
       name: '@deepseek-ai/dsh-message-feedback'
       config:
@@ -112,6 +120,20 @@
       name: '@deepseek-ai/dsh-api-terminal-controller'
     - id: workspace-files
       name: '@deepseek-ai/dsh-api-workspace-files'
+
+    # Subscription-account usage: the signed-in account's rolling and weekly
+    # limit occupancy, read Host-side from the stored grant and seated on the
+    # composer dock strip. Renders nothing where no subscription grant exists.
+    - id: account-usage
+      name: '@deepseek-ai/dsh-account-usage'
+
+    # Pinned-directory service: the operator's own roots anywhere on the Host,
+    # kept as this entry's live `roots` / `autoOpen` fields (so a legacy
+    # `pinned-files:` settings.yaml section imports here), plus unconfined
+    # directory listings and text reads for them. Deliberately outside the
+    # workspace fence; read the package README before widening it further.
+    - id: pinned-files
+      name: '@deepseek-ai/dsh-api-pinned-files'
 
     # Configuration-surface reads and writes over Typert Remote. Each method
     # reports an actionable error when its settings-domain provider is absent.
@@ -264,6 +286,13 @@
     # with active sessions first, opened by kind through the guide.
     - id: ui-sessions-panel
       name: '@deepseek-ai/dsh-client-ui-sessions-panel'
+
+    # The right Sidebar's pinned-directory explorer: roots kept on the
+    # `pinned-files` entry, identical in every Session and Workspace, plus its
+    # own file preview. It opens itself once per Session only when that entry's
+    # live `autoOpen` field is true (default false).
+    - id: ui-sidebar-explorer
+      name: '@deepseek-ai/dsh-client-ui-sidebar-explorer'
 
     - id: ui-settings
       name: '@deepseek-ai/dsh-client-ui-settings'

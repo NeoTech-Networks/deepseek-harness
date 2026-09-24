@@ -59,6 +59,7 @@ kind: "package-reference"
 | `defaultContextWindow` | `1,000,000` | 无精确值模型的容量回退 |
 | `models` | V41 Flash + V4 Pro | 供发现消费方查看的建议性目录 |
 | `streamIdleTimeoutMs` | `300,000` | 单次流读取未完成的最大提供方空闲时间 |
+| `streamFirstPayloadTimeoutMs` | `25,000` | 等待首个内容事件的最长时间；心跳、`ping` 与 `message_start` 不满足它；到期为可重试的 `TIMEOUT`；`0` 表示禁用 |
 | `maxRequestFilesBytes` | `128 MiB` | file 模式请求图片字节预算，保留图片超过时请求以 `IMAGE_OFFLOAD_REQUIRED` 失败 |
 | `maxInlineRequestImageBytes` | `20 MiB` | 独立的 base64 回退高水位 |
 | `maxImagesPerRequest` | `600` | 保留请求图片数量的高水位 |

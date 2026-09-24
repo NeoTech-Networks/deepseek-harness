@@ -100,6 +100,12 @@
     },
     {
       "path": "../account-controller"
+    },
+    {
+      "path": "../pinned-files"
+    },
+    {
+      "path": "../../llm/account-usage/tsconfig.host.json"
     }
   ]
 }

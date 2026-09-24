@@ -163,6 +163,7 @@
     "@deepseek-ai/dsh-tool-ralph": "workspace:*",
     "@deepseek-ai/dsh-tool-skill": "workspace:*",
     "@deepseek-ai/dsh-tool-subagent": "workspace:*",
+    "@deepseek-ai/dsh-vision-routing": "workspace:*",
     "@deepseek-ai/dsh-tool-subagent-control": "workspace:*",
     "@deepseek-ai/dsh-tool-todo": "workspace:*",
     "@deepseek-ai/dsh-tool-web": "workspace:*",
@@ -175,6 +176,9 @@
     "commander": "^15.0.0",
     "open": "^11.0.0",
     "@deepseek-ai/dsh-api-account-controller": "workspace:*",
+    "@deepseek-ai/dsh-account-usage": "workspace:*",
+    "@deepseek-ai/dsh-api-pinned-files": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-sidebar-explorer": "workspace:*",
     "@deepseek-ai/dsh-client-ui-settings-account": "workspace:*"
   },
   "peerDependencies": {
