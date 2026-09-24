@@ -180,7 +180,8 @@
     "@deepseek-ai/dsh-client-shortcuts": "workspace:*",
     "@deepseek-ai/dsh-client-ui-shortcuts": "workspace:*",
     "@deepseek-ai/dsh-account-usage": "workspace:*",
-    "@deepseek-ai/dsh-api-pinned-files": "workspace:*"
+    "@deepseek-ai/dsh-api-pinned-files": "workspace:*",
+    "@deepseek-ai/dsh-client-ui-sidebar-explorer": "workspace:*"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:~",
