@@ -15,7 +15,7 @@ import type { RefObject } from 'react'
 import clsx from 'clsx'
 import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  HoverCard, IconAlarmClockOutlineRegular, IconArchiveOutlineRegular, IconEditOutlineRegular,
+  HoverCard, IconArchiveOutlineRegular, IconEditOutlineRegular,
   IconEllipsisOutlineRegular, IconFolderCloseRegular, IconFolderOpenOutlineRegular,
   IconFolderOpenRegular,
   IconNewChatOutlineRegular, IconPinFillRegular, IconTrashOutlineRegular,
@@ -419,6 +419,21 @@ function SessionStatusDots({ statuses }: { statuses: readonly [SessionStatus, ..
       ))}
     </>
   )
+}
+
+/**
+ * The row's live status mark for surfaces outside the tree (the fork's All
+ * Sessions section); an idle row draws nothing.
+ * @param props - the row's status facts and the locale seat.
+ * @returns the mark, or null.
+ */
+export function SessionMark({ node, t }: {
+  node: Pick<SessionNode, 'pendingInteraction' | 'running' | 'runningSubagentCount' | 'completed'>
+  t: RowTranslate
+}) {
+  const statuses = sessionStatuses(node, t)
+  if (statuses[0].state === 'idle') return null
+  return <SessionStatusDots statuses={statuses} />
 }
 
 /** Non-interactive pinned-row marker; the enclosing row remains the only action. */

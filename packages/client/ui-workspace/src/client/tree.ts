@@ -577,6 +577,50 @@ export function sectionShowsWorkspaces(
   return section.label === undefined || expansion?.[section.key] !== false
 }
 
+/** One All Sessions quick-nav row (fork): a Session row plus the Workspace it belongs to. */
+export interface AllSessionNode extends SessionNode {
+  /** Owning Workspace title, the cwd basename for a loose session, or empty. */
+  workspace: string
+}
+
+/**
+ * Derive the All Sessions quick-nav rows (fork): every visible unarchived
+ * Session, newest first with pinned rows leading, each labelled with its
+ * Workspace. The archived filter of the browser below does not apply here.
+ * @param list - sessions list snapshot.
+ * @param workspaces - Workspace membership and display labels.
+ * @param rowState - registry-global pin and archive sets.
+ * @param statuses - unified UI status by Session.
+ * @returns flat rows in render order.
+ */
+export function deriveAllSessions(
+  list: SessionListState,
+  workspaces: readonly WorkspaceView[],
+  rowState: Pick<SessionRowState, 'pinnedSessionIds' | 'archivedSessionIds'>,
+  statuses: SessionStatuses,
+): AllSessionNode[] {
+  const archived = new Set(rowState.archivedSessionIds)
+  const pinned = new Set(rowState.pinnedSessionIds)
+  const current = mainSessionId(list)
+  const workspaceBySession = new Map<SessionId, string>()
+  for (const workspace of workspaces) {
+    for (const sessionId of workspace.sessionIds) {
+      if (!workspaceBySession.has(sessionId)) workspaceBySession.set(sessionId, workspace.title)
+    }
+  }
+  const visible = orderByRecency(list.ids.filter((id) => {
+    const summary = list.byId[id]
+    return summary !== undefined && sessionVisible(summary, current, archived, 'default')
+  }), list.byId).flatMap((id) => {
+    const summary = list.byId[id]
+    return summary === undefined ? [] : [summary]
+  })
+  return sectionMembers(visible, pinned, archived).map(summary => ({
+    ...sessionNode(summary, list, statuses, pinned, archived),
+    workspace: workspaceBySession.get(summary.id) ?? workspaceLabel(summary.cwd),
+  }))
+}
+
 /**
  * Select complete flat-list membership, independently of archive visibility.
  * @param list - sessions list snapshot.
