@@ -383,6 +383,54 @@ describe('workspace browser rows', () => {
     assertIndicator()
   })
 
+  it('draws the stage mark for each live phase and the declared status glyph in its tone (fork)', () => {
+    const idle: SessionNode = {
+      id: sid('stage'), title: 'Stage', blank: false, running: false,
+      runningSubagentCount: 0, completed: false, hasActiveSchedule: false, updatedAt: 0, pinned: false, archived: false,
+    }
+    const renderRow = (over: Partial<SessionNode>) =>
+      render(<SessionNodeItem node={{ ...idle, ...over }} currentId={undefined} now={0} onOpen={vi.fn()} t={t} />)
+    const mark = (view: ReturnType<typeof renderRow>) => view.container.querySelector<HTMLElement>('[data-phase]')
+    const cases: Array<[Partial<SessionNode>, string, string | undefined]> = [
+      [{ running: true }, 'running', 'arc'],
+      [{ pendingInteraction: 'question', running: true }, 'awaiting-answer', 'caret'],
+      [{ pendingInteraction: 'approval' }, 'awaiting-approval', 'caret'],
+      [{ pendingInteraction: 'plan-review' }, 'awaiting-plan-review', 'check-2'],
+      [{ planActive: true, running: true }, 'planning', 'check-2'],
+    ]
+    for (const [over, phase, part] of cases) {
+      const view = renderRow(over)
+      expect(mark(view)?.dataset.phase, phase).toBe(phase)
+      if (part !== undefined) expect(mark(view)?.querySelector(`[data-part="${part}"]`), phase).not.toBeNull()
+      view.unmount()
+    }
+    // Plan mode during a running turn is live; a still plan-mode session is not.
+    const live = renderRow({ planActive: true, running: true })
+    expect(mark(live)?.dataset.active).toBe('true')
+    live.unmount()
+    const still = renderRow({ planActive: true })
+    expect(mark(still)?.dataset.active).toBeUndefined()
+    still.unmount()
+    // Declared statuses draw their own glyph in their tone, below live work.
+    const declared: Array<[string, string, string]> = [
+      ['deploying', 'attention', 'arrow'],
+      ['blocked', 'error', 'glass'],
+      ['saved', 'success', 'card'],
+      ['failed', 'error', 'cross'],
+    ]
+    for (const [icon, tone, part] of declared) {
+      const view = renderRow({ declaredStatus: { id: icon, label: icon, icon: icon as never, tone: tone as never } })
+      expect(mark(view)?.dataset.phase).toBe('declared')
+      expect(mark(view)?.dataset.tone).toBe(tone)
+      expect(mark(view)?.querySelector(`[data-part="${part}"]`), icon).not.toBeNull()
+      expect(view.container.textContent).toContain(icon)
+      view.unmount()
+    }
+    const busy = renderRow({ running: true, declaredStatus: { id: 'finished', label: 'Finished', icon: 'saved', tone: 'success' } })
+    expect(mark(busy)?.dataset.phase).toBe('running')
+    busy.unmount()
+  })
+
   it('shows the green done dot only on a finished, unviewed session (live activity wins the slot)', () => {
     const renderRow = (over: Partial<SessionNode>) => render(
       <SessionNodeItem

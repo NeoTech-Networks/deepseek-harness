@@ -466,3 +466,153 @@
 .projectRow.menuOpen .countBadge {
   display: none;
 }
+
+/* Session stage marks (fork; design project "dsh icons", 2026-09-19), drawn in
+   the same status slot as the state dot: the glyph names the phase and the
+   colour carries urgency - warn for every phase that blocks the operator,
+   secondary label colour for plan mode, which is a mode, not a request. The
+   glyphs carry only `data-part` names; the loops below are the row's own, so
+   one rule stops them all for reduced motion and a still mark is the design's
+   complete resting frame. */
+.phaseIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+.phaseIcon[data-phase='planning'] {
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* A glyph standing in for a running indicator carries the ongoing blue and a
+   pulse, the same static step StateDot pins for `ongoing`. */
+.phaseIcon[data-active='true'] {
+  color: var(--dsw-static-deepseek-450);
+  animation: dsw-plan-active 1.6s var(--ds-ease-in-out) infinite;
+}
+
+@keyframes dsw-plan-active {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* A run in flight: the design's own spin replaces the wrapper pulse. */
+.phaseIcon[data-active='true'][data-phase='running'] {
+  animation: none;
+}
+
+.phaseIcon[data-phase='running'] [data-part='arc'] {
+  transform-origin: 12px 12px;
+  animation: dsw-stage-arc-spin 1.8s linear infinite;
+}
+
+.phaseIcon[data-phase='running'] [data-part='arc-back'] {
+  transform-origin: 12px 12px;
+  animation: dsw-stage-arc-spin-back 2.9s linear infinite;
+}
+
+.phaseIcon[data-phase='running'] [data-part='core'] {
+  animation: dsw-stage-core-pulse 1.8s ease-in-out infinite;
+}
+
+.phaseIcon[data-active='true'][data-phase='planning'] [data-part='check-2'] {
+  animation: dsw-stage-check-draw 3s ease-out infinite;
+}
+
+/* Declared holds that are still moving: the tray lifts (deploying) and the
+   hourglass tips (blocked). `failed` and `saved` are outcomes and stay still. */
+.phaseIcon [data-part='arrow'] {
+  animation: dsw-stage-lift-off 2.4s cubic-bezier(.3, .7, .2, 1) infinite;
+}
+
+.phaseIcon [data-part='sweep'] {
+  animation: dsw-stage-tick-sweep 2.4s ease-in-out infinite;
+}
+
+.phaseIcon [data-part='glass'] {
+  transform-origin: 12px 12px;
+  animation: dsw-stage-glass-tip 3.6s cubic-bezier(.6, 0, .2, 1) infinite;
+}
+
+.phaseIcon [data-part='grain'] {
+  animation: dsw-stage-grain-fall 1.8s ease-in infinite;
+}
+
+/* The design's 14px reduction: no hourglass base line, one plan check. */
+.phaseIcon [data-part='detail'],
+.phaseIcon [data-part='check'],
+.phaseIcon [data-part='check-3'] {
+  display: none;
+}
+
+/* Declared status tones. */
+.phaseIcon[data-tone='attention'] {
+  color: var(--dsw-alias-state-warn-primary);
+}
+
+.phaseIcon[data-tone='error'] {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.phaseIcon[data-tone='success'] {
+  color: var(--dsw-alias-state-success-primary);
+}
+
+.phaseIcon[data-tone='neutral'] {
+  color: var(--dsw-alias-label-secondary);
+}
+
+@keyframes dsw-stage-arc-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes dsw-stage-arc-spin-back {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+@keyframes dsw-stage-core-pulse {
+  0%, 100% { r: 1.6; }
+  50% { r: 2.6; }
+}
+
+@keyframes dsw-stage-check-draw {
+  0%, 55% { stroke-dashoffset: 0; }
+  68% { stroke-dashoffset: 12; }
+  94%, 100% { stroke-dashoffset: 0; }
+}
+
+@keyframes dsw-stage-lift-off {
+  0% { transform: translateY(0); opacity: 1; }
+  48% { transform: translateY(-3.2px); opacity: 1; }
+  56% { transform: translateY(-4.4px); opacity: 0; }
+  70% { transform: translateY(2.4px); opacity: 0; }
+  84%, 100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes dsw-stage-tick-sweep {
+  0%, 100% { opacity: .3; }
+  40% { opacity: 1; }
+}
+
+@keyframes dsw-stage-glass-tip {
+  0%, 74% { transform: rotate(0deg); }
+  88%, 100% { transform: rotate(180deg); }
+}
+
+@keyframes dsw-stage-grain-fall {
+  0% { transform: translateY(-.6px); opacity: 0; }
+  20% { opacity: 1; }
+  70% { transform: translateY(4.4px); opacity: 1; }
+  90%, 100% { transform: translateY(5px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phaseIcon,
+  .phaseIcon * {
+    animation: none;
+    transition: none;
+  }
+}
