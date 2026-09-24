@@ -142,6 +142,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   terminalController: 'workspace.md',
   directoryPickerController: 'workspace.md',
   accountUsage: 'account-usage.md',
+  pinnedFiles: 'sidebar-right.md',
 }
 
 /**
@@ -275,6 +276,9 @@ export const EVENT_WALK_EXEMPTIONS: Record<string, string> = {
  * appear on more than one page.
  */
 export const LINK_MAP: Readonly<Record<string, string>> = {
+  PinnedFileText: 'sidebar-right.md',
+  PinnedListing: 'sidebar-right.md',
+  PinnedState: 'sidebar-right.md',
   ProductTelemetryRecord: 'product-telemetry.md',
   ProductTelemetryScalar: 'product-telemetry.md',
   WorkspaceChangesSummary: 'deliverables.md',

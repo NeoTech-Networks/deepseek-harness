@@ -108,6 +108,9 @@
       "path": "../../credentials/deepseek-account"
     },
     {
+      "path": "../pinned-files"
+    },
+    {
       "path": "../../llm/account-usage/tsconfig.host.json"
     }
   ]

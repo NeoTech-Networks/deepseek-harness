@@ -132,6 +132,14 @@
     - id: account-usage
       name: '@deepseek-ai/dsh-account-usage'
 
+    # Pinned-directory service: the operator's own roots anywhere on the Host,
+    # kept as this entry's live `roots` / `autoOpen` fields (so a legacy
+    # `pinned-files:` settings.yaml section imports here), plus unconfined
+    # directory listings and text reads for them. Deliberately outside the
+    # workspace fence; read the package README before widening it further.
+    - id: pinned-files
+      name: '@deepseek-ai/dsh-api-pinned-files'
+
     # Configuration-surface reads and writes over Typert Remote. Each method
     # reports an actionable error when its settings-domain provider is absent.
     - id: ui-settings-account

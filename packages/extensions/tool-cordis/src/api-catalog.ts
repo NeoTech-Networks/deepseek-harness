@@ -1586,6 +1586,49 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'pinnedFiles',
+    summary: 'Host Remote service over the composed filesystem, confined to nothing and authorized by the operator.',
+    description: 'Host Remote service over the composed filesystem, confined to nothing and authorized by the operator.',
+    methods: [
+      {
+        signature: '@Remote async state(signal: AbortSignal): Promise<PinnedState>',
+        description: 'Report the operator\'s pinned roots and explorer preferences.',
+        parameters: [{ name: 'signal', description: 'caller cancellation.' }],
+        returns: 'every pinned root with its current reachability, and the auto-open preference.',
+      },
+      {
+        signature: '@Remote async addRoot(path: string, signal: AbortSignal): Promise<PinnedState>',
+        description: 'Pin one directory, appending it to the operator\'s list.\n\nIdempotent: pinning a directory already in the list moves nothing and fails nothing, because the operator\'s gesture was "make sure this is there", and a picker can hand back a path they already chose once.',
+        parameters: [{ name: 'path', description: 'absolute directory to pin.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the state after the write.',
+      },
+      {
+        signature: '@Remote async removeRoot(path: string, signal: AbortSignal): Promise<PinnedState>',
+        description: 'Unpin one directory. A path that is not pinned is left alone rather than refused: the list already says what the caller wanted it to say.',
+        parameters: [{ name: 'path', description: 'absolute directory to unpin.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the state after the write.',
+      },
+      {
+        signature: '@Remote async setAutoOpen(autoOpen: boolean, signal: AbortSignal): Promise<PinnedState>',
+        description: 'Set whether the explorer opens itself in every Session.',
+        parameters: [{ name: 'autoOpen', description: 'the operator\'s preference.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the state after the write.',
+      },
+      {
+        signature: '@Remote async list(path: string, signal: AbortSignal): Promise<PinnedListing>',
+        description: 'List the direct children of one directory anywhere the Host can read.\n\nThe directory does not have to be a pinned root, or under one: the tree walks downward from a root the operator authorized, and re-checking ancestry on every level would cost a resolve per row without adding an authority the caller does not already have.',
+        parameters: [{ name: 'path', description: 'absolute directory to list.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the directory\'s children in the backend\'s stable name order, bounded by the entry cap.',
+      },
+      {
+        signature: '@Remote async read(path: string, signal: AbortSignal): Promise<PinnedFileText>',
+        description: 'Read one regular file\'s whole text from anywhere the Host can read.\n\nA file above the byte cap is refused with its size rather than shortened, because a silently cut file reads as the whole file.',
+        parameters: [{ name: 'path', description: 'absolute path of the file.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the file\'s identity, size, and complete decoded text.',
+      },
+    ],
+  },
+  {
     key: 'planMode',
     summary: '`ctx.planMode`: owns logged plan state, applies and narrates selected state at step start, the `plan:policy` section, the `/plan` command, and the stable exit tool.',
     description: '`ctx.planMode`: owns logged plan state, applies and narrates selected state at step start, the `plan:policy` section, the `/plan` command, and the stable exit tool. Client carriers expose the projection\'s cropped `{ active, pending }` view.',
@@ -5867,6 +5910,26 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'PermissionCatalog',
     declaration: 'export interface PermissionCatalog {\n    options: PresetOption[];\n    defaultOptions: PresetOption[];\n    defaultPreset: string;\n}',
+  },
+  {
+    name: 'PinnedEntry',
+    declaration: 'export interface PinnedEntry {\n    readonly name: string;\n    readonly path: string;\n    readonly type: \'file\' | \'directory\' | \'other\';\n    readonly size?: number;\n}',
+  },
+  {
+    name: 'PinnedFileText',
+    declaration: 'export interface PinnedFileText {\n    readonly path: string;\n    readonly version: string;\n    readonly bytes: number;\n    readonly text: string;\n}',
+  },
+  {
+    name: 'PinnedListing',
+    declaration: 'export interface PinnedListing {\n    readonly path: string;\n    readonly entries: readonly PinnedEntry[];\n    readonly truncated: boolean;\n}',
+  },
+  {
+    name: 'PinnedRoot',
+    declaration: 'export interface PinnedRoot {\n    readonly path: string;\n    readonly label: string;\n    readonly available: boolean;\n}',
+  },
+  {
+    name: 'PinnedState',
+    declaration: 'export interface PinnedState {\n    readonly roots: readonly PinnedRoot[];\n    readonly autoOpen: boolean;\n}',
   },
   {
     name: 'PlatformSession',
