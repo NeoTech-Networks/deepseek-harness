@@ -47,6 +47,10 @@ The plugin is a namespace plugin (`name` / `inject` / `apply`, no default export
 
 - [session-status group map](../README.md): the sibling group page and its package table.
 
+## Runtime invariant
+
+No companion is published. The command delegates vocabulary validation and the durable append to the session-status domain and registers one stateless command, so there is no independent observation for a runtime companion to compare against.
+
 -----
 
 <a id="model-experience"></a>
@@ -65,10 +69,6 @@ Reading status, setting or clearing it, or receiving a direct command error adds
 #### KV Cache effect
 
 Command discovery, mutations, and direct output do not affect the cache.
-
-## Runtime invariant
-
-No companion is published. The command delegates vocabulary validation and the durable append to the session-status domain and registers one stateless command, so there is no independent observation for a runtime companion to compare against.
 
 ## Known Limitations and Deferred Work
 

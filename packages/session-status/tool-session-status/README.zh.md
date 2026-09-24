@@ -48,6 +48,10 @@ kind: "package-reference"
 - [session-status group map](../README.zh.md): 兄弟分组页及其包表。
 - [Generated tool catalog](../../../docs/tool-catalog.zh.md#deepseek-aidsh-tool-session-status): 模型收到的 `set_session_status` schema。
 
+## Runtime invariant
+
+不发布伴随件。该工具把词表校验和持久化追加委托给 session-status 域，并只注册一个无状态工具，因此没有独立观察需要运行时伴随件比较。
+
 -----
 
 <a id="model-experience"></a>
@@ -82,10 +86,6 @@ kind: "package-reference"
 仅追加；新可见内容跟随可复用请求前缀。
 
 -----
-
-## Runtime invariant
-
-不发布伴随件。该工具把词表校验和持久化追加委托给 session-status 域，并只注册一个无状态工具，因此没有独立观察需要运行时伴随件比较。
 
 <a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work

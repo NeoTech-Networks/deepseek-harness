@@ -48,6 +48,10 @@ The plugin is a namespace plugin (`name` / `inject` / `apply`, no default export
 - [session-status group map](../README.md): the sibling group page and its package table.
 - [Generated tool catalog](../../../docs/tool-catalog.md#deepseek-aidsh-tool-session-status): the `set_session_status` schema the model receives.
 
+## Runtime invariant
+
+No companion is published. The tool delegates vocabulary validation and the durable append to the session-status domain and registers one stateless tool, so there is no independent observation for a runtime companion to compare against.
+
 -----
 
 <a id="model-experience"></a>
@@ -80,10 +84,6 @@ The call arguments and the small structured result remain until compaction.
 #### KV Cache effect
 
 Append-only; newly visible content follows the reusable request prefix.
-
-## Runtime invariant
-
-No companion is published. The tool delegates vocabulary validation and the durable append to the session-status domain and registers one stateless tool, so there is no independent observation for a runtime companion to compare against.
 
 ## Known Limitations and Deferred Work
 
