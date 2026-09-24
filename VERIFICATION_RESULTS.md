@@ -1,5 +1,30 @@
 
 
+## 2026-09-24 - DSH 0.1.7-rc.2 installed
+
+| Check | Result | Evidence |
+|---|---|---|
+| replay completeness | subject lists old 49, new 49, no difference; 14 picks conflicted | `update/v0.1.7-rc.2` vs `dsh-v0.1.7-rc.1..update/v0.1.7-rc.1` |
+| branch and tag on the fork | `update/v0.1.7-rc.2` at `9befa83826` and tag `dsh-v0.1.7-rc.2` pushed and read back | `NeoTech-Networks/deepseek-harness` |
+| typecheck | host and client exit 0 | `C:\d172` |
+| tests | 1717 passed in 52 files (conflict-touched packages); 119 passed (agent-team) | `C:\d172` |
+| doc-sync | 40 passed, 2 failed, both baseline (symlink EPERM; commit hashes in `PORT-0.1.7-FEATURE-MAP.md`) | `C:\d172` |
+| translation pairing | 1154 pairs consistent after re-recording in rc.2's format | `verify-translation-pairing` |
+| operator mode source | rc.2 `standard.patch.yml` byte-identical to rc.1's, no re-derive | file compare |
+| installer | 287,442,652 bytes, sha256 `B72681920DBF70B6AD434D49873C56DA0748D2BE4D7D2AF1416DE406BDD8AF5C`; packaged smoke passed (DOCX, XLSX, PPTX to PDF) | `C:\d172\apps\desktop\.desktop-build\targets\win-x64\unsigned-artifacts\` |
+| features in the packaged build | 35 of 35 after folding in `9befa83826` (first build 34 of 35) | `dsh_local_features_check.py --asar` |
+| SessionStart chain | 4.38 s wall, all exit 0 | parallel timing run |
+| finish-install.ps1 run 1 | installer exit code 2, script refused, rc.1 intact | script output |
+| finish-install.ps1 run 2 | 19 vault files same, "every one of your settings survived", `HARDLINK OK`, `SETUP COMPLETE. Running 0.1.7-rc.2` | script output |
+| uninstall rows | exactly 1, `7808434f-469e-5eba-848e-edf64d3b94ce`, `DisplayVersion 0.1.7-rc.2` | HKCU uninstall key |
+| processes and port | 5 started 18:53:14; 127.0.0.1:19387 answers | `Get-Process`, port probe |
+| features in the running code | 35 of 35 from the installed `app.asar` | `dsh_local_features_check.py` |
+| operator mode selected | `selectedDefault: standard-hooks` present | profile patch |
+| session answers | `session-211cdbee` (18:57) answered | session log |
+| hooks | UserPromptSubmit exit 0 (1058 ms), Stop exit 0 (3522 ms) | session log `hook/result` |
+| MCP servers exposed | 10 (claude-memory-bridge, claude_design, claude_design_team_account, composio, composio_platform, playwright, claude_ai_Railway, qbo_abc, qbo_neotech, qbo_sig) | session tool list |
+| NOT YET PROVEN | PreToolUse, PostToolUse, a real MCP call answering (the test message made no tool call); mode picker not seen on screen | OPEN_ISSUES 44 |
+
 ## 2026-09-24 - post-install check: launchers, hook enforcement, C:\Claude sync
 
 | Check | Result | Evidence |
@@ -197,23 +222,3 @@
 | Installer | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,931,936 bytes, 2026-09-17 19:16:27, `win-x64-release.json` version `0.1.5-rc.2` | VERIFIED |
 | Install and the running build | markers in the RUNNING profile | PENDING: the operator has not run the installer yet. This is the resume point | UNVERIFIED |
 | Footer seen on screen | the two labelled lines | PENDING, and it has never been done. A Vercel-workspace Session that starts with `/dashboard <key>` is the case to capture | UNVERIFIED |
-
-
-## 2026-09-17 - the two-line session footer: built, tested, merged, packaged
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| Resolver unit suite | pass | `packages/api/session-controller/tests/workspace-links.host.spec.ts`: 10 cases pass (exact folder, subfolder, worktree tail, lookalike key, unmapped, missing design file, malformed dashboard file, non-string values, separators and case) | VERIFIED |
-| Footer component suite | pass | `packages/client/ui-conversation/tests/skeleton.client.spec.tsx`: 5 new cases pass (both values, both labels empty, one half only, no footer in the hero, exact English labels) | VERIFIED |
-| Touched package suites | pass | 70 files, 1166 passed, 1 skipped, 1 FAILED: `media-references.host.spec.ts` symlink `EPERM`, reproduced identically on `1a77e844ad`, the known no-symlink-privilege environment | VERIFIED (failure pre-existing) |
-| typecheck | exit 0 | `pnpm run typecheck` exit 0 after `src/workspace-links.ts` was added to the package `tsconfig.host.json` `files` list, which the first run named as the missing entry | VERIFIED |
-| build | exit 0 | `pnpm run build` exit 0, 240 client artifacts | VERIFIED |
-| i18n gate | exit 0 | exits 1 on two `ui-sidebar-explorer/src/client/definition.ts` strings; identical output on `1a77e844ad`, and zero findings in the changed files | VERIFIED (failure pre-existing) |
-| Built bundles carry the change | present | `lib/index.js` reads `dashboard-links.json` and `design-links.json`; `lib/client.js` carries `data-session-footer-line` (2) and no `sessionFooterSummary` (0) | VERIFIED |
-| Maps regenerated | both written | `~\.dsh\dashboard-links.json` 89 entries (66 dashboard folders + 23 unambiguous producer service folders); `~\.dsh\design-links.json` 83 entries; 51 names read from Claude Design across both accounts, 0 fell back to a contract title | VERIFIED |
-| Producer service mapping | resolves, and skips the ambiguous | live resolver over the real maps: `services\youtube-creator` and a folder inside it resolve to the URL and `YouTube`; `services\content-planner` (17 dashboards behind it) resolves to nothing, as designed; 10 ambiguous services named in the generator's output | VERIFIED |
-| Release line | carries the commits | `feat/session-footer-links` and `update/v0.1.5-rc.2` both read back from the fork at `e15a4fc5f4` | VERIFIED |
-| Seed proof before handover | markers inside the packaged seed | conversation `.tgz`: `data-session-footer-line` (2), `sessionFooterSummary` (0); session-controller `.tgz`: both map filenames | VERIFIED |
-| Installer | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,884,537 bytes, 2026-09-17 01:20:22 | VERIFIED |
-| Running app after the install | 21 of 21 markers | `dsh_local_features_check.py`: "all 21 local features are present in the running build", exit 0; profile client.js (01:48:52) marker 2 and old class 0; profile host bundle reads `design-links.json`; provision log ends `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished`; 4 processes from 01:43:54; release file `0.1.5-rc.2` | VERIFIED |
-| Footer seen on screen | two labelled lines | PARTIAL: the app window was captured but it was on the NEW SESSION screen, where no footer renders by design (correct), and no current workspace points at a mapped folder. Evidence: `C:\Projects\logs\2026-09-17\dsh-session-footer-lines\` | UNVERIFIED |
