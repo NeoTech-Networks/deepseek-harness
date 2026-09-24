@@ -403,6 +403,21 @@ function SessionStatusDots({ statuses }: { statuses: readonly [SessionStatus, ..
   )
 }
 
+/**
+ * The row's live status mark for surfaces outside the tree (the fork's All
+ * Sessions section); an idle row draws nothing.
+ * @param props - the row's status facts and the locale seat.
+ * @returns the mark, or null.
+ */
+export function SessionMark({ node, t }: {
+  node: Pick<SessionNode, 'pendingInteraction' | 'running' | 'runningSubagentCount' | 'completed'>
+  t: RowTranslate
+}) {
+  const statuses = sessionStatuses(node, t)
+  if (statuses[0].state === 'idle') return null
+  return <SessionStatusDots statuses={statuses} />
+}
+
 /** Non-interactive active-Schedule marker; the enclosing row remains the only action. */
 function ActiveScheduleIndicator({ t, search = false }: { t: RowTranslate; search?: boolean }) {
   const label = t('schedule.active')

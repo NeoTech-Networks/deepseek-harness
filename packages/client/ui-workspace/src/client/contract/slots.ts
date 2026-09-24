@@ -46,7 +46,7 @@ import type { SessionActivity, WorkspaceId, WorkspaceView } from '@deepseek-ai/d
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 // Type-only: also pulls the `sessionStatus` projection merge into the Client face.
 import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
-import type { createWorkspaceViewStore } from '../stores.ts'
+import type { createAllSessionsStore, createWorkspaceViewStore } from '../stores.ts'
 
 /**
  * Owner share of the directory-flow holes: the complete conversation between
@@ -226,6 +226,22 @@ export type WorkspaceBrowserInjected = {
   /** Adopt a picked host directory as a real Workspace before targeting a Session. */
   createWorkspace: (input: { path: string }) => Promise<WorkspaceView>
 }
+
+/**
+ * The fork's All Sessions section share: the one action its flat list drives.
+ * Data reads use the global framework hooks.
+ */
+export type AllSessionsInjected = {
+  /** Open a listed Session (the same navigation the browser rows use). */
+  open: (sessionId: SessionId) => void
+}
+
+/** Full All Sessions props: shell owner share + fold store + injected open + the locale seat. */
+export type AllSessionsProps =
+  PropsRuntime<'sidebar.allSessions'>
+  & PropsStore<ReturnType<typeof createAllSessionsStore>>
+  & AllSessionsInjected
+  & PropsLocale<'workspace'>
 
 /** The browser's declared viewing store handle, shared with the row actions that write view state. */
 export type WorkspaceViewStoreHandle = ReturnType<typeof createWorkspaceViewStore>

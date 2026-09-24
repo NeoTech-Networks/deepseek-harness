@@ -32,14 +32,15 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Type-only: pulls the Session root standard-hook merge.
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import {
-  type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
+  type AllSessionsInjected, type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
   type SessionArchiveConfirmInjected, type SessionArchiveConfirmRequest,
   type RenameSessionInjected, type RowToast, type RowToastInjected, type RowToastState, type SessionRenameDialogInjected,
   type SessionRenameTarget, type SessionStatusDialogInjected, type SessionStatusMenuInjected, type SessionStatusTarget,
   type WorkspaceBrowserInjected, type WorkspacePickerInjected,
 } from './contract/slots.ts'
 import { UiWorkspaceService } from './navigation.ts'
-import { createWorkspaceViewStore } from './stores.ts'
+import { createAllSessionsStore, createWorkspaceViewStore } from './stores.ts'
+import { AllSessionsSection } from './rows/AllSessions.tsx'
 import { WorkspaceBrowser } from './rows/WorkspaceBrowser.tsx'
 import { ArchiveSessionMenuItem, ArchiveSessionRowButton, SessionArchiveConfirmDialog } from './session-actions/ArchiveSession.tsx'
 import { derive } from './session-actions/derived.ts'
@@ -332,6 +333,16 @@ export function apply(ctx: Context): void {
       name: 'shell.overlay', id: 'workspace.row-toast', locale: NS, inject: rowToastInjected,
     }, RowActionToast)
   })
+  // The fork's All Sessions quick-nav section, above the browser.
+  ctx.slots.inject('sidebar.allSessions', () => ctx.slots.register(
+    {
+      name: 'sidebar.allSessions',
+      store: createAllSessionsStore(),
+      inject: (): AllSessionsInjected => ({ open: openSession }),
+      locale: NS,
+    },
+    AllSessionsSection,
+  ))
   ctx.slots.inject('conversation.hero.workspace', () => ctx.slots.register(
     {
       name: 'conversation.hero.workspace',
