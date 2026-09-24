@@ -1,3 +1,16 @@
+
+
+## 2026-09-24 - post-install check: launchers, hook enforcement, C:\Claude sync
+
+| Check | Result | Evidence |
+|---|---|---|
+| claude-deepseek, claude-ds, claude-kimi, claude-glm, claude-bypass | tier line printed and each replied `OK`; route proof for DeepSeek and Kimi | `C:\Projects\logs\2026-09-24\dsh-017-check\smoke-*.txt` |
+| DeepSeek model ids | `deepseek-flash`, `deepseek-v4-pro` | live `GET api.deepseek.com/models` |
+| hook enforcement before fix | bridge `RC 2`, session `exitCode 1, decision pass`, merge ran | debug capture, session.v4 rows |
+| hook enforcement after fix | fresh headless session refused `gh pr merge 999999` by the preview-capture guard | `probe-headless-out.txt` |
+| `hooklayer_check.py` | exit 0, plugin `0.1.7-rc.1 in app.asar` | claude-cowork-config #330 |
+| `C:\Claude` checkout | `## master...origin/master`, features 34/34, vault 19 same | this session |
+
 ## 2026-09-24 - 0.1.7-rc.1 installed and verified live
 
 | Check | Result | Evidence |
@@ -204,65 +217,3 @@
 | Installer | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,884,537 bytes, 2026-09-17 01:20:22 | VERIFIED |
 | Running app after the install | 21 of 21 markers | `dsh_local_features_check.py`: "all 21 local features are present in the running build", exit 0; profile client.js (01:48:52) marker 2 and old class 0; profile host bundle reads `design-links.json`; provision log ends `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished`; 4 processes from 01:43:54; release file `0.1.5-rc.2` | VERIFIED |
 | Footer seen on screen | two labelled lines | PARTIAL: the app window was captured but it was on the NEW SESSION screen, where no footer renders by design (correct), and no current workspace points at a mapped folder. Evidence: `C:\Projects\logs\2026-09-17\dsh-session-footer-lines\` | UNVERIFIED |
-
-## 2026-09-16 - the 00:39 installer was run: 20 of 20 markers in the RUNNING build
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| Installer ran | app reinstalled and relaunched | app exe 2026-09-16 00:39:00 (artifact 00:39:04); processes started 01:11:32, 01:11:34, 01:13:53, 01:14:18 | VERIFIED |
-| Seed integrity | verified | provision log `seed integrity verified` | VERIFIED |
-| Profile re-extracted | fresh | profile ui-workspace files 01:11:47 to 01:12:51 | VERIFIED |
-| Provision finished | health check then activation | `staged health check passed` / `staging profile activated as 0.1.5-rc.2` / `applyRelease finished`, no failed entry | VERIFIED |
-| Local feature markers | 20 of 20 | `dsh_local_features_check.py`: "all 20 local features are present in the running build", exit 0 | VERIFIED |
-| The three changes in the RUNNING code | present | profile `dsh-client-ui-workspace\lib\client.js`: `ARCHIVE_CHORD_LATCH_MS` (2), `sectionShowsWorkspaces` (5), `font-size:13px;font-weight:600;line-height:18px` (1) | VERIFIED |
-| Group label is 13px, not 11px | 13 on this rule | the only `font-size:11px` left in that bundle is `.countBadge`, a different element | VERIFIED |
-| Ctrl+Shift+A pressed live | row leaves both views | NOT DONE: needs the operator's hands | UNVERIFIED |
-| Header folded, 13px seen, fold remembered after a restart | on screen | NOT DONE: needs the operator's eyes | UNVERIFIED |
-| Add/Remove Programs | one entry | TWO rows for this one install (`7260a3eb-...` and `7808434f-...`), same version, same uninstaller path; the known app-id mismatch | UNVERIFIED |
-
-## 2026-09-16 - group header text 11px to 13px: the default for every group
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| Touched package suite | pass | ui-workspace 11 files, 215 passed; no test asserted the old size, so none changed | VERIFIED |
-| Rule in the built bundle | 13px on the shared class | `packages/client/ui-workspace/lib/client.js` carries `...groupHeader{...font-size:13px;font-weight:600;line-height:18px...}` | VERIFIED |
-| Rule in the packaged seed | 13px, markers intact | ui-workspace `.tgz` extracted from `win-unpacked`: the same rule, plus `ARCHIVE_CHORD_LATCH_MS` (2), `sectionShowsWorkspaces` (5), `group.toggle` (3) | VERIFIED |
-| Installer rebuilt | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,906,904 bytes, 2026-09-16 00:39:04, superseding the 00:19 build so one install carries all three changes | VERIFIED |
-| First packaging attempt | exit 0 | FAILED inside `package-target.ts`; the immediate rerun succeeded. Cause UNKNOWN (that run's output was tail-truncated); the documented `win-unpacked.tmp` EPERM transient fits | UNVERIFIED |
-| Release line | carries the commit | `update/v0.1.5-rc.2` and `feat/archive-session-shortcut` both read back at `1a77e844ad` from the remote | VERIFIED |
-| On-screen size | 13px on every group | NOT DONE: nothing has looked at the rendered sidebar | UNVERIFIED |
-
-## 2026-09-16 - named Workspace group fold: built, and the installer rebuilt to carry both changes
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| New fold tests | pass | 4 new cases in `workspace-browser.client.spec.tsx`: fold from the header, remember the choice, start folded from a remembered choice, and mount on a view state that predates the field | VERIFIED |
-| Touched package suite | pass | ui-workspace 11 files, 215 passed (was 211 before this change) | VERIFIED |
-| typecheck | exit 0 | `pnpm run typecheck` exit 0; run again inside both pre-push hooks (17.9s and 44.7s) | VERIFIED |
-| build | exit 0 | `pnpm run build` exit 0, 240 client artifacts recorded | VERIFIED |
-| Markers in the built lib | present | `packages/client/ui-workspace/lib/client.js` carries `sectionShowsWorkspaces` (5), `groupChevronOpen` (3), `group.toggle` (3), and still `ARCHIVE_CHORD_LATCH_MS` (2) | VERIFIED |
-| Translation pair | consistent | re-recorded with `--write`, then checked on the named pair: consistent, exit 0 | VERIFIED |
-| Feature registry | 20 rows | parsed; new row `workspace-group-fold` -> `dsh-client-ui-workspace` / `lib/client.js` / `sectionShowsWorkspaces` | VERIFIED |
-| Installer rebuilt | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,914,731 bytes, 2026-09-16 00:19:52, superseding the 194,945,456-byte 19:05 build so one install carries both changes | VERIFIED |
-| Both changes inside the packaged seed | present | ui-workspace `.tgz` extracted from `win-unpacked`: `ARCHIVE_CHORD_LATCH_MS` (2), `sectionShowsWorkspaces` (5), `group.toggle` (3) | VERIFIED |
-| Release line | carries both commits | `update/v0.1.5-rc.2` and `feat/archive-session-shortcut` both read back at `e7b9f7ef6d` from the remote | VERIFIED |
-| Folded state survives a restart | persisted | the fold writes `sectionExpansion` into `dsh.workspace.view.v5`, and a mount on a stored `{ SIG: false }` starts folded | VERIFIED (jsdom) |
-| On-screen look of the header | chevron and hover correct | NOT DONE: nothing has looked at the rendered sidebar | UNVERIFIED |
-| Installed and used live | 20/20 markers, group folds | NOT DONE: install pending | UNVERIFIED |
-
-## 2026-09-15 - Ctrl+Shift+A archive chord: built and packaged, install pending
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| New chord tests | pass | 10 new cases in `workspace-browser.client.spec.tsx`; 62 passed in that file | VERIFIED |
-| Touched package suite | pass | ui-workspace 11 files, 211 passed | VERIFIED |
-| typecheck | exit 0 | `pnpm run typecheck` exit 0; the pre-push hook ran it again in 31.7s | VERIFIED |
-| build | exit 0 | `pnpm run build` exit 0, 240 client artifacts recorded | VERIFIED |
-| Marker in the built lib | present | `packages/client/ui-workspace/lib/client.js` carries `ARCHIVE_CHORD_LATCH_MS` and the two locale keys | VERIFIED |
-| Translation pair | consistent | re-recorded with `--write`, then checked on the named pair: consistent, exit 0 | VERIFIED |
-| Feature registry | 19 rows | parsed; new row `archive-session-shortcut` -> `dsh-client-ui-workspace` / `lib/client.js` / `ARCHIVE_CHORD_LATCH_MS` | VERIFIED |
-| Installer packaged | exit 0 | `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,945,456 bytes, 2026-09-15 19:05:34 | VERIFIED |
-| Change inside the packaged seed | present | extracted the ui-workspace `.tgz` out of `win-unpacked`: `package/lib/client.js` carries `ARCHIVE_CHORD_LATCH_MS` (2) and `nothingToArchive` (3) | VERIFIED |
-| First packaging attempt | exit 0 | NOT A CODE FAULT: `tar (child): Cannot connect to C: resolve failed` from Git's GNU tar reading an absolute Windows path as `host:path`; prepending `C:\Windows\System32` (bsdtar) fixed it (ledger 37) | VERIFIED |
-| Installed and pressed live | 19/19 markers, row disappears | NOT DONE: install pending, and the installer force-closes this session | UNVERIFIED |
-| `verify-client-ui-i18n` | exit 0 | exit 1 on two hard-coded strings in `dsh-client-ui-sidebar-explorer`, a file untouched by this change | PRE-EXISTING |
