@@ -1,3 +1,17 @@
+## 2026-09-24 - 0.1.7-rc.1 port gates (build tree, not installed)
+
+| Check | Result | Evidence |
+|---|---|---|
+| clean tag baseline build | exit 0; plan-mode 87/87; fs-local 147 pass / 13 symlink fails | `C:\Projects\logs\2026-09-24\dsh-017-port\baseline-*.log` |
+| merged tree typecheck / build / lint | 0 / 0 / 0 errors over 4831 files | `C:\Projects\logs\2026-09-24\dsh-017-port\merge-gates.md` |
+| vitest, 20 touched package dirs | 6844 pass, 31 fail (all environmental, itemised) | `C:\Projects\logs\2026-09-24\dsh-017-port\vitest.log`, `vitest-desktop-serial.log` |
+| markers in built libs | 29 of 29 | `C:\Projects\logs\2026-09-24\dsh-017-port\merge-gates.md` marker table |
+| settings import, web profile, throwaway home | 7 of 7 sections IMPORTED, no entry failed to activate | migrator `verify --profile web` exit 0 |
+| MCP on 0.1.7, throwaway home | 11 servers listed tools; memory_search 2 hits | headless run 2026-09-24 |
+| hook bridge on 0.1.7 | 5 of 5 events delivered, bridge exit 0 each | probe log, `C:\Projects\logs\2026-09-24\dsh-017-port\hooks-placement.md` |
+| finish-install.ps1 -WhatIf | refuses with no installer (exit 2); full 8-step plan with one (exit 0); live lock refused, stale lock cleared | this session |
+| packaging | NOT RUN: vswhere ENOENT, no MSVC toolchain | `C:\Projects\logs\2026-09-24\dsh-017-port\package.log` |
+
 
 
 ## 2026-09-20 - the footer live-intent change, re-verified live in the running build
