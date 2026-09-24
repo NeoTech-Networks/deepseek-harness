@@ -1,4 +1,5 @@
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import type { ShortcutCommand } from '@deepseek-ai/dsh-client-shortcuts/client'
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import type {
@@ -53,9 +54,19 @@ const workspaceState = (
   items, archivedSessionIds, pinnedSessionIds, state: 'idle', phase: 'ready', error: null,
 })
 
+/** Commands the last bench's apply registered with the shortcut service, by id. */
+const registeredShortcuts = new Map<string, ShortcutCommand>()
+
 async function bench() {
   const ctx = new Context()
-  ctx.provide('shortcuts', { register: () => () => {}, catalog: createSnapshotStore([]) })
+  registeredShortcuts.clear()
+  ctx.provide('shortcuts', {
+    register: (command: ShortcutCommand) => {
+      registeredShortcuts.set(command.id, command)
+      return () => { registeredShortcuts.delete(command.id) }
+    },
+    catalog: createSnapshotStore([]),
+  })
   ctx.provide('uiConversation', {})
   await ctx.plugin(SlotRegistry).await()
   const create = vi.fn(async (input: { name: string } | { path: string }) => ({
@@ -632,67 +643,60 @@ describe('ui-workspace apply', () => {
   })
 })
 
-describe('ui-workspace archive chord (fork)', () => {
-  /** A node-lane window: an EventTarget the chord listener binds to, removed after the test. */
-  function stubWindow(day: number): EventTarget {
-    const target = new EventTarget()
-    vi.stubGlobal('window', target)
-    // The chord latch is module scope; a distinct clock per test keeps each test outside the last one's window.
+describe('ui-workspace archive shortcut (fork)', () => {
+  // Since 0.1.7-rc.2 Ctrl+Shift+A is upstream's registered `session.archive`
+  // command; the fork keeps the latch and the refusals around its action.
+  const context = { region: 'page', modal: null, target: null } as const
+  /** Resolve and run the registered command the way the dispatcher would. */
+  function press(): 'handled' | 'blocked' | 'pass' {
+    const resolution = registeredShortcuts.get('session.archive')!.resolve(context)
+    if (resolution.status === 'handled') resolution.run()
+    return resolution.status
+  }
+  /** The latch is module scope; a distinct clock per test keeps each test outside the last one's window. */
+  function clock(day: number): void {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date(2030, 0, day))
-    onTestFinished(() => {
-      vi.useRealTimers()
-      vi.unstubAllGlobals()
-    })
-    return target
-  }
-  function press(target: EventTarget, overrides: Record<string, unknown> = {}): Event {
-    const event = Object.assign(new Event('keydown', { cancelable: true }), {
-      ctrlKey: true, shiftKey: true, altKey: false, metaKey: false, repeat: false, code: 'KeyA', key: 'A', ...overrides,
-    })
-    target.dispatchEvent(event)
-    return event
+    onTestFinished(() => { vi.useRealTimers() })
   }
   const mainView = (item: SessionSummary): SessionSummary => ({ ...item, retainedBy: { mainView: 1 } })
 
-  it('refuses aloud when there is no started current Session', async () => {
+  it('refuses aloud when the current Session has not started', async () => {
     const b = await bench()
-    const target = stubWindow(1)
+    clock(1)
     declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
     await b.ctx.plugin({ inject: [...inject], apply }).await()
     const archiveSession = vi.spyOn(b.ctx.uiWorkspace, 'archiveSession')
     const toast = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
-    expect(press(target).defaultPrevented).toBe(true)
-    expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'nothingToArchive' })
+    // No current Session at all is upstream's own blocked resolution.
+    expect(press()).toBe('blocked')
     b.setSessions(sessionState([mainView({ ...summary('blank', 1), blank: true })]))
-    press(target)
-    expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'nothingToArchive', seq: 2 })
+    expect(press()).toBe('handled')
+    expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'nothingToArchive' })
     expect(archiveSession).not.toHaveBeenCalled()
   })
 
   it('archives the current Session through the row action path, once per latch window', async () => {
     const b = await bench()
-    const target = stubWindow(2)
+    clock(2)
     b.setSessions(sessionState([mainView(summary('one', 1)), summary('two', 2)]))
     declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
     await b.ctx.plugin({ inject: [...inject], apply }).await()
     const archiveSession = vi.spyOn(b.ctx.uiWorkspace, 'archiveSession').mockResolvedValue(undefined)
     const toast = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
-    press(target, { code: '', key: 'a' })
-    press(target)
-    press(target, { repeat: true })
-    press(target, { altKey: true })
+    press()
+    press()
     expect(archiveSession).toHaveBeenCalledOnce()
     expect(archiveSession).toHaveBeenCalledWith('one')
     await vi.waitFor(() => { expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'archived', sessionId: 'one' }) })
     vi.setSystemTime(new Date(2030, 0, 2, 0, 0, 1))
-    press(target)
+    press()
     expect(archiveSession).toHaveBeenCalledTimes(2)
   })
 
   it('says so when the archive fails for a reason other than running work', async () => {
     const b = await bench()
-    const target = stubWindow(3)
+    clock(3)
     b.setSessions(sessionState([mainView(summary('one', 1))]))
     declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
     await b.ctx.plugin({ inject: [...inject], apply }).await()
@@ -700,7 +704,7 @@ describe('ui-workspace archive chord (fork)', () => {
     const toast = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
-      press(target)
+      press()
       await vi.waitFor(() => { expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'archiveFailed' }) })
     } finally {
       warn.mockRestore()

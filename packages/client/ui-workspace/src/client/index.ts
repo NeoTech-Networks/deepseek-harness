@@ -39,7 +39,7 @@ import {
   type SessionArchiveConfirmInjected, type SessionArchiveConfirmRequest,
   type RenameSessionInjected, type RowToast, type RowToastInjected, type RowToastState, type SessionRenameDialogInjected,
 
-  type SessionRenameTarget, type SessionStatusDialogInjected, type SessionStatusMenuInjected, type SessionStatusTarget,
+  type SessionStatusDialogInjected, type SessionStatusMenuInjected, type SessionStatusTarget,
   type WorkspaceBrowserInjected, type WorkspacePickerInjected,
 } from './contract/slots.ts'
 import { createWorkspaceShortcutControls, installWorkspaceShortcuts } from './shortcuts.ts'
