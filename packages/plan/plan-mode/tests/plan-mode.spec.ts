@@ -204,8 +204,10 @@ describe('resolveConfig', () => {
   it('accepts and validates the optional defaultActive flag', () => {
     expect(resolveConfig({ section: TEST_PLAN_SECTION, defaultActive: true }))
       .toEqual({ section: TEST_PLAN_SECTION, defaultActive: true })
-    expect(() => resolveConfig({ section: TEST_PLAN_SECTION, defaultActive: 'yes' } as unknown as PlanModeConfig))
-      .toThrow('`defaultActive` must be a boolean when provided')
+    // A YAML string where a boolean belongs reaches the plugin untyped.
+    const wrongType: PlanModeConfig = { section: TEST_PLAN_SECTION }
+    Reflect.set(wrongType, 'defaultActive', 'yes')
+    expect(() => resolveConfig(wrongType)).toThrow('`defaultActive` must be a boolean when provided')
   })
 })
 
