@@ -65,6 +65,7 @@ LEGACY_SECTION_ENTRIES = {
 PRESET_DIR = Path('.agent-presets') / 'standard-hooks'
 DESKTOP_GATE = """disabled: !!js "ctx.get('profileContext')?.name === 'desktop'\""""
 CLI_ONLY_IDS = ('mcp-github', 'mcp-postgres')
+SANDBOX_POLICY_ID = 'sandbox-policy'
 
 
 class JsLoader(yaml.SafeLoader):
@@ -195,6 +196,21 @@ def migrate_home_patch(home_text: str, preset_text: str) -> str:
     #    every preset, subagents included.
     rows = preset_rows(preset_text)
     block = ['\n',
+             '# --- Migrated 0.1.7: the sandbox default for calls with no Session -----------\n',
+             '# Hook commands run through the shell with NO Session attached, so they never\n',
+             '# get a Session permission preset and fall back to this row. Upstream defaults\n',
+             "# it to 'workspace-write' limited to the host's launch folder, which made every\n",
+             '# bridge hook that writes under ~/.claude or C:/Claude exit 1 (proven 2026-09-24,\n',
+             '# C:/Projects/logs/2026-09-24/dsh-017-port/hooks-placement.md). Sessions still\n',
+             '# set their own mode from permission.defaultPreset; only session-less calls see\n',
+             '# this default, which matches how the bridge ran on 0.1.5. DSH_PERMISSION_MODE\n',
+             '# still overrides it. This replaces the shipped row (config is not merged).\n',
+             f'- id: {SANDBOX_POLICY_ID}\n',
+             "  name: '@deepseek-ai/dsh-sandbox-policy'\n",
+             '  config:\n',
+             "    mode: !!js process.env.DSH_PERMISSION_MODE ?? 'danger-full-access'\n",
+             '    workspaceRoot: !!js process.cwd()\n',
+             '\n',
              '# --- Migrated 0.1.7: the standard-hooks preset rows -------------------------\n',
              '# 0.1.7 no longer scans $DSH_HOME/.agent-presets, so the hook bridge and the MCP\n',
              '# servers that preset mounted live here as ROOT rows instead. The shipped\n',
@@ -226,6 +242,9 @@ def validate_home_patch(text: str, preset_text: str) -> list[str]:
     for r in inserted:
         if r.get('id') in CLI_ONLY_IDS and 'desktop' not in str(r.get('disabled', '')):
             raise RuntimeError('%s is not gated off the desktop profile' % r.get('id'))
+    overrides = [op for op in ops if isinstance(op, dict) and op.get('id') == SANDBOX_POLICY_ID]
+    if len(overrides) != 1 or 'danger-full-access' not in str((overrides[0].get('config') or {}).get('mode')):
+        raise RuntimeError('home patch must carry exactly one sandbox-policy override for session-less hooks')
     return ids
 
 
