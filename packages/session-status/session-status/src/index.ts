@@ -96,6 +96,12 @@ const sessionStatusStateSchema: ZodType<SessionStatusProjectionState> = zod.obje
   goalPhase: zod.string().nullable(),
 }).strict()
 
+/** The `sessionStatus` projection definition with its client wire view present. */
+export type SessionStatusProjectionDefinition =
+  Omit<ProjectionDefinition<'sessionStatus', SessionStatusProjectionState>, 'wire'> & {
+    wire: NonNullable<ProjectionDefinition<'sessionStatus', SessionStatusProjectionState>['wire']>
+  }
+
 /**
  * Build the `sessionStatus` projection for one resolved vocabulary.
  *
@@ -107,9 +113,11 @@ const sessionStatusStateSchema: ZodType<SessionStatusProjectionState> = zod.obje
  * @param resolve - resolves a shipped status id against the deployment vocabulary.
  * @returns the projection definition to register.
  */
-export function createSessionStatusProjectionDefinition(resolve: SessionStatusVocabularyResolver) {
-  // No return annotation: `register` demands a definition whose `wire` is
-  // present, and annotating the optional-`wire` interface would widen it away.
+export function createSessionStatusProjectionDefinition(
+  resolve: SessionStatusVocabularyResolver,
+): SessionStatusProjectionDefinition {
+  // The annotation keeps `wire` required, which is the overload `register`
+  // takes for a client-visible unit.
   return {
     key: 'sessionStatus',
     // v2: state gained `goalPhase` and the fold gained the goal drive, so
