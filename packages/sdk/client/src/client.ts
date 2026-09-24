@@ -215,6 +215,9 @@ export class HarnessClient {
       cwd: this.runtime.cwd,
       env: this.runtime.environment(),
       stdio: ['pipe', 'pipe', 'pipe'],
+      // The runtime is a console-subsystem process whose output is piped here;
+      // a GUI embedder would otherwise get a visible console window with it.
+      windowsHide: true,
     })
     this.child = child
     child.once('error', (error) => {

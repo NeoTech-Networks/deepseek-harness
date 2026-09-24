@@ -198,6 +198,9 @@ export class DesktopHostProcess {
       cwd: this.projectDir,
       env: desktopNodeEnvironment(this.node, undefined, this.environment),
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+      // Electron has no console of its own, so the bundled console-subsystem
+      // Node would be handed a visible terminal window for the whole session.
+      windowsHide: true,
     })
     this.child = child
     child.stderr?.setEncoding('utf8')
