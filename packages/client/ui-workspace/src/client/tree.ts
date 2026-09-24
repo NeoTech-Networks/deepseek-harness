@@ -81,6 +81,11 @@ export interface GroupNode {
   group: string
   /** Total visible sessions in the group. */
   sessionCount: number
+  /**
+   * Unarchived ordinary Sessions the group accounts (fork's folder count
+   * badge), independent of the archived filter and of folding.
+   */
+  unarchivedCount: number
   expanded: boolean
   /** The group contains the selected session (active folder tint; supplied here so the renderer never scans). */
   containsCurrent: boolean
@@ -128,6 +133,7 @@ interface Group {
   label: string
   group: string
   sessions: SessionSummary[]
+  unarchivedCount: number
 }
 
 /**
@@ -317,8 +323,14 @@ function buildGroup(
   label: string,
   group: string,
   members: readonly SessionSummary[],
+  unarchivedCount: number,
 ): Group {
-  return { key, workspaceId, cwd, createdAt, label, group, sessions: [...members] }
+  return { key, workspaceId, cwd, createdAt, label, group, sessions: [...members], unarchivedCount }
+}
+
+/** An account member the folder count badge counts: ordinary, not a blank placeholder, not archived. */
+function countsAsUnarchived(session: SessionSummary, archived: ReadonlySet<SessionId>): boolean {
+  return session.origin !== 'subagent' && !session.blank && !archived.has(session.id)
 }
 
 /** Apply a stored Ungrouped order and append newly loose Sessions by recency. */
@@ -356,16 +368,18 @@ function groupByWorkspace(
   const accounted = new Set<SessionId>()
   for (const workspace of workspaces) {
     const members: SessionSummary[] = []
+    let unarchivedCount = 0
     for (const id of workspace.sessionIds) {
       const summary = list.byId[id]
       if (summary === undefined) continue // account may lead the list pull; the row appears when the summary lands
       accounted.add(id)
+      if (countsAsUnarchived(summary, archived)) unarchivedCount += 1
       if (!sessionVisible(summary, current, archived, archivedFilter)) continue
       members.push(summary)
     }
     groups.push(buildGroup(
       workspace.workspaceId, workspace.workspaceId, workspace.path,
-      Date.parse(workspace.createdAt), workspace.title, workspace.group?.trim() ?? '', members,
+      Date.parse(workspace.createdAt), workspace.title, workspace.group?.trim() ?? '', members, unarchivedCount,
     ))
   }
   const stray = list.ids
@@ -381,6 +395,7 @@ function groupByWorkspace(
       '',
       '',
       orderedUngrouped(stray, ungroupedOrder, list.byId),
+      stray.filter(session => countsAsUnarchived(session, archived)).length,
     ))
   }
   return groups
@@ -469,6 +484,7 @@ export function deriveGroups(
       label: g.label,
       group: g.group,
       sessionCount: g.sessions.length,
+      unarchivedCount: g.unarchivedCount,
       expanded,
       containsCurrent: g.key === currentGroup,
       sessions: expanded

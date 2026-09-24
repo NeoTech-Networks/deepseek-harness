@@ -218,6 +218,7 @@ export function ProjectRowItem({ group, containsCurrentDescendant = false, onTog
   // The ungrouped bucket has no workspace title: its label is dictionary copy.
   const label = row.workspaceId === undefined ? t('group.ungrouped') : row.label
   const active = containsCurrentDescendant || (group.expanded && group.containsCurrent)
+  const count = row.unarchivedCount
   const [menuOpen, setMenuOpen] = useState(false)
   const workspaceMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutlineRegular /> },
@@ -241,7 +242,7 @@ export function ProjectRowItem({ group, containsCurrentDescendant = false, onTog
         }}
       onDragEnd={drag?.end}
     >
-      <span className={clsx(css.slot, css.folder, active && css.folderActive)}>
+      <span className={clsx(css.slot, css.folder, active && css.folderActive, count > 0 && css.folderHasSessions)}>
         {row.expanded ? <IconFolderOpenRegular /> : <IconFolderCloseRegular />}
       </span>
       <span className={clsx(css.slot, css.chevron)}>
@@ -250,6 +251,15 @@ export function ProjectRowItem({ group, containsCurrentDescendant = false, onTog
       <span className={css.projectText}>
         <span className={css.title}>{label}</span>
       </span>
+      {count > 0 && (
+        <span
+          className={css.countBadge}
+          data-session-count={count}
+          title={t(count === 1 ? 'sessions.count.one' : 'sessions.count.other', { n: count })}
+        >
+          {count}
+        </span>
+      )}
       <span className={css.rowActions}>
         {actions !== undefined && (
           <Menu

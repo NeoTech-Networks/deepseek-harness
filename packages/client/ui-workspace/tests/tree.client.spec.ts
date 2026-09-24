@@ -921,6 +921,17 @@ describe('named Workspace group sections (fork)', () => {
     ])
   })
 
+  it('counts unarchived ordinary Sessions per folder regardless of the archived filter or folding', () => {
+    const blank = { ...summary('new', 4), blank: true }
+    const child = { ...summary('child', 5), origin: 'subagent' as const }
+    const state = list(summary('a', 1), summary('b', 2), summary('gone', 3), blank, child)
+    const ws = [{ ...workspace('w', ['a', 'b', 'gone', 'new', 'child']) }]
+    for (const archivedFilter of ['default', 'show', 'only'] as const) {
+      const [group] = deriveGroups(state, ws, rowState({ archived: ['gone'], archivedFilter }), noAttention, view())
+      expect(group?.unarchivedCount, archivedFilter).toBe(2)
+    }
+  })
+
   it('folds only named sections', () => {
     const [named, unlabelled] = sectionize(deriveGroups(
       list(summary('a', 1), summary('b', 2)), [grouped('a', 'ABC'), grouped('b')], noRows, noAttention, view(),
