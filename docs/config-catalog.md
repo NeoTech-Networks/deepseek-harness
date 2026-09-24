@@ -240,6 +240,30 @@ export interface Config {
 
 Source: [`packages/api/job-controller/src/index.ts:35`](../packages/api/job-controller/src/index.ts)
 
+<a id="deepseek-aidsh-api-pinned-files"></a>
+
+## `@deepseek-ai/dsh-api-pinned-files`
+
+Requires: `fs` · `typert`
+
+```ts config-catalog
+/** Deployment caps on one listing and one read, plus the operator's own live fields. */
+export interface Config {
+  /** Cap on returned directory entries; the rest is dropped and reported cut. */
+  readonly maxEntries: number
+  /** Inclusive byte cap on one file read. A larger file is refused, never truncated. */
+  readonly maxBytes: number
+  /** Absolute directory paths, in the order the operator added them (live, operator-editable). */
+  readonly roots: Volatile<string[]>
+  /** Whether the explorer opens itself in every Session (live, operator-editable; default off). */
+  readonly autoOpen: Volatile<boolean>
+}
+```
+
+Depends on: `Volatile` (`@deepseek-ai/cordis`)
+
+Source: [`packages/api/pinned-files/src/index.ts:55`](../packages/api/pinned-files/src/index.ts)
+
 <a id="deepseek-aidsh-api-session-controller"></a>
 
 ## `@deepseek-ai/dsh-api-session-controller`
