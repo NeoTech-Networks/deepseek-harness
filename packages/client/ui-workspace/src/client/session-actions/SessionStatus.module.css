@@ -1,0 +1,43 @@
+/* Declared-status dialog (fork). Kept beside its component so the
+   session-actions domain does not reach into the rows domain's stylesheet. */
+.statusError {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.statusList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statusOption {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  line-height: 18px;
+  text-align: left;
+  color: var(--dsw-alias-label-primary);
+  cursor: pointer;
+}
+
+.statusOption:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.statusOption:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.statusLoading {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
+}

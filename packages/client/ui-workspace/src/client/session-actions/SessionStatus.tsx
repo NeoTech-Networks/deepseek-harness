@@ -12,7 +12,7 @@ import { Button, IconCloseCircleFillRegular, IconPauseOutlineRegular, MenuItemBu
 import type {
   SessionMenuItemProps, SessionStatusDialogInjected, SessionStatusDialogProps, SessionStatusMenuInjected, SessionStatusTarget,
 } from '../contract/slots.ts'
-import css from '../rows/WorkspaceBrowser.module.css'
+import css from './SessionStatus.module.css'
 
 /**
  * Menu row (order 350): ask for the status dialog for this row.
@@ -130,7 +130,7 @@ function StatusForm({ request, setSessionStatus, listSessionStatuses, onSettle, 
         <Button variant="outline" disabled={setting} onClick={() => { commit(null) }}>{t('status.clear')}</Button>
       )}
     >
-      {error !== null && <div className={css.renameError} role="alert">{error}</div>}
+      {error !== null && <div className={css.statusError} role="alert">{error}</div>}
       {vocabulary === null && error === null && (
         <div className={css.statusLoading} role="status">{t('status.loading')}</div>
       )}
