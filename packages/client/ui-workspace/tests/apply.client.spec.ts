@@ -624,3 +624,79 @@ describe('ui-workspace apply', () => {
     expect(b.slots.entries('shell.overlay')).toHaveLength(0)
   })
 })
+
+describe('ui-workspace archive chord (fork)', () => {
+  /** A node-lane window: an EventTarget the chord listener binds to, removed after the test. */
+  function stubWindow(day: number): EventTarget {
+    const target = new EventTarget()
+    vi.stubGlobal('window', target)
+    // The chord latch is module scope; a distinct clock per test keeps each test outside the last one's window.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2030, 0, day))
+    onTestFinished(() => {
+      vi.useRealTimers()
+      vi.unstubAllGlobals()
+    })
+    return target
+  }
+  function press(target: EventTarget, overrides: Record<string, unknown> = {}): Event {
+    const event = Object.assign(new Event('keydown', { cancelable: true }), {
+      ctrlKey: true, shiftKey: true, altKey: false, metaKey: false, repeat: false, code: 'KeyA', key: 'A', ...overrides,
+    })
+    target.dispatchEvent(event)
+    return event
+  }
+  const mainView = (item: SessionSummary): SessionSummary => ({ ...item, retainedBy: { mainView: 1 } })
+
+  it('refuses aloud when there is no started current Session', async () => {
+    const b = await bench()
+    const target = stubWindow(1)
+    declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const archiveSession = vi.spyOn(b.ctx.uiWorkspace, 'archiveSession')
+    const toast = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
+    expect(press(target).defaultPrevented).toBe(true)
+    expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'nothingToArchive' })
+    b.setSessions(sessionState([mainView({ ...summary('blank', 1), blank: true })]))
+    press(target)
+    expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'nothingToArchive', seq: 2 })
+    expect(archiveSession).not.toHaveBeenCalled()
+  })
+
+  it('archives the current Session through the row action path, once per latch window', async () => {
+    const b = await bench()
+    const target = stubWindow(2)
+    b.setSessions(sessionState([mainView(summary('one', 1)), summary('two', 2)]))
+    declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const archiveSession = vi.spyOn(b.ctx.uiWorkspace, 'archiveSession').mockResolvedValue(undefined)
+    const toast = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
+    press(target, { code: '', key: 'a' })
+    press(target)
+    press(target, { repeat: true })
+    press(target, { altKey: true })
+    expect(archiveSession).toHaveBeenCalledOnce()
+    expect(archiveSession).toHaveBeenCalledWith('one')
+    await vi.waitFor(() => { expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'archived', sessionId: 'one' }) })
+    vi.setSystemTime(new Date(2030, 0, 2, 0, 0, 1))
+    press(target)
+    expect(archiveSession).toHaveBeenCalledTimes(2)
+  })
+
+  it('says so when the archive fails for a reason other than running work', async () => {
+    const b = await bench()
+    const target = stubWindow(3)
+    b.setSessions(sessionState([mainView(summary('one', 1))]))
+    declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    vi.spyOn(b.ctx.uiWorkspace, 'archiveSession').mockRejectedValue(new Error('offline'))
+    const toast = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      press(target)
+      await vi.waitFor(() => { expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'archiveFailed' }) })
+    } finally {
+      warn.mockRestore()
+    }
+  })
+})
