@@ -15,8 +15,9 @@ import type { RefObject } from 'react'
 import clsx from 'clsx'
 import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  HoverCard, IconArchiveOutlineRegular, IconEditOutlineRegular,
-  IconEllipsisOutlineRegular, IconFolderCloseRegular, IconFolderOpenRegular,
+  HoverCard, IconAlarmClockOutlineRegular, IconArchiveOutlineRegular, IconEditOutlineRegular,
+  IconEllipsisOutlineRegular, IconFolderCloseRegular, IconFolderOpenOutlineRegular,
+  IconFolderOpenRegular,
   IconNewChatOutlineRegular, IconPinFillRegular, IconTrashOutlineRegular,
   IconTriangleRightFillRegular, IconUnarchiveOutlineRegular, Menu, relativeTime, StateDot, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -222,8 +223,8 @@ export function ProjectRowItem({ group, containsCurrentDescendant = false, onTog
   containsCurrentDescendant?: boolean
   onToggle: () => void
   onCreate: () => void
-  /** Real-Workspace actions; absent for the ungrouped bucket (no menu shown). */
-  actions?: { rename: () => void; delete: () => void } | undefined
+  /** Real-Workspace actions; absent for the ungrouped bucket (no menu shown). `setGroup` is the fork's named-group assignment. */
+  actions?: { rename: () => void; setGroup?: (() => void) | undefined; delete: () => void } | undefined
   /** Present only for real Workspace rows in the grouped view. */
   drag?: WorkspaceRowDragProps | undefined
   /** Host account home; POSIX home-rooted hover paths display as `~`. */
@@ -237,6 +238,7 @@ export function ProjectRowItem({ group, containsCurrentDescendant = false, onTog
   const [menuOpen, setMenuOpen] = useState(false)
   const workspaceMenuItems = [
     { id: 'rename', label: t('rename'), icon: <IconEditOutlineRegular /> },
+    ...actions?.setGroup === undefined ? [] : [{ id: 'setGroup', label: t('group.set'), icon: <IconFolderOpenOutlineRegular /> }],
     { id: 'delete', label: t('delete.workspace'), icon: <IconTrashOutlineRegular />, danger: true },
   ]
   const ownRow = (
@@ -275,9 +277,10 @@ export function ProjectRowItem({ group, containsCurrentDescendant = false, onTog
               setMenuOpen(false)
               // Unknown ids leave before the dispatch: a future menu row must
               // not inherit the destructive branch as an else fallback.
-              /* v8 ignore next -- Menu can emit only the rename and delete rows supplied above. */
-              if (id !== 'rename' && id !== 'delete') return
+              /* v8 ignore next -- Menu can emit only the rows supplied above. */
+              if (id !== 'rename' && id !== 'setGroup' && id !== 'delete') return
               if (id === 'rename') actions.rename()
+              else if (id === 'setGroup') actions.setGroup?.()
               else actions.delete()
             }}
             portal

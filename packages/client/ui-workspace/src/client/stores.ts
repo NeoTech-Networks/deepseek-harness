@@ -28,6 +28,12 @@ type WorkspaceViewState = {
   sessionOrderByAccount: Record<string, string[]>
   /** Archived-row visibility; omitted in pre-filter v5 snapshots and read as 'default'. */
   archivedFilter?: ArchivedFilter
+  /**
+   * Fold state of named Workspace group sections (fork), keyed by group label;
+   * `false` folds. Optional so v5 blobs written without it parse unchanged, and
+   * label-keyed so `retainAccountKeys` never prunes it.
+   */
+  sectionExpansion?: Record<string, boolean>
 }
 
 type SessionOrderSource = {
@@ -66,6 +72,7 @@ type WorkspaceViewActions = {
     source: SessionOrderSource,
   ) => void
   setArchivedFilter: (draft: WorkspaceViewState, filter: ArchivedFilter) => void
+  setSectionExpanded: (draft: WorkspaceViewState, key: string, expanded: boolean) => void
 }
 
 /** Copy read-only projections into the persisted mutable store representation. */
@@ -125,6 +132,10 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
         }))
       },
       setArchivedFilter: (d, filter: ArchivedFilter) => { d.archivedFilter = filter },
+      setSectionExpanded: (d, key: string, expanded: boolean) => {
+        d.sectionExpansion ??= {}
+        d.sectionExpansion[key] = expanded
+      },
     },
   })
 }
