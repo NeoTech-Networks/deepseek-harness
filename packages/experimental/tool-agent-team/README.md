@@ -56,7 +56,7 @@ Try it by asking the Lead model: "create a teammate named reviewer to check the 
 
 The nine tools group into four capabilities:
 
-- **Create a teammate** — `spawn_teammate` takes a name, a description, and the initial task; only the Lead can call it.
+- **Create a teammate** — `spawn_teammate` takes a name, a description, and the initial task; only the Lead can call it. Optional `provider`, `model`, and `reasoning_effort` run that teammate on a different LLM route. The route must be in the Host's allowed subagent models (`@deepseek-ai/dsh-tool-subagent/model-selection-settings`, enabled), and it is resolved before the teammate is reserved. Omit them to inherit the Lead's route. The roster keeps reporting the selected model after the teammate goes inactive.
 - **Send messages** — `send_message` steers a running member at its nearest step boundary, starts or resumes an inactive member.
 - **See and wait** — `list_agents` returns each member’s `target` and availability; `wait_agent` waits for the next team change; `interrupt_agent` stops a teammate's current turn (Lead only).
 - **Manage the task board** — `team_task_create`, `team_task_list`, `team_task_get`, and `team_task_update` add, browse, read, and update shared tasks.

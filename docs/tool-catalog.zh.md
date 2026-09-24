@@ -2361,6 +2361,18 @@ lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，�
         "fresh",
         "fork"
       ]
+    },
+    "provider": {
+      "type": "string",
+      "description": "Optional LLM provider for this teammate (see list_subagent_models). Supply together with model; omit both to run on the Lead's model."
+    },
+    "model": {
+      "type": "string",
+      "description": "Optional model id for this teammate. Must be an allowed subagent model. Supply together with provider."
+    },
+    "reasoning_effort": {
+      "type": "string",
+      "description": "Optional reasoning effort for the selected model; omit to use that model's default."
     }
   },
   "required": [
