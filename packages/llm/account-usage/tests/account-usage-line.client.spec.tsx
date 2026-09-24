@@ -41,12 +41,12 @@ function feedOf(snapshot: AccountUsageSnapshot): AccountUsageFeed & { running: s
 /** Render the dock entry with the standard props it actually reads. */
 function renderLine(snapshot: AccountUsageSnapshot, running = false) {
   const feed = feedOf(snapshot)
-  const props = {
+  const props: AccountUsageLineProps = {
     feed,
     t,
     sessionId: 'session-1',
     useSession: (select: (s: { running: boolean }) => unknown) => select({ running }),
-  } as unknown as AccountUsageLineProps
+  } as never
   return { feed, ...render(<AccountUsageLine {...props} />) }
 }
 
