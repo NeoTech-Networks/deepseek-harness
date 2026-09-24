@@ -106,6 +106,23 @@ export class TestWorkspaces implements IWorkspaces {
   }
 
   /**
+   * Assign or clear a Workspace group (recorded). The default echoes a minimal view.
+   * @param workspaceId - target workspace.
+   * @param group - new group label; blank clears.
+   * @returns the updated view.
+   */
+  async setGroup(workspaceId: WorkspaceId, group: string): Promise<WorkspaceView> {
+    this.calls.push({ method: 'setGroup', args: [workspaceId, group] })
+    const stub = this.stubs.get('setGroup')
+    if (stub !== undefined) return await (stub(workspaceId, group) as Promise<WorkspaceView>)
+    const trimmed = group.trim()
+    return {
+      workspaceId, title: '', path: '', sessionIds: [], createdAt: '', updatedAt: '',
+      ...(trimmed === '' ? {} : { group: trimmed }),
+    }
+  }
+
+  /**
    * Delete a Workspace (recorded; default no-op).
    * @param workspaceId - target workspace.
    */
