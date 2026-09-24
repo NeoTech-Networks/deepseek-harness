@@ -285,7 +285,7 @@ describe('RightbarSeat presentation', () => {
     h.open()
     expect(element(h.view.container, '[data-sidebar-right-panel]')).toBe(panel)
     expect(panel.hasAttribute('data-sidebar-right-open')).toBe(true)
-    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, false)
+    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, false, SESSION)
     await h.runtime.dispose()
     expect(h.frame.closeRightbar).toHaveBeenCalled()
   })
@@ -342,12 +342,12 @@ describe('RightbarSeat presentation', () => {
     expect(panel.style.width).toBe('100vw')
     expect(panel.dataset['sidebarRightPanel']).toBe('fullscreen')
     expect(element(h.view.container, '[data-tab-body]')).toBe(body)
-    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, true)
+    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, true, SESSION)
     expect(h.bodies.get(tab.id)?.sidebar).toEqual({ expanded: true, fullscreen: true })
     fireEvent.click(element(h.view.container, '[data-sidebar-right-mode]'))
     expect(panel.style.width).toBe('420px')
     expect(element(h.view.container, '[data-tab-body]')).toBe(body)
-    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, false)
+    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, false, SESSION)
     fireEvent.click(element(h.view.container, '[data-sidebar-right-toggle]'))
     expect(h.layout().expanded).toBe(false)
     expect(h.frame.closeRightbar).toHaveBeenCalled()
@@ -357,13 +357,13 @@ describe('RightbarSeat presentation', () => {
     const h = await mountSeat(767, false)
     h.open()
     expect(h.layout().mode).toBe('push')
-    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(false, true)
+    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(false, true, SESSION)
     const stored = h.instance.getSnapshot()
     const body = element(h.view.container, '[data-tab-body]')
     h.view.update({ width: 420, viewportWidth: 768, canShow: true })
     expect(h.instance.getSnapshot()).toBe(stored)
     expect(element(h.view.container, '[data-tab-body]')).toBe(body)
-    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, false)
+    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, false, SESSION)
   })
 
   it('closes on automatic fullscreen exit and stays closed after widening', async () => {
@@ -387,9 +387,9 @@ describe('RightbarSeat presentation', () => {
     fireEvent.click(element(h.view.container, '[data-sidebar-right-mode]'))
     const stored = h.instance.getSnapshot()
     h.view.update({ width: 420, viewportWidth: 500, canShow: false })
-    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(false, true)
+    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(false, true, SESSION)
     h.view.update({ width: 420, viewportWidth: 1440, canShow: true })
-    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, true)
+    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, true, SESSION)
     expect(h.instance.getSnapshot()).toBe(stored)
   })
 
@@ -423,9 +423,9 @@ describe('RightbarSeat fullscreen entry', () => {
     expect(h.frame.openRightbar).not.toHaveBeenCalled()
     expect(h.frame.closeRightbar).not.toHaveBeenCalled()
     await act(async () => { slide.finish(); await slide.animation.finished })
-    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(true, true)
+    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(true, true, SESSION)
     fireEvent.click(element(h.view.container, '[data-sidebar-right-mode]'))
-    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, false)
+    expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, false, SESSION)
     unrelated.finish()
   })
 
@@ -438,7 +438,7 @@ describe('RightbarSeat fullscreen entry', () => {
     vi.spyOn(element(h.view.container, '[data-sidebar-right-panel]'), 'getAnimations')
       .mockReturnValue([unrelated.animation, ended.animation])
     h.open()
-    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(true, true)
+    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(true, true, SESSION)
     unrelated.finish()
   })
 
@@ -449,7 +449,7 @@ describe('RightbarSeat fullscreen entry', () => {
     h.open()
     expect(h.frame.openRightbar).not.toHaveBeenCalled()
     await act(async () => { slide.cancel(); await Promise.allSettled([slide.animation.finished]) })
-    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(false, true)
+    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(false, true, SESSION)
   })
 
   it('waits for a replacement transform after cancellation', async () => {
@@ -463,7 +463,7 @@ describe('RightbarSeat fullscreen entry', () => {
     await act(async () => { first.cancel(); await Promise.allSettled([first.animation.finished]) })
     expect(h.frame.openRightbar).not.toHaveBeenCalled()
     await act(async () => { replacement.finish(); await replacement.animation.finished })
-    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(false, true)
+    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(false, true, SESSION)
   })
 
   it.each(['close', 'push', 'session', 'unmount'])('ignores a late completion after %s', async (change) => {
@@ -496,7 +496,7 @@ describe('RightbarSeat fullscreen entry', () => {
     h.view.update({ width: 420, viewportWidth: 500, canShow: false })
     expect(h.frame.openRightbar).not.toHaveBeenCalled()
     await act(async () => { slide.finish(); await slide.animation.finished })
-    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(false, true)
+    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(false, true, SESSION)
   })
 
   it('does not delay normal presentation behind its slide', async () => {
@@ -505,7 +505,7 @@ describe('RightbarSeat fullscreen entry', () => {
     const animations = vi.spyOn(element(h.view.container, '[data-sidebar-right-panel]'), 'getAnimations')
       .mockReturnValue([slide.animation])
     h.open()
-    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(true, false)
+    expect(h.frame.openRightbar).toHaveBeenCalledExactlyOnceWith(true, false, SESSION)
     expect(animations).not.toHaveBeenCalled()
     slide.finish()
   })
