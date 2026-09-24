@@ -120,6 +120,7 @@ function mount(overrides: Partial<WorkspaceBrowserProps> = {}) {
     requestSessionRename: vi.fn(),
     notifyArchivedNotOpenable: vi.fn(),
     renameWorkspace: vi.fn(async () => {}),
+    setGroupWorkspace: vi.fn(async () => {}),
     deleteWorkspace: vi.fn(async () => {}),
     unarchiveSession: vi.fn(async () => {}),
     insertWorkspaceBefore: vi.fn(async () => {}),
@@ -2452,5 +2453,59 @@ describe('Workspace tree grouping', () => {
     fireEvent.dragEnd(alpha)
     expect(b.props.insertWorkspaceBefore).toHaveBeenCalledOnce()
     expect(b.props.insertWorkspaceBefore).toHaveBeenCalledWith(wid('alpha'), wid('gamma'))
+  })
+})
+
+describe('WorkspaceBrowser named Workspace groups (fork)', () => {
+  const grouped = (id: string, group?: string): WorkspaceView => ({
+    ...workspace(id, []), ...group === undefined ? {} : { group },
+  })
+  const workspaceRows = () => screen.getAllByRole('treeitem')
+    .filter(row => row.getAttribute('aria-expanded') !== null)
+    .map(row => row.textContent ?? '')
+  const headers = () => [...document.querySelectorAll<HTMLElement>('[data-workspace-group]')]
+
+  it('renders named group headers A-Z, sorts their folders A-Z, and keeps ungrouped folders in Host order', () => {
+    mount({
+      useWorkspaces: hook(workspaceState([
+        grouped('zeta', 'NeoTech'), grouped('omega'), grouped('alpha', 'NeoTech'), grouped('gamma'), grouped('beta', 'ABC'),
+      ])),
+    })
+    expect(headers().map(header => header.dataset.workspaceGroup)).toEqual(['ABC', 'NeoTech'])
+    expect(workspaceRows()).toEqual(['beta', 'alpha', 'zeta', 'omega', 'gamma'])
+    // Folders inside a named group sort by name, so only ungrouped folders drag.
+    const draggable = screen.getAllByRole('treeitem')
+      .filter(row => row.getAttribute('aria-expanded') !== null)
+      .map(row => row.getAttribute('draggable'))
+    expect(draggable).toEqual(['false', 'false', 'false', 'true', 'true'])
+  })
+
+  it('folds a named group from its header and remembers the choice per label', () => {
+    const b = mount({
+      useWorkspaces: hook(workspaceState([grouped('alpha', 'NeoTech'), grouped('beta', 'ABC')])),
+    })
+    const abc = headers().find(header => header.dataset.workspaceGroup === 'ABC')!
+    expect(abc.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(abc)
+    expect(b.store.getSnapshot().sectionExpansion).toEqual({ ABC: false })
+    expect(headers().find(header => header.dataset.workspaceGroup === 'ABC')!.getAttribute('aria-expanded')).toBe('false')
+    expect(workspaceRows()).toEqual(['alpha'])
+  })
+
+  it('assigns a group from the folder row menu', async () => {
+    const b = mount({ useWorkspaces: hook(workspaceState([grouped('omega')])) })
+    fireEvent.click(screen.getByLabelText(t('actions.workspace.aria', { name: 'omega' })))
+    fireEvent.click(await screen.findByRole('menuitem', { name: t('group.set') }))
+    const input = screen.getByLabelText(t('field.groupName'))
+    fireEvent.change(input, { target: { value: '  SIG ' } })
+    fireEvent.click(screen.getByRole('button', { name: t('group.save') }))
+    await waitFor(() => { expect(b.props.setGroupWorkspace).toHaveBeenCalledWith(wid('omega'), 'SIG') })
+  })
+
+  it('keeps the upstream tree mode free of named sections', () => {
+    localStorage.clear()
+    createWorkspaceViewStore().create().actions.setGroupBy('workspace-tree')
+    mount({ useWorkspaces: hook(workspaceState([grouped('alpha', 'NeoTech')])) })
+    expect(headers()).toEqual([])
   })
 })

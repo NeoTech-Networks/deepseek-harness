@@ -77,6 +77,8 @@ export interface GroupNode {
   /** Workspace creation time (epoch ms); absent only for the ungrouped bucket. */
   createdAt: number | undefined
   label: string
+  /** Named Workspace group label (fork); empty for ungrouped Workspaces and the ungrouped bucket. */
+  group: string
   /** Total visible sessions in the group. */
   sessionCount: number
   expanded: boolean
@@ -124,6 +126,7 @@ interface Group {
   cwd: string | undefined
   createdAt: number | undefined
   label: string
+  group: string
   sessions: SessionSummary[]
 }
 
@@ -312,9 +315,10 @@ function buildGroup(
   cwd: string | undefined,
   createdAt: number | undefined,
   label: string,
+  group: string,
   members: readonly SessionSummary[],
 ): Group {
-  return { key, workspaceId, cwd, createdAt, label, sessions: [...members] }
+  return { key, workspaceId, cwd, createdAt, label, group, sessions: [...members] }
 }
 
 /** Apply a stored Ungrouped order and append newly loose Sessions by recency. */
@@ -361,7 +365,7 @@ function groupByWorkspace(
     }
     groups.push(buildGroup(
       workspace.workspaceId, workspace.workspaceId, workspace.path,
-      Date.parse(workspace.createdAt), workspace.title, members,
+      Date.parse(workspace.createdAt), workspace.title, workspace.group?.trim() ?? '', members,
     ))
   }
   const stray = list.ids
@@ -374,6 +378,7 @@ function groupByWorkspace(
       undefined,
       undefined,
       undefined,
+      '',
       '',
       orderedUngrouped(stray, ungroupedOrder, list.byId),
     ))
@@ -462,6 +467,7 @@ export function deriveGroups(
       cwd: g.cwd,
       createdAt: g.createdAt,
       label: g.label,
+      group: g.group,
       sessionCount: g.sessions.length,
       expanded,
       containsCurrent: g.key === currentGroup,
@@ -472,6 +478,94 @@ export function deriveGroups(
     })
   }
   return groups
+}
+
+/** One section of the `workspace` grouping mode: an optional named header over its Workspace rows. */
+export interface GroupSectionNode {
+  /** Stable section key: the group label, or a reserved key for the unlabelled sections. */
+  key: string
+  /** Header label; undefined renders the section's Workspaces without a header. */
+  label: string | undefined
+  /** Some Workspace in the section contains the selected session. */
+  containsCurrent: boolean
+  /** Workspace rows in render order. */
+  workspaces: readonly GroupNode[]
+}
+
+/** Section key for Workspaces without a named group. */
+export const UNGROUPED_SECTION_KEY = '\u0000ungrouped'
+/** Section key for Sessions outside every Workspace. */
+export const LOOSE_SECTION_KEY = '\u0000loose'
+
+/** Natural, case-insensitive name order, the order the file explorer uses for its rows. */
+const NAME_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+
+/**
+ * Order Workspace rows by the name the row shows. A cleared title falls back
+ * to the path; equal names keep their Host order because Array.sort is stable.
+ * @param left - one Workspace row.
+ * @param right - the other Workspace row.
+ * @returns the collator's ordering of the two displayed names.
+ */
+export function byWorkspaceName(left: GroupNode, right: GroupNode): number {
+  const nameOf = (node: GroupNode): string => node.label.trim() === '' ? node.cwd ?? '' : node.label
+  return NAME_COLLATOR.compare(nameOf(left), nameOf(right))
+}
+
+/**
+ * Group root Workspace rows into sections: named groups first (headers and
+ * members both A-Z, so a folder added on disk slots into place), then the
+ * Workspaces without a group in their Host order (drag reorder stays live
+ * there), then the loose-Session bucket.
+ * @param nodes - root Workspace rows in Host order.
+ * @returns sections in render order.
+ */
+export function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
+  const named = new Map<string, GroupNode[]>()
+  const ungrouped: GroupNode[] = []
+  const loose: GroupNode[] = []
+  for (const node of nodes) {
+    if (node.workspaceId === undefined) loose.push(node)
+    else if (node.group === '') ungrouped.push(node)
+    else {
+      const bucket = named.get(node.group)
+      if (bucket === undefined) named.set(node.group, [node])
+      else bucket.push(node)
+    }
+  }
+  const sections: GroupSectionNode[] = [...named.keys()]
+    .sort((a, b) => NAME_COLLATOR.compare(a, b))
+    .map((label) => {
+      const workspaces = [...(named.get(label) ?? [])].sort(byWorkspaceName)
+      return { key: label, label, containsCurrent: workspaces.some(node => node.containsCurrent), workspaces }
+    })
+  if (ungrouped.length > 0) {
+    sections.push({
+      key: UNGROUPED_SECTION_KEY, label: undefined,
+      containsCurrent: ungrouped.some(node => node.containsCurrent), workspaces: ungrouped,
+    })
+  }
+  if (loose.length > 0) {
+    sections.push({
+      key: LOOSE_SECTION_KEY, label: undefined,
+      containsCurrent: loose.some(node => node.containsCurrent), workspaces: loose,
+    })
+  }
+  return sections
+}
+
+/**
+ * A named section shows its Workspaces unless the operator folded it; an
+ * unlabelled section has no header and always shows them.
+ * @param expansion - persisted fold state keyed by section key.
+ * @param section - the section to test.
+ * @returns whether the section's Workspace rows render.
+ */
+export function sectionShowsWorkspaces(
+  expansion: Readonly<Record<string, boolean>> | undefined,
+  section: GroupSectionNode,
+): boolean {
+  return section.label === undefined || expansion?.[section.key] !== false
 }
 
 /**

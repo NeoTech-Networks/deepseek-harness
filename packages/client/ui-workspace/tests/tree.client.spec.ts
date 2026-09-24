@@ -10,7 +10,8 @@ import type { SessionProjectionSnapshot } from '@deepseek-ai/dsh-api-session-con
 import {
   type ArchivedFilter,
   deriveFlat, deriveGroups, deriveSearchResults, orderByRecency, owningGroupKey, owningParentFolder,
-  pinCurrentBlank, reconcileManualOrder, sessionMemberIds, visibleSessionIds, workspaceLabel, UNGROUPED_KEY,
+  pinCurrentBlank, reconcileManualOrder, sectionize, sectionShowsWorkspaces, sessionMemberIds, visibleSessionIds,
+  workspaceLabel, LOOSE_SECTION_KEY, UNGROUPED_KEY, UNGROUPED_SECTION_KEY,
 } from '../src/client/tree.ts'
 import { createWorkspaceViewStore } from '../src/client/stores.ts'
 
@@ -892,5 +893,47 @@ describe('parent folder membership', () => {
     ['/Git/app', ['/git'], undefined],
   ])('groups %s under its nearest registered ancestor', (path, parents, expected) => {
     expect(owningParentFolder(path, parents)).toBe(expected)
+  })
+})
+
+describe('named Workspace group sections (fork)', () => {
+  const grouped = (id: string, group?: string, title = id): WorkspaceView => ({
+    ...workspace(id, [id]), title, ...group === undefined ? {} : { group },
+  })
+
+  it('carries the Workspace group label into its node', () => {
+    const groups = deriveGroups(list(summary('a', 1)), [grouped('a', '  NeoTech ')], noRows, noAttention, view())
+    expect(groups[0]?.group).toBe('NeoTech')
+  })
+
+  it('sorts named headers and their folders A-Z, keeps ungrouped Host order, and trails loose sessions', () => {
+    const groups = deriveGroups(
+      list(summary('z10', 1), summary('z9', 2), summary('m', 3), summary('b', 4), summary('stray', 5)),
+      [grouped('z10', 'SIG', 'Site 10'), grouped('m', undefined, 'Mid'), grouped('z9', 'SIG', 'Site 9'), grouped('b', 'ABC')],
+      noRows, noAttention, view(),
+    )
+    const sections = sectionize(groups)
+    expect(sections.map(section => [section.key, section.label, section.workspaces.map(node => node.key)])).toEqual([
+      ['ABC', 'ABC', ['b']],
+      ['SIG', 'SIG', ['z9', 'z10']],
+      [UNGROUPED_SECTION_KEY, undefined, ['m']],
+      [LOOSE_SECTION_KEY, undefined, [UNGROUPED_KEY]],
+    ])
+  })
+
+  it('folds only named sections', () => {
+    const [named, unlabelled] = sectionize(deriveGroups(
+      list(summary('a', 1), summary('b', 2)), [grouped('a', 'ABC'), grouped('b')], noRows, noAttention, view(),
+    ))
+    expect(sectionShowsWorkspaces(undefined, named!)).toBe(true)
+    expect(sectionShowsWorkspaces({ ABC: false }, named!)).toBe(false)
+    expect(sectionShowsWorkspaces({ [UNGROUPED_SECTION_KEY]: false }, unlabelled!)).toBe(true)
+  })
+
+  it('persists section folds beside the v5 view state without pruning them', () => {
+    const store = createWorkspaceViewStore().create()
+    store.actions.setSectionExpanded('ABC', false)
+    store.actions.retainAccountKeys([])
+    expect(store.getSnapshot().sectionExpansion).toEqual({ ABC: false })
   })
 })
