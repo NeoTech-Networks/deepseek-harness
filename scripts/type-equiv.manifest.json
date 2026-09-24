@@ -403,6 +403,31 @@
       "source": "packages/interaction/commands/src/index.ts"
     },
     {
+      "doc": "docs/subsystems/session-status.md",
+      "symbol": "SessionStatusIconId",
+      "source": "packages/session-status/session-status/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-status.md",
+      "symbol": "SessionStatusTone",
+      "source": "packages/session-status/session-status/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-status.md",
+      "symbol": "SessionStatusValue",
+      "source": "packages/session-status/session-status/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-status.md",
+      "symbol": "SessionStatusVocabularyEntry",
+      "source": "packages/session-status/session-status/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/session-status.md",
+      "symbol": "SessionStatusConfig",
+      "source": "packages/session-status/session-status/src/types.ts"
+    },
+    {
       "doc": "docs/subsystems/system-prompt.md",
       "symbol": "AssembleContext",
       "source": "packages/core/system-prompt/src/index.ts"
