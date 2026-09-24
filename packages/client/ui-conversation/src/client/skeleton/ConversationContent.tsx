@@ -22,7 +22,7 @@ function NoConversationWidthControls() {
 export function ConversationContent(props: ConversationContentProps) {
   const {
     sessionId, phase, hero, useSession, useSessions, useSessionStatus,
-    useWorkspaces, useInput, useComposerBlock, renderSlot, renderSlotChain,
+    useWorkspaces, useInput, useComposerBlock, useProjection, renderSlot, renderSlotChain,
     selectWorkspace, t, useFactorySlot,
   } = props
   const session = useSession(snapshot => snapshot)
@@ -33,6 +33,15 @@ export function ConversationContent(props: ConversationContentProps) {
     sessionId === undefined ? undefined : snapshot.get(sessionId)?.pendingInteraction)
   const inputState = useInput(s => s)
   const cwd = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.cwd)
+  const summaryDashboardUrl = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.dashboardUrl)
+  const summaryDesignProject = useSessions(s => sessionId === undefined ? undefined : s.byId[sessionId]?.designProject)
+  // The live half: the host publishes the `workspaceLinks` projection as the
+  // Session's own messages name a dashboard, so the footer follows the Session
+  // without waiting for a Session-list pull. The summary row stays as the
+  // fallback for a Session whose projection store has not been seeded yet.
+  const projected = useProjection('workspaceLinks')
+  const dashboardUrl = projected?.dashboardUrl ?? summaryDashboardUrl
+  const designProject = projected?.designProject ?? summaryDesignProject
   const workspaces = useWorkspaces(s => s)
   // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
@@ -160,12 +169,43 @@ export function ConversationContent(props: ConversationContentProps) {
         : hero ? { placeholder: t('placeholder.hero') } : {}),
   })
 
+  // The footer earns its space only when it names something. A workspace that
+  // belongs to no dashboard is not a finding, so nothing renders rather than
+  // two bare labels; when one half resolves, both rows stay, as before. Only
+  // the main occurrence carries it: an embedded Conversation is not the
+  // operator's open Session.
+  const hasWorkspaceLinks = dashboardUrl !== undefined || designProject !== undefined
+  const showSessionFooter = !hero && props.variant === 'main' && hasWorkspaceLinks
+
   const composerBar = (
     <div className={clsx(css.composerStack, hero && css.composerHero)}>
       {hero && <HeroShell t={t} renderSlot={renderSlot} />}
       {hero && heroWorkspaceRow}
       {zone !== undefined && renderSlot('conversation.input.dock', zone)}
       {inputBar}
+      {showSessionFooter && (
+        <div className={css.sessionFooter} data-session-footer="">
+          <div className={css.sessionFooterLine} data-session-footer-line="dashboard">
+            <span className={css.sessionFooterLabel}>{t('footer.dashboard')}</span>
+            {dashboardUrl !== undefined && (
+              <a
+                className={css.sessionFooterValue}
+                href={dashboardUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {dashboardUrl}
+              </a>
+            )}
+          </div>
+          <div className={css.sessionFooterLine} data-session-footer-line="design-project">
+            <span className={css.sessionFooterLabel}>{t('footer.designProject')}</span>
+            {designProject !== undefined && (
+              <span className={css.sessionFooterValue}>{designProject}</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 

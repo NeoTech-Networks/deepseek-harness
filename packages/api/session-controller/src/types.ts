@@ -20,6 +20,8 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
     imageLimits: null
     /** Durable model selection already used by a request and still pending for a later request. */
     modelSelection: ModelSelectionProjectionState
+    /** Map-free candidates folded from the dashboard a Session's messages name. */
+    workspaceLinks: WorkspaceLinksProjectionState
   }
   interface SessionProjectionMap {
     /** Persisted facts used to summarize a Session without activating it. */
@@ -28,6 +30,8 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
     imageLimits: ImageAttachmentLimits
     /** Durable model selection already used and selected for the next request. */
     modelSelection: ModelSelectionProjection
+    /** Dashboard and Design project the Session footer names, resolved against the live maps. */
+    workspaceLinks: WorkspaceLinks
   }
 }
 
@@ -47,6 +51,46 @@ export interface SessionListMetadata {
   readonly blank: boolean
   /** Latest human-authored prompt time in the folded prefix. */
   readonly lastPromptAt: number | null
+}
+
+/** The dashboard and design project a Session workspace belongs to. */
+export interface WorkspaceLinks {
+  /** Front-door URL of the dashboard whose page source is this workspace. */
+  readonly dashboardUrl?: string
+  /** Name of the Claude Design project behind that dashboard. */
+  readonly designProject?: string
+}
+
+/**
+ * One operator message's dashboard signal, stripped of any map dependency.
+ *
+ * This is the foldable half of the message signal: a Session projection stores
+ * it verbatim, and classification against the maps happens on the read side, so
+ * a regenerated map never invalidates folded state. It lives here, and not beside
+ * the resolver, because this module is the package's browser-safe vocabulary and
+ * the projection state must be nameable from the client face.
+ */
+export interface WorkspaceLinkCandidates {
+  /** Seq of the message this was extracted from, for the reader's own ordering. */
+  readonly seq: number
+  /** Dashboard addresses the message carries, in the order they appear. */
+  readonly urls: readonly string[]
+  /** The lowercased `/dashboard <target>` target, or null when it names none. */
+  readonly target: string | null
+}
+
+/**
+ * Folded state of the dashboard a Session's operator messages name.
+ *
+ * Map-free by construction: the candidates are the raw signals, and only the
+ * projection's client view classifies them against the profile maps. That is
+ * what lets a regenerated map be picked up without invalidating this state.
+ */
+export interface WorkspaceLinksProjectionState {
+  /** The Session's immutable workspace directory, or an empty string. */
+  readonly cwd: string
+  /** Candidate-bearing operator messages retained, oldest first. */
+  readonly candidates: readonly WorkspaceLinkCandidates[]
 }
 
 /**
@@ -184,6 +228,10 @@ export interface SessionSummary {
   readonly parentSessionId?: SessionId
   readonly origin?: 'subagent'
   readonly cwd?: string
+  /** Front-door URL of the dashboard this Session's workspace is associated with; absent when there is no association. */
+  readonly dashboardUrl?: string
+  /** Name of the Claude Design project behind that dashboard; absent when there is no association. */
+  readonly designProject?: string
   readonly projections?: SessionProjectionHints
 }
 
