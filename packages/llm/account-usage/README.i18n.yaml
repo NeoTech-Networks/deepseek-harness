@@ -1,6 +1,46 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/llm/account-usage/README.md
-README.md: a692e38122aae20974a8a0a630abecdb608787fc
-README.zh.md: e26500c16c7dcda894866ba8c050a336403a1d13
+/:
+  en: f9b56d82d8c3359f
+  zh: 20214dc0dc382dfb
+/deepseek-ai-dsh-account-usage:
+  en: 8306dc5f6c58e13c
+  zh: 2e3bceeb9bbe74db
+/deepseek-ai-dsh-account-usage/summary:
+  en: d0c17985adcad335
+  zh: caa898b637d854e4
+/deepseek-ai-dsh-account-usage/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 82bbd1ae631975a1
+/deepseek-ai-dsh-account-usage/use-this-package:
+  en: e9747827e24739a7
+  zh: 89a145a033ff1ed7
+/deepseek-ai-dsh-account-usage/use-this-package/what-the-reading-says:
+  en: 715cd558daf09eb9
+  zh: 49d04063076ac8a9
+/deepseek-ai-dsh-account-usage/use-this-package/cadence:
+  en: d2d54b45598eab7c
+  zh: 02ffeeedc53528a2
+/deepseek-ai-dsh-account-usage/use-this-package/deployments-with-no-subscription:
+  en: d2d57760e800c853
+  zh: a2971d01bb02a302
+/deepseek-ai-dsh-account-usage/understand-the-implementation:
+  en: d32a718300dbaf10
+  zh: af6afb3f27e269c2
+/deepseek-ai-dsh-account-usage/further-exploration:
+  en: b27f2dabdee1fa2e
+  zh: e1403a946d12bd9f
+/deepseek-ai-dsh-account-usage/model-experience:
+  en: dd5b4726da1788a4
+  zh: 333d55797c52be7d
+/deepseek-ai-dsh-account-usage/model-experience/kv-cache-effect:
+  en: bb2c110ac5be3024
+  zh: 99e27a3de63cdcab
+/deepseek-ai-dsh-account-usage/known-limitations-and-deferred-work:
+  en: 89222104ccdf9969
+  zh: dd04d14b28b480e4
+/deepseek-ai-dsh-account-usage/known-limitations-and-deferred-work/dev-note:
+  en: 106a87ab053e1fd8
+  zh: 3b4861efddfb230b

@@ -1,6 +1,22 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-07-session-status.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/feature/2026-09-07-session-status.md
-2026-09-07-session-status.md: 200e7e8bc9963f13067e2a187759d0572bc190ff
-2026-09-07-session-status.zh.md: cd906289bf2478f3243dedc664988b7e65a79b16
+/agent-note-durable-session-status-icons-in-the-sidebar:
+  en: bc8c6347e7868de5
+  zh: 0227c54179cfd54d
+/agent-note-durable-session-status-icons-in-the-sidebar/problem:
+  en: 7fed6d8113652609
+  zh: 8795ec82c2b52f07
+/agent-note-durable-session-status-icons-in-the-sidebar/proposal:
+  en: 35cb9371c8369e40
+  zh: 41a7918b48c39495
+/agent-note-durable-session-status-icons-in-the-sidebar/alternatives-considered:
+  en: eeda6b791accd59f
+  zh: 09f68da3510b1467
+/agent-note-durable-session-status-icons-in-the-sidebar/acceptance-criteria:
+  en: 62dd07ef7b9299c3
+  zh: d4f83be604f61679
+/agent-note-durable-session-status-icons-in-the-sidebar/risks:
+  en: e78dbeb6728d10ed
+  zh: 77220cf843f912a3

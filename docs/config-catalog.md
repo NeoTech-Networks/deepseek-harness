@@ -9,6 +9,33 @@ Both language versions of this file are GENERATED from source (`scripts/gen-conf
 
 Each package entry labels its data with three identifiers: `inject` lists the service keys the plugin injects, so its `cordis.yml` tree must also load providers for those services; `refs` lists the referenced types that are not pasted here; `source` links the file that declares the config. Scope is the harness tier (`packages/`); the vendored cordis plugins a config tree may also load (the console logger, …) are pinned upstream source ([vendoring policy](../vendor/README.md)) and not catalogued here.
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-account-usage -->
+<a id="deepseek-aidsh-account-usage"></a>
+
+## `@deepseek-ai/dsh-account-usage`
+
+- `inject`: `typert`
+- `source`: [`packages/llm/account-usage/src/index.ts:58`](../packages/llm/account-usage/src/index.ts)
+
+```ts config-catalog
+/** Where the account's usage report lives and how hard this service may ask. */
+export interface Config {
+  /** Full URL of the usage report. */
+  readonly endpoint: string
+  /** Beta opt-in header value sent with the request. */
+  readonly beta: string
+  /** Registered name of the plugin owning the credential record. */
+  readonly credentialScope: string
+  /** That plugin's own addressing unit for the record, its provider route key. */
+  readonly credentialId: string
+  /** Milliseconds one answer stays good for; every caller shares it. */
+  readonly cacheMs: number
+  /** Milliseconds before one read of the report is abandoned. */
+  readonly timeoutMs: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-account-usage -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-acp -->
 <a id="deepseek-aidsh-acp"></a>
 
@@ -216,13 +243,37 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-job-controller -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-pinned-files -->
+<a id="deepseek-aidsh-api-pinned-files"></a>
+
+## `@deepseek-ai/dsh-api-pinned-files`
+
+- `inject`: `fs` · `typert`
+- `refs`: `Volatile` (`@deepseek-ai/cordis`)
+- `source`: [`packages/api/pinned-files/src/index.ts:55`](../packages/api/pinned-files/src/index.ts)
+
+```ts config-catalog
+/** Deployment caps on one listing and one read, plus the operator's own live fields. */
+export interface Config {
+  /** Cap on returned directory entries; the rest is dropped and reported cut. */
+  readonly maxEntries: number
+  /** Inclusive byte cap on one file read. A larger file is refused, never truncated. */
+  readonly maxBytes: number
+  /** Absolute directory paths, in the order the operator added them (live, operator-editable). */
+  readonly roots: Volatile<string[]>
+  /** Whether the explorer opens itself in every Session (live, operator-editable; default off). */
+  readonly autoOpen: Volatile<boolean>
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-api-pinned-files -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-api-session-controller -->
 <a id="deepseek-aidsh-api-session-controller"></a>
 
 ## `@deepseek-ai/dsh-api-session-controller`
 
 - `inject`: `agentDefaultModel` · `agents` · `attachments` · `fileUploads` · `fs` · `llm` · `sessions` · `sessionProjections` · `sessionQuery` · `typert` · `workspaceRegistry`
-- `source`: [`packages/api/session-controller/src/index.ts:79`](../packages/api/session-controller/src/index.ts)
+- `source`: [`packages/api/session-controller/src/index.ts:83`](../packages/api/session-controller/src/index.ts)
 
 ```ts config-catalog
 /** Session Controller deployment policy. */
@@ -301,7 +352,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-api-workspace-controller`
 
 - `inject`: `typert` · `workspaceRegistry`
-- `source`: [`packages/api/workspace-controller/src/index.ts:33`](../packages/api/workspace-controller/src/index.ts)
+- `source`: [`packages/api/workspace-controller/src/index.ts:34`](../packages/api/workspace-controller/src/index.ts)
 
 ```ts config-catalog
 /** First-use directory policy for the Host account. */
@@ -1942,6 +1993,38 @@ export type Config = Readonly<Record<string, never>>
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-llm-retry -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-llm-route-fallback -->
+<a id="deepseek-aidsh-llm-route-fallback"></a>
+
+## `@deepseek-ai/dsh-llm-route-fallback`
+
+- `source`: [`packages/llm/llm-route-fallback/src/index.ts:40`](../packages/llm/llm-route-fallback/src/index.ts)
+
+```ts config-catalog
+/**
+ * Plugin configuration. Every field is optional and defaulted; a value that
+ * cannot be honored fails plugin load rather than silently disabling the guard
+ * (see {@link resolveConfig}).
+ */
+export interface Config {
+  /** Master switch. `false` leaves every request exactly as the agent declared it. */
+  enabled?: boolean
+  /** Provider route the fallback applies to; requests on any other provider are untouched. */
+  provider?: string
+  /**
+   * Models the fallback moves a request OFF. A list, not one id, because a
+   * provider can serve the same underlying model under a current id and a
+   * legacy alias, and a request pinned to either must still be protected.
+   */
+  from?: string[]
+  /** Model the fallback moves a qualifying request ONTO. */
+  to?: string
+  /** Combined UTF-8 byte size of the tools' `function.parameters` above which the route moves. */
+  limitBytes?: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-llm-route-fallback -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-lsp-stdio -->
 <a id="deepseek-aidsh-lsp-stdio"></a>
 
@@ -2208,7 +2291,7 @@ export interface Config {
 ## `@deepseek-ai/dsh-plan-mode`
 
 - `inject`: `tools` · `systemPrompt` · `sessionProjections`
-- `source`: [`packages/plan/plan-mode/src/index.ts:70`](../packages/plan/plan-mode/src/index.ts)
+- `source`: [`packages/plan/plan-mode/src/index.ts:130`](../packages/plan/plan-mode/src/index.ts)
 
 ```ts config-catalog
 /** Deployment-owned plan guidance. */
@@ -2317,7 +2400,7 @@ export interface LaunchConfig {
 
 - `inject`: `subprocess`
 - `refs`: `Volatile` (`@deepseek-ai/cordis`)
-- `source`: [`packages/shell/pwsh-local/src/index.ts:58`](../packages/shell/pwsh-local/src/index.ts)
+- `source`: [`packages/shell/pwsh-local/src/index.ts:94`](../packages/shell/pwsh-local/src/index.ts)
 
 ```ts config-catalog
 /** Validated plugin configuration with live command budgets. */
@@ -2697,6 +2780,76 @@ export interface Config {
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-session-reference -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-session-status -->
+<a id="deepseek-aidsh-session-status"></a>
+
+## `@deepseek-ai/dsh-session-status`
+
+- `inject`: `sessionProjections`
+- `source`: [`packages/session-status/session-status/src/types.ts:87`](../packages/session-status/session-status/src/types.ts)
+
+```ts config-catalog
+/** Deployment-owned status vocabulary, validated at plugin load. */
+export interface SessionStatusConfig {
+  /**
+   * The allowed statuses. Ids must be non-empty and unique, every icon id must
+   * be one of {@link SessionStatusIconId}, and every tone must be one of
+   * {@link SessionStatusTone}; a malformed entry fails the plugin load loudly.
+   */
+  readonly vocabulary: readonly SessionStatusVocabularyEntry[]
+}
+
+/** One vocabulary entry the deployment declares; the folded value is the entry. */
+export interface SessionStatusVocabularyEntry extends SessionStatusValue {}
+
+/**
+ * One durable declared session status. The whole value travels in the
+ * `session/status` event so a later vocabulary edit cannot retroactively
+ * change or break a row already logged.
+ */
+export interface SessionStatusValue {
+  /** Stable kebab-case identity, resolved against the deployment vocabulary. */
+  readonly id: string
+  /** Human label shown in the row and hover card; operator-authored copy. */
+  readonly label: string
+  /** Glyph id the client resolves to a component. */
+  readonly icon: SessionStatusIconId
+  /** Colour urgency of the glyph. */
+  readonly tone: SessionStatusTone
+}
+
+/**
+ * The shipped glyph identifiers, drawn from the ui-primitives icon set. An id
+ * is a stable wire value, never a component: the client resolves the id
+ * through its own allowlist so a deployment that authors a new icon id keeps
+ * working, and a client that does not know an id falls back to a neutral
+ * generic glyph instead of throwing.
+ *
+ * The allowlist ONLY grows. The five ids below `deploying` shipped before the
+ * session stage marks and stay valid forever, because a `session/status` event
+ * already written to a session log names its icon id durably: dropping one would
+ * make an old row's status undrawable on replay. The client maps the legacy ids
+ * to the nearest stage mark so an old session still draws the current set.
+ */
+export type SessionStatusIconId =
+  | 'right-up'
+  | 'stop'
+  | 'check'
+  | 'clock'
+  | 'pause'
+  | 'deploying'
+  | 'blocked'
+  | 'saved'
+  | 'failed'
+
+/**
+ * Colour urgency of one status glyph. Identity lives in the glyph, urgency in
+ * the colour, matching the workspace row's existing phase-mark arrangement.
+ */
+export type SessionStatusTone = 'attention' | 'error' | 'success' | 'neutral'
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-session-status -->
 
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-session-telemetry-otel -->
 <a id="deepseek-aidsh-session-telemetry-otel"></a>
@@ -4040,6 +4193,36 @@ export type ApprovalPolicy = 'ask' | 'never'
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-user-approval -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-vision-routing -->
+<a id="deepseek-aidsh-vision-routing"></a>
+
+## `@deepseek-ai/dsh-vision-routing`
+
+- `source`: [`packages/vision/vision-routing/src/index.ts:57`](../packages/vision/vision-routing/src/index.ts)
+
+```ts config-catalog
+/** Plugin configuration. Every field is optional; defaults point at the shipped vision model. */
+export interface Config {
+  /** Exact vision-model route. Defaults to `deepseek-official/deepseek-flash`. */
+  visionRoute?: VisionRoute
+  /** Instruction sent with the images. Defaults to the stable describe rubric. */
+  prompt?: string
+  /** Output-token cap for one description. Defaults to 4096. */
+  maxTokens?: number
+  /** End-to-end deadline for one description. Defaults to 60 seconds. */
+  timeoutMs?: number
+}
+
+/** Exact provider/model route the vision model runs on. */
+export interface VisionRoute {
+  /** Provider route key the vision model is served by. */
+  readonly provider: string
+  /** Exact model id on that provider. */
+  readonly model: string
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-vision-routing -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-web -->
 <a id="deepseek-aidsh-web"></a>
 
@@ -4313,6 +4496,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-client-ui-renderer` | — | [`packages/client/ui-renderer/src/index.ts`](../packages/client/ui-renderer/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-schedule` | — | [`packages/client/ui-schedule/src/index.ts`](../packages/client/ui-schedule/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-session` | — | [`packages/client/ui-session/src/index.ts`](../packages/client/ui-session/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-sessions-panel` | — | [`packages/client/ui-sessions-panel/src/index.ts`](../packages/client/ui-sessions-panel/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings` | — | [`packages/client/ui-settings/src/index.ts`](../packages/client/ui-settings/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-agent-loop` | — | [`packages/client/ui-settings-agent-loop/src/index.ts`](../packages/client/ui-settings-agent-loop/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-settings-general` | — | [`packages/client/ui-settings-general/src/index.ts`](../packages/client/ui-settings-general/src/index.ts) |
@@ -4324,6 +4508,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-client-ui-shortcuts` | — | [`packages/client/ui-shortcuts/src/index.ts`](../packages/client/ui-shortcuts/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-sidebar` | — | [`packages/client/ui-sidebar/src/index.ts`](../packages/client/ui-sidebar/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-sidebar-browser` | — | [`packages/client/ui-sidebar-browser/src/index.ts`](../packages/client/ui-sidebar-browser/src/index.ts) |
+| `@deepseek-ai/dsh-client-ui-sidebar-explorer` | — | [`packages/client/ui-sidebar-explorer/src/index.ts`](../packages/client/ui-sidebar-explorer/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-sidebar-files` | — | [`packages/client/ui-sidebar-files/src/index.ts`](../packages/client/ui-sidebar-files/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-sidebar-right` | — | [`packages/client/ui-sidebar-right/src/index.ts`](../packages/client/ui-sidebar-right/src/index.ts) |
 | `@deepseek-ai/dsh-client-ui-sidebar-terminal` | — | [`packages/client/ui-sidebar-terminal/src/index.ts`](../packages/client/ui-sidebar-terminal/src/index.ts) |
@@ -4337,6 +4522,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-command-compact` | `commands` · `compaction` | [`packages/compaction/command-compact/src/index.ts`](../packages/compaction/command-compact/src/index.ts) |
 | `@deepseek-ai/dsh-command-feedback` | `commands` | [`packages/feedback/command-feedback/src/index.ts`](../packages/feedback/command-feedback/src/index.ts) |
 | `@deepseek-ai/dsh-command-goal` | `commands` · `goals` | [`packages/goal/command-goal/src/index.ts`](../packages/goal/command-goal/src/index.ts) |
+| `@deepseek-ai/dsh-command-session-status` | `commands` · `sessionStatus` | [`packages/session-status/command-session-status/src/index.ts`](../packages/session-status/command-session-status/src/index.ts) |
 | `@deepseek-ai/dsh-commands` | — | [`packages/interaction/commands/src/index.ts`](../packages/interaction/commands/src/index.ts) |
 | `@deepseek-ai/dsh-compaction-image-offload` | `agents` · `sessions` | [`packages/compaction/compaction-image-offload/src/index.ts`](../packages/compaction/compaction-image-offload/src/index.ts) |
 | `@deepseek-ai/dsh-computer-use` | — | [`packages/computer-use/computer-use/src/index.ts`](../packages/computer-use/computer-use/src/index.ts) |
@@ -4371,6 +4557,7 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 | `@deepseek-ai/dsh-tool-ask-user` | `tools` · `userQuestions` | [`packages/interaction/tool-ask-user/src/index.ts`](../packages/interaction/tool-ask-user/src/index.ts) |
 | `@deepseek-ai/dsh-tool-call-timeout-policy` | `tools` | [`packages/guard/timeout-policy/src/index.ts`](../packages/guard/timeout-policy/src/index.ts) |
 | `@deepseek-ai/dsh-tool-cordis` | `tools` · `cordisInspect` | [`packages/extensions/tool-cordis/src/index.ts`](../packages/extensions/tool-cordis/src/index.ts) |
+| `@deepseek-ai/dsh-tool-session-status` | `tools` · `sessionStatus` | [`packages/session-status/tool-session-status/src/index.ts`](../packages/session-status/tool-session-status/src/index.ts) |
 | `@deepseek-ai/dsh-tool-subagent-control` | `tools` · `subagents` | [`packages/subagent/tool-subagent-control/src/index.ts`](../packages/subagent/tool-subagent-control/src/index.ts) |
 | `@deepseek-ai/dsh-user-questions` | — | [`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts) |
 | `@deepseek-ai/dsh-webhook` | `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry` | [`packages/webhook/webhook/src/index.ts`](../packages/webhook/webhook/src/index.ts) |

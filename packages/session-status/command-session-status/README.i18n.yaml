@@ -1,6 +1,52 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/session-status/command-session-status/README.md
-README.md: 92e71f99d474151b5e1e53140b0a6b27c46d2f4d
-README.zh.md: 85d50d1cc1927248f6c96af85ccaeb2bf2697ede
+/:
+  en: 339ba0b8fe27008d
+  zh: a6d5d10f473bda2b
+/deepseek-ai-dsh-command-session-status:
+  en: bb437951b289d420
+  zh: c3af27e9f4689944
+/deepseek-ai-dsh-command-session-status/summary:
+  en: bf4735fba3e79c79
+  zh: d3da41364e3f26bc
+/deepseek-ai-dsh-command-session-status/table-of-contents:
+  en: 917ce3d0411d27de
+  zh: 0a840592ab91552d
+/deepseek-ai-dsh-command-session-status/use-this-package:
+  en: 2bd2692a36b14b02
+  zh: efb3af52fe892c80
+/deepseek-ai-dsh-command-session-status/use-this-package/what-each-command-does:
+  en: b8cbdf1e528d5eb3
+  zh: ff0203e6469d8ca2
+/deepseek-ai-dsh-command-session-status/understand-the-implementation:
+  en: 7ac2542221545787
+  zh: 4bf4fe783a6d2193
+/deepseek-ai-dsh-command-session-status/further-exploration:
+  en: 1c3a3031d8239246
+  zh: 8cfa5674717a9b26
+/deepseek-ai-dsh-command-session-status/runtime-invariant:
+  en: 35e3bdd0d2364743
+  zh: 6c208a2ba7e6f149
+/deepseek-ai-dsh-command-session-status/model-experience:
+  en: 215e7ba838619b7b
+  zh: 215e7ba838619b7b
+/deepseek-ai-dsh-command-session-status/model-experience/human-status-control:
+  en: d3cfd66d6c57c24c
+  zh: d3cfd66d6c57c24c
+/deepseek-ai-dsh-command-session-status/model-experience/human-status-control/what-the-model-sees:
+  en: 1f1a7097987dc83f
+  zh: 52e8d599cf07df56
+/deepseek-ai-dsh-command-session-status/model-experience/human-status-control/token-effect:
+  en: 41d895dd5bd459d9
+  zh: a9d3fc22cdb34c85
+/deepseek-ai-dsh-command-session-status/model-experience/human-status-control/kv-cache-effect:
+  en: 2ffbdda3504b32be
+  zh: 1af10dbd425b8f8e
+/deepseek-ai-dsh-command-session-status/known-limitations-and-deferred-work:
+  en: 493206eb1f0c1e94
+  zh: 1d66c622d149b3b4
+/deepseek-ai-dsh-command-session-status/known-limitations-and-deferred-work/dev-note:
+  en: 90a1b09bce8a1db2
+  zh: 677cf28f795562cb

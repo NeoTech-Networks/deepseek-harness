@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-11-llm-route-fallback.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-11-llm-route-fallback.md
-2026-09-11-llm-route-fallback.md: 7886699af224a4dafdbf2ab2c5a09e6b6e9fa199
-2026-09-11-llm-route-fallback.zh.md: b34c2172e595c12e9d5af247f39d3d76641e1e0f
+/agent-note-tool-schema-route-fallback:
+  en: 96cb09e54d13ffb8
+  zh: 0d33da46f233edea
+/agent-note-tool-schema-route-fallback/problem:
+  en: c4a3d831c2ab7668
+  zh: d2074b2cf6db166d
+/agent-note-tool-schema-route-fallback/decision:
+  en: a9dc90cc68c1002f
+  zh: 047dfa92e49af910
+/agent-note-tool-schema-route-fallback/alternatives-considered:
+  en: 2f10ea38f2d6f6af
+  zh: 32ed389ff5f0114c
+/agent-note-tool-schema-route-fallback/consequences:
+  en: 05606f488fcb5baa
+  zh: 49fc9b1df8804ec0

@@ -1,6 +1,19 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-08-vision-routing.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-08-vision-routing.md
-2026-09-08-vision-routing.md: d7a7015e7032ae25a1e6fab7ad96be6b17a16dab
-2026-09-08-vision-routing.zh.md: 18c3ac16a2d2ff71016e1534701233bb541e3d54
+/agent-note-automatic-image-description-for-text-only-models:
+  en: e2994319e4a4a7aa
+  zh: 835536dc2657b10f
+/agent-note-automatic-image-description-for-text-only-models/problem:
+  en: f7540a327752a212
+  zh: b29f52ff3e8408ce
+/agent-note-automatic-image-description-for-text-only-models/decision:
+  en: d2e7eba9b628a7ba
+  zh: 252008ca3c950579
+/agent-note-automatic-image-description-for-text-only-models/alternatives-considered:
+  en: 7315dcdbf2ffc948
+  zh: 4f12eb594b831f06
+/agent-note-automatic-image-description-for-text-only-models/consequences:
+  en: 2ea26da5a1ddd270
+  zh: 2019d8b1df1bcc11

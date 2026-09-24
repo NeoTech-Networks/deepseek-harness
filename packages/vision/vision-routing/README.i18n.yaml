@@ -1,6 +1,55 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/vision/vision-routing/README.md
-README.md: aad0e9a9b8eee45089d3524e73017d80cfa04a83
-README.zh.md: bd69f6697032b3387b21d0a2e0b4fefe7a52f421
+/:
+  en: 10353f134a02dc87
+  zh: 544d38d5d098eac3
+/deepseek-ai-dsh-vision-routing:
+  en: 0907371a2ecf53d2
+  zh: 29219d7e2a1578f3
+/deepseek-ai-dsh-vision-routing/summary:
+  en: 1444aaf21e85aa23
+  zh: 1e38105ed1d567b6
+/deepseek-ai-dsh-vision-routing/table-of-contents:
+  en: 76368b6b1da79c80
+  zh: 26607c8f64ab57e7
+/deepseek-ai-dsh-vision-routing/use-this-package:
+  en: 2a0fcf6b4ac5d60e
+  zh: 2c4acede4270f19d
+/deepseek-ai-dsh-vision-routing/use-this-package/when-it-acts:
+  en: 81096e3cae33f69b
+  zh: 26a789eea325e372
+/deepseek-ai-dsh-vision-routing/use-this-package/configuration:
+  en: df012255621d66f6
+  zh: f930668aa2e10122
+/deepseek-ai-dsh-vision-routing/understand-the-implementation:
+  en: 8815d1412717f865
+  zh: 34d49c6ade95b20a
+/deepseek-ai-dsh-vision-routing/model-experience:
+  en: 215e7ba838619b7b
+  zh: 215e7ba838619b7b
+/deepseek-ai-dsh-vision-routing/model-experience/image-described-for-a-text-only-model:
+  en: 6b4051f62e211671
+  zh: 6b4051f62e211671
+/deepseek-ai-dsh-vision-routing/model-experience/image-described-for-a-text-only-model/what-the-model-sees:
+  en: 43461427e6687a92
+  zh: d2a3d3adca972bfc
+/deepseek-ai-dsh-vision-routing/model-experience/image-described-for-a-text-only-model/what-the-model-sees/described-image:
+  en: 221757d23eeacd14
+  zh: 221757d23eeacd14
+/deepseek-ai-dsh-vision-routing/model-experience/image-described-for-a-text-only-model/what-the-model-sees/description-failed:
+  en: 67ba2ba5abd4d23e
+  zh: 67ba2ba5abd4d23e
+/deepseek-ai-dsh-vision-routing/model-experience/image-described-for-a-text-only-model/token-effect:
+  en: b1673fbc61c2612d
+  zh: 561b3f8f5ccccf2c
+/deepseek-ai-dsh-vision-routing/model-experience/image-described-for-a-text-only-model/kv-cache-effect:
+  en: 215a427906f20887
+  zh: 671975a80a8abe46
+/deepseek-ai-dsh-vision-routing/known-limitations-and-deferred-work:
+  en: 2e42261b044d3989
+  zh: 3b7f77abf9dd8083
+/deepseek-ai-dsh-vision-routing/known-limitations-and-deferred-work/dev-note:
+  en: efbc45e4745411e3
+  zh: 131e87a024c7621e

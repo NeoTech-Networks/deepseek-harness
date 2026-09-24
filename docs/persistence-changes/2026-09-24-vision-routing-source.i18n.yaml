@@ -1,6 +1,28 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for 2026-09-24-vision-routing-source.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/persistence-changes/2026-09-24-vision-routing-source.md
-2026-09-24-vision-routing-source.md: 4907caf43a3c0aa28f6fc3382edff8e7ffde4d20
-2026-09-24-vision-routing-source.zh.md: 61d0be24a62f66e069479a70c179005284292610
+/:
+  en: 3d5a424ae7d7e46b
+  zh: c22a8e4a62d8cc1a
+/2026-09-24-vision-routing-source:
+  en: 025297736c1bf77d
+  zh: 557b9b2ecd0c36f3
+/2026-09-24-vision-routing-source/summary:
+  en: 12fe61ee10a573a9
+  zh: 36bc48ca355065fb
+/2026-09-24-vision-routing-source/table-of-contents:
+  en: 6cf314a069ceb451
+  zh: 9adff678e9ecab3b
+/2026-09-24-vision-routing-source/declaration:
+  en: 6907136f28e48c90
+  zh: 02f8298485f3d8e7
+/2026-09-24-vision-routing-source/compatibility:
+  en: 25ee1439e77c7b25
+  zh: 8f95bfb0a7cc8ccf
+/2026-09-24-vision-routing-source/verification:
+  en: 78d259569b6cf793
+  zh: b8d155523018ad54
+/2026-09-24-vision-routing-source/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

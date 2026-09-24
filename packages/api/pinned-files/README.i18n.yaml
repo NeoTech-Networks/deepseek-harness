@@ -1,6 +1,37 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/api/pinned-files/README.md
-README.md: ff4e0067c40b470094cc6245278fc8b5ecd6c980
-README.zh.md: 2ecd72486d9b3bb83901875fc5eb602ca8f41a96
+/:
+  en: 75a4fdfc0734f56f
+  zh: 64c488fc74962bd3
+/deepseek-ai-dsh-api-pinned-files:
+  en: 491590e4d2be9371
+  zh: 0213b40b5560cfa3
+/deepseek-ai-dsh-api-pinned-files/summary:
+  en: 64acf90b682a7c96
+  zh: 7c173041ee2d1c45
+/deepseek-ai-dsh-api-pinned-files/table-of-contents:
+  en: 76368b6b1da79c80
+  zh: 26607c8f64ab57e7
+/deepseek-ai-dsh-api-pinned-files/use-this-package:
+  en: a7ce4aa45185e1d8
+  zh: 181c44389a4d3d09
+/deepseek-ai-dsh-api-pinned-files/use-this-package/the-live-fields:
+  en: dbf4918d253e4cfb
+  zh: 25a8bf3e4c814f23
+/deepseek-ai-dsh-api-pinned-files/understand-the-implementation:
+  en: 0a3c4ebcc9c7e7f6
+  zh: a771b30079e4b9b2
+/deepseek-ai-dsh-api-pinned-files/model-experience:
+  en: 710be6ef25ff16f7
+  zh: 710be6ef25ff16f7
+/deepseek-ai-dsh-api-pinned-files/model-experience/kv-cache-effect:
+  en: 23fb7fc6a4403687
+  zh: 23fb7fc6a4403687
+/deepseek-ai-dsh-api-pinned-files/known-limitations-and-deferred-work:
+  en: 9baaa617e6f0a7f9
+  zh: 2b32eb396ed76a59
+/deepseek-ai-dsh-api-pinned-files/known-limitations-and-deferred-work/dev-note:
+  en: f81ff18871e10f7c
+  zh: f6b4432c845d740b

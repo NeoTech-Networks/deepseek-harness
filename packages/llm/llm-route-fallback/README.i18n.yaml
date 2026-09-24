@@ -1,6 +1,58 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/llm/llm-route-fallback/README.md
-README.md: f409eb7d84185b2eb844446c6a2e8ae89ffd46a0
-README.zh.md: be236727c5691d969ef596a71c2626c0392be116
+/:
+  en: ae5f9ff3400dfd27
+  zh: 56dd271e70629a55
+/deepseek-ai-dsh-llm-route-fallback:
+  en: f01290d500a13433
+  zh: 2a28c2b68921638d
+/deepseek-ai-dsh-llm-route-fallback/summary:
+  en: 3502946e18875d54
+  zh: ab43084a2ddc2a70
+/deepseek-ai-dsh-llm-route-fallback/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 82bbd1ae631975a1
+/deepseek-ai-dsh-llm-route-fallback/use-this-package:
+  en: f94e6d7b8cd27680
+  zh: 05096066dd86704d
+/deepseek-ai-dsh-llm-route-fallback/use-this-package/when-to-choose-it:
+  en: d4b2d68eb749d3a3
+  zh: 9eb3d8708bff6e11
+/deepseek-ai-dsh-llm-route-fallback/use-this-package/configuration:
+  en: 7723296c95c60fb9
+  zh: 7356f2465433d6b1
+/deepseek-ai-dsh-llm-route-fallback/use-this-package/what-you-get:
+  en: a4be8feab979e2bb
+  zh: 60d7eca92009b5b0
+/deepseek-ai-dsh-llm-route-fallback/understand-the-implementation:
+  en: 79a0f50bc95ed2b8
+  zh: f79bfcdba87a3c3c
+/deepseek-ai-dsh-llm-route-fallback/understand-the-implementation/design-commitments:
+  en: d28af0ce58bddb80
+  zh: 448c3ebeac8e0ce9
+/deepseek-ai-dsh-llm-route-fallback/understand-the-implementation/the-gates-in-order:
+  en: e47f87e63fcb46f4
+  zh: d4c176206f3d8e01
+/deepseek-ai-dsh-llm-route-fallback/understand-the-implementation/measurement:
+  en: 5c11a997b100846f
+  zh: f779d2137a0c73ba
+/deepseek-ai-dsh-llm-route-fallback/understand-the-implementation/source-map:
+  en: faecb8bcb4406462
+  zh: 930193e6de8216b8
+/deepseek-ai-dsh-llm-route-fallback/further-exploration:
+  en: bf35a8c98181d5c8
+  zh: bffc94cbc034a365
+/deepseek-ai-dsh-llm-route-fallback/model-experience:
+  en: 5de954483bf0630d
+  zh: c08f211d60a9bd3b
+/deepseek-ai-dsh-llm-route-fallback/model-experience/kv-cache-effect:
+  en: 41b1ad89eed1da06
+  zh: 02fb3931e76467e3
+/deepseek-ai-dsh-llm-route-fallback/known-limitations-and-deferred-work:
+  en: f08ae49a02fb6953
+  zh: aee09e037c5c716c
+/deepseek-ai-dsh-llm-route-fallback/known-limitations-and-deferred-work/dev-note:
+  en: 3eed560d3c3c4d2a
+  zh: 246d6488645a19f5

@@ -36,6 +36,7 @@
 | `@deepseek-ai/dsh-tool-fs-search` | `glob`、`grep` | `ctx.tools`、`ctx.subprocess`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | glob 和 grep 是无条件可用的发现工具，通过 ctx.subprocess spawn 随包提供的 ripgrep 二进制文件（`@vscode/ripgrep`），并作为普通前台调用运行，绝不作为后台任务；无需在宿主机安装 `rg`，也不经过 shell 层。本目录使用 `sampleOverCapGlobResults: true`；部署必须显式选择该行为。结果超过上限时，会通过可选的 ctx.spillStore 后端保存完整的格式化列表；在共置部署中，如果后端公开本地路径，返回的定位信息可供后续读取／搜索。 |
 | `@deepseek-ai/dsh-tool-terminal` | `terminal_close`、`terminal_list`、`terminal_open`、`terminal_read`、`terminal_send`、`terminal_signal` | `ctx.tools`、`ctx.terminals`、`ctx.systemPrompt`、`ctx.jobs at call time for run_in_background` | `tool/call`、`tool/result` | - | 这 6 个终端工具需要选择启用，用于补充一次性 bash／文件系统工具。`terminal_send(run_in_background: true)` 会注册到 `ctx.jobs`；schema 不包含 TUI、具名按键序列、BEL、调整尺寸、自动启动和跨 agent 共享。 |
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`、`get_goal`、`update_goal` | `ctx.tools`、`ctx.agents`、`ctx.goals`、`ctx.systemPrompt`、`a calling Agent in an authorized open turn` | `tool/call`、`goal/change for mutations`、`tool/result` | - | create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。 |
+| `@deepseek-ai/dsh-tool-session-status` | `set_session_status` | `ctx.tools`、`ctx.sessionStatus`、`owning Agent session` | `tool/call`、`session/status`、`tool/result` | - | set_session_status 是 session-status 领域之上的 harness 工具：status 枚举是 live 词汇表加上一个 clear 哨兵值，因此模型无法编造部署未声明的 id。 |
 | `@deepseek-ai/dsh-schedule` | `schedule_create`、`schedule_delete`、`schedule_list`、`schedule_update` | `ctx.tools`、`ctx.schedule`、live 根 Agent | `tool/call`、Schedule storage domain 创建、更新或删除、`tool/result` | - | Schedule 服务加载期间，在 live 根 Agent scope 内注册。接受 after_seconds、显式绝对 at、有界固定速率 every_seconds、带显式 IANA 时区的每日与每周本地时间，以及作为五字段表达式的 cron。管理使用宿主 storage domain；到期消息会恢复原 Session。 |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.tools`、`ctx.lsp`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@deepseek-ai/dsh-lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。 |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`、`ctx.workflowEngine`、`ctx.subagents`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents every fresh round)` | `tool/call`、`tool/result`、`workflow and child session events during execution` | - | 固定的前台工作流会在每个 Round 启动一个全新的结构化子级；模型只能选择不可变目标和可选的 Round 上限。 |
@@ -472,7 +473,11 @@
           },
           "question": {
             "type": "string",
-            "description": "The specific question to ask the user."
+            "description": "The question itself, written as short paragraphs of at most two sentences each."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Optional markdown rendered under the question. Use it for background, tradeoffs and lists rather than lengthening the question line."
           },
           "header": {
             "type": "string",
@@ -1382,6 +1387,46 @@ glob 和 grep 是无条件可用的发现工具，通过 ctx.subprocess spawn �
 来源：[`packages/goal/tool-goal/src/index.ts`](../packages/goal/tool-goal/src/index.ts)
 
 create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。
+
+<a id="deepseek-aidsh-tool-session-status"></a>
+
+## `@deepseek-ai/dsh-tool-session-status`
+
+### `set_session_status`
+
+为当前会话设置一个持久状态，使操作者的侧边栏无论运行哪个模型都能一眼看出该会话在做什么。当会话到达操作者无需打开会话就应看到的状态时调用它。工作已构建完成、等待操作者的部署口令时使用 "waiting-production"；会话离开操作者就无法推进时使用 "stuck"；目标已达成时使用 "finished"；等待第三方时使用 "waiting-external"；会话被搁置时使用 "paused"。发送 "clear" 可移除状态。操作者下一次向该会话发出提示时，状态会自动清除。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "description": "The status to set, or \"clear\" to remove the current status.",
+      "enum": [
+        "waiting-production",
+        "stuck",
+        "finished",
+        "waiting-external",
+        "paused",
+        "failed",
+        "clear"
+      ]
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional one-line reason, recorded beside the status."
+    }
+  },
+  "required": [
+    "status"
+  ]
+}
+```
+
+来源：[`packages/session-status/tool-session-status/src/index.ts`](../packages/session-status/tool-session-status/src/index.ts)
+
+set_session_status 是 session-status 领域之上的 harness 工具：status 枚举是 live 词汇表加上一个 clear 哨兵值，因此模型无法编造部署未声明的 id。
 
 <a id="deepseek-aidsh-schedule"></a>
 

@@ -1,6 +1,16 @@
-# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
-# side as of the last confirmed-consistent state. Both languages carry equal authority;
-# after editing either side, bring the other along and re-record with:
+# Bilingual-pair consistency record for account-usage.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/subsystems/account-usage.md
-account-usage.md: 7992c48dcb58cb5d7ece6f208d2babede6da7743
-account-usage.zh.md: 25d2e7e3d2163698222caac48bfe4dd2c3a78a64
+/account-usage:
+  en: 407300ff678a608e
+  zh: faadf3e21d94a96a
+/account-usage/what-crosses-the-wire:
+  en: 15a0be8654bcc0eb
+  zh: 091160e82994df20
+/account-usage/degraded-answers:
+  en: f9472e9eae77b14c
+  zh: bbf915831a541343
+/account-usage/cost:
+  en: 3f46bef80803f11f
+  zh: c9408571d3789673
