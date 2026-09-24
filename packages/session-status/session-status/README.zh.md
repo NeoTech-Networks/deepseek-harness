@@ -92,6 +92,10 @@ kind: "package-reference"
 - [Generated configuration catalog](../../../docs/config-catalog.zh.md#deepseek-aidsh-session-status): 每个接受的配置字段及其来源声明。
 - [session-status Agent Note](../../../.agents/notes/proposed/feature/2026-09-07-session-status.zh.md): 设计记录。
 
+## Runtime invariant
+
+不发布伴随件。词表在插件加载时校验、状态 id 在 `set` 边界校验，`sessionStatus` 投影折叠整值事件，因此没有独立可变关系需要运行时伴随件交叉检查。
+
 -----
 
 <a id="model-experience"></a>
@@ -104,10 +108,6 @@ kind: "package-reference"
 无；该投影从不组装或发送 provider 请求。
 
 -----
-
-## Runtime invariant
-
-不发布伴随件。词表在插件加载时校验、状态 id 在 `set` 边界校验，`sessionStatus` 投影折叠整值事件，因此没有独立可变关系需要运行时伴随件交叉检查。
 
 <a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work

@@ -214,6 +214,8 @@ const SENTENCE_MODEL_EXPERIENCE: Readonly<Record<string, SentenceContract>> = {
   'packages/llm/llm-route-fallback': { kind: 'none', reason: 'The plugin changes only which model answers the assembled request; it registers no prompt section, tool schema, or message.' },
   'packages/client/ui-sidebar-explorer': { kind: 'none', reason: 'Browser-only pinned-directory tree and text preview; registers no tool, prompt section, or session event.' },
   'packages/api/pinned-files': { kind: 'none', reason: 'Host Remote service for operator-pinned directories; registers no tool, prompt section, or session event.' },
+  'packages/session-status/session-status': { kind: 'none', reason: 'The status service registers no tool or prompt; its projection serves client read models of already-logged session state, and the model-facing tool lives in tool-session-status.' },
+  'packages/client/ui-sessions-panel': { kind: 'none', reason: 'Browser-only session list viewer in the right Sidebar; registers no tool, prompt section, or session event.' },
   'packages/llm/account-usage': { kind: 'none', reason: 'The service answers a browser readout with the limit percentages of the account; it registers no tool, prompt section, or session event.' },
   'packages/api/workspace-files': { kind: 'none', reason: 'Workspace file read API and its Client resource provider; it registers no prompt, tool, or session event.' },
   'packages/typert/protocol': { kind: 'none', reason: 'Compiler-independent Remote protocol declarations; registers nothing model-facing.' },

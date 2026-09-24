@@ -92,6 +92,10 @@ When `ctx.sessionProjections` is mounted, this package registers the `sessionSta
 - [Generated configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-session-status): every accepted config field and its source declaration.
 - [session-status Agent Note](../../../.agents/notes/proposed/feature/2026-09-07-session-status.md): the design record.
 
+## Runtime invariant
+
+No companion is published. The vocabulary is validated at plugin load and the status id at the `set` boundary, and the `sessionStatus` projection folds the whole-value event, so there is no independent mutable relationship for a runtime companion to cross-check.
+
 -----
 
 <a id="model-experience"></a>
@@ -102,10 +106,6 @@ None, as the status service registers no tool or prompt and the sessionStatus pr
 #### KV Cache effect
 
 None; the projection never assembles or sends a provider request.
-
-## Runtime invariant
-
-No companion is published. The vocabulary is validated at plugin load and the status id at the `set` boundary, and the `sessionStatus` projection folds the whole-value event, so there is no independent mutable relationship for a runtime companion to cross-check.
 
 ## Known Limitations and Deferred Work
 
