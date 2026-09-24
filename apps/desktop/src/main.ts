@@ -309,6 +309,7 @@ async function main(): Promise<void> {
   let welcomeWindow: BrowserWindow | undefined
   let enteredWorkspace = false
   let shellInstallerOwnsQuit = false
+  let confirmingQuit = false
   let requireCleanStop = false
   let updateStoppedHost = false
   let updateStopFailure: DesktopHostUncleanExitError | undefined
@@ -908,6 +909,31 @@ async function main(): Promise<void> {
     browserGuests.bind(window)
     window.on('focus', automaticCheck)
     window.on('closed', () => { if (mainWindow === window) mainWindow = undefined })
+    // Closing the workspace window on Windows and Linux quits the app, so ask
+    // first. Every shutdown path the shell owns passes straight through: a quit
+    // already under way (menu Quit, a confirmed close, fatal recovery, the
+    // mandatory-update window's close), the updater's quitAndInstall, a blocking
+    // mandatory update, the welcome flow closing a window that never showed the
+    // workspace, and a host that is not running. macOS keeps the app alive when
+    // its last window closes, so there is nothing to confirm there.
+    window.on('close', (event) => {
+      if (process.platform === 'darwin' || quitting || shuttingDown || shellInstallerOwnsQuit
+        || isMandatory() || recovery.active || !enteredWorkspace || backend.host === undefined) return
+      event.preventDefault()
+      if (confirmingQuit) return
+      confirmingQuit = true
+      const messages = locale.messages
+      void dialog.showMessageBox(window, {
+        type: 'question',
+        title: messages.quitConfirmTitle,
+        message: messages.quitConfirmMessage,
+        buttons: [messages.quit, messages.cancel],
+        defaultId: 1,
+        cancelId: 1,
+      }).then((result) => {
+        if (result.response === 0 && !quitting) app.quit()
+      }).catch((error: unknown) => { console.error(error) }).finally(() => { confirmingQuit = false })
+    })
     window.webContents.on('console-message', (details) => {
       if (details.level !== 'error') return
       rendererConsole.push(`${details.sourceId}:${String(details.lineNumber)} ${details.message}`)
