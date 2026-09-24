@@ -126,6 +126,11 @@ function pwshDescription(windowsSandbox: boolean): string {
     + 'Managed `$env:DSH_*` variables expose current harness environment facts. '
     + 'Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. '
     + 'On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. '
+    + 'A command that opens with a `param(...)` declaration is wrapped in a script block for you, because the executor pins output encoding ahead of the command; '
+    + 'a command that must open with `using` cannot run through `-Command` at all: write it to a `.ps1` file and run that with `pwsh -File <path>`. '
+    + 'PowerShell strings: a backslash is NOT an escape and `$` always starts a variable or a scope qualifier, so a regex or pattern containing `$` '
+    + '(for example a `$script:` fragment) must be SINGLE-quoted (`-Pattern \'^\\$script:\'`); inside double quotes PowerShell fails with '
+    + '`ParserError: Variable reference is not valid`. '
     + 'Commands may run under a file sandbox; a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]`, a policy denial: do not retry another way.'
   if (!windowsSandbox) return base
   // The language-mode and named-pipe contracts below are Windows-restricted-token
