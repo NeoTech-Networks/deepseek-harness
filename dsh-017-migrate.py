@@ -66,6 +66,10 @@ PRESET_DIR = Path('.agent-presets') / 'standard-hooks'
 DESKTOP_GATE = """disabled: !!js "ctx.get('profileContext')?.name === 'desktop'\""""
 CLI_ONLY_IDS = ('mcp-github', 'mcp-postgres')
 SANDBOX_POLICY_ID = 'sandbox-policy'
+APPROVAL_ID = 'approval'
+# The session-less default written into the home patch is the danger-full-access
+# preset, so it is only written when that is already the operator's own default.
+REQUIRED_DEFAULT_PRESET = 'danger-full-access'
 
 
 class JsLoader(yaml.SafeLoader):
@@ -205,11 +209,23 @@ def migrate_home_patch(home_text: str, preset_text: str) -> str:
              '# set their own mode from permission.defaultPreset; only session-less calls see\n',
              '# this default, which matches how the bridge ran on 0.1.5. DSH_PERMISSION_MODE\n',
              '# still overrides it. This replaces the shipped row (config is not merged).\n',
+             '#\n',
+             '# The approval row MUST move with it: the permission service derives its\n',
+             '# default preset from the (sandbox, approval) pair, and danger-full-access +\n',
+             "# 'ask' matches no preset, so the permission entry refuses to activate at all\n",
+             '# (proven 2026-09-24 on the web profile). The pair below IS the\n',
+             '# danger-full-access preset, which is the operator\'s permission.defaultPreset;\n',
+             '# the migration refuses to write it for any other default.\n',
              f'- id: {SANDBOX_POLICY_ID}\n',
              "  name: '@deepseek-ai/dsh-sandbox-policy'\n",
              '  config:\n',
              "    mode: !!js process.env.DSH_PERMISSION_MODE ?? 'danger-full-access'\n",
              '    workspaceRoot: !!js process.cwd()\n',
+             '\n',
+             f'- id: {APPROVAL_ID}\n',
+             "  name: '@deepseek-ai/dsh-user-approval'\n",
+             '  config:\n',
+             "    policy: !!js \"(process.env.DSH_PERMISSION_MODE ?? 'danger-full-access') === 'danger-full-access' ? 'never' : 'ask'\"\n",
              '\n',
              '# --- Migrated 0.1.7: the standard-hooks preset rows -------------------------\n',
              '# 0.1.7 no longer scans $DSH_HOME/.agent-presets, so the hook bridge and the MCP\n',
@@ -245,6 +261,10 @@ def validate_home_patch(text: str, preset_text: str) -> list[str]:
     overrides = [op for op in ops if isinstance(op, dict) and op.get('id') == SANDBOX_POLICY_ID]
     if len(overrides) != 1 or 'danger-full-access' not in str((overrides[0].get('config') or {}).get('mode')):
         raise RuntimeError('home patch must carry exactly one sandbox-policy override for session-less hooks')
+    approvals = [op for op in ops if isinstance(op, dict) and op.get('id') == APPROVAL_ID]
+    if len(approvals) != 1 or "'never'" not in str((approvals[0].get('config') or {}).get('policy')):
+        raise RuntimeError('home patch must pair the sandbox override with an approval override, '
+                           'or the permission service matches no preset and does not activate')
     return ids
 
 
@@ -257,6 +277,11 @@ def stage(home: Path, out: Path) -> dict:
             raise FileNotFoundError(p)
     out.mkdir(parents=True, exist_ok=True)
     s_text, plan = migrate_settings(settings.read_text(encoding='utf-8'))
+    default_preset = ((load(s_text) or {}).get('permission') or {}).get('defaultPreset')
+    if default_preset != REQUIRED_DEFAULT_PRESET:
+        raise RuntimeError(f'permission.defaultPreset is {default_preset!r}, not {REQUIRED_DEFAULT_PRESET!r}; '
+                           'the session-less sandbox/approval override would widen access beyond the '
+                           "operator's own default, so the migration stops for a decision")
     preset_text = preset.read_text(encoding='utf-8')
     h_text = migrate_home_patch(patch.read_text(encoding='utf-8'), preset_text)
     ids = validate_home_patch(h_text, preset_text)
@@ -368,7 +393,7 @@ def self_test() -> int:
             '# top comment\nui-onboarding:\n  welcomeNoticeVersion: "1"\n'
             'agent-presets:\n  default: standard-hooks\n'
             '# a note\nsubagent-model-selection:\n  enabled: true\n  allowedModels:\n    - a\n'
-            'permission:\n  defaultPreset: full\n', encoding='utf-8')
+            'permission:\n  defaultPreset: danger-full-access\n', encoding='utf-8')
         (home / 'cordis.patch.yml').write_text(
             '# MCP opt-ins for the DeepSeek Harness *CLI*. NOT the desktop app.\n- insert:\n'
             '    - id: mcp-github\n      name: x\n      config: {}\n'
@@ -398,9 +423,20 @@ def self_test() -> int:
         assert code == 3 and any('NOT IMPORTED: permission' in r for r in report), report
         assert 'permission' in (out / 'unimported.yaml').read_text(encoding='utf-8')
         with (home / 'profiles' / 'desktop' / 'cordis.patch.yml').open('a', encoding='utf-8') as f:
-            f.write('- id: permission\n  config:\n    defaultPreset: full\n')
+            f.write('- id: permission\n  config:\n    defaultPreset: danger-full-access\n')
         code, report = verify(home, out)
         assert code == 0, report
+        # A narrower operator default must stop the migration, not be widened silently.
+        narrow = Path(tmp) / 'narrow'
+        (narrow / PRESET_DIR).mkdir(parents=True)
+        shutil.copy2(home / PRESET_DIR / 'agent.cordis.yml', narrow / PRESET_DIR / 'agent.cordis.yml')
+        shutil.copy2(home / 'cordis.patch.yml.pre-0.1.7', narrow / 'cordis.patch.yml')
+        (narrow / 'settings.yaml').write_text('permission:\n  defaultPreset: workspace-write\n', encoding='utf-8')
+        try:
+            stage(narrow, Path(tmp) / 'narrow-staged')
+            raise AssertionError('stage accepted a workspace-write default')
+        except RuntimeError as e:
+            assert 'defaultPreset' in str(e), e
     print('self-test OK')
     return 0
 
