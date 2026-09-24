@@ -300,6 +300,11 @@
     - id: ui-sidebar-explorer
       name: '@deepseek-ai/dsh-client-ui-sidebar-explorer'
 
+    # The right Sidebar's cross-workspace sessions tab (fork): a session list
+    # with active sessions first, opened by kind through the guide.
+    - id: ui-sessions-panel
+      name: '@deepseek-ai/dsh-client-ui-sessions-panel'
+
     - id: ui-settings
       name: '@deepseek-ai/dsh-client-ui-settings'
 
