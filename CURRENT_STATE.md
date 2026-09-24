@@ -187,15 +187,15 @@ the rules require. And the shared-checkout guard creates its worktree inside the
   Auto-managed by the claude-memory save-state hook.
   Anything between :begin and :end is overwritten on every save-state.
   Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=678d6721-7615-4fbb-bd1a-9d773fa85ff0 at=2026-09-21T17:17:58.757623+00:00
+  Last write: actor=claude-code:steve session=dd7cc509-27f8-409d-ab9b-df363819ffd0 at=2026-09-24T14:18:29.776852+00:00
 -->
-## Last save-state (2026-09-21T17:17:58.757623+00:00)
+## Last save-state (2026-09-24T14:18:29.776852+00:00)
 
-- Trigger: `save_state`
+- Trigger: `clear`
 - Actor: `claude-code:steve`
-- Session id: `678d6721-7615-4fbb-bd1a-9d773fa85ff0`
-- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Session id: `dd7cc509-27f8-409d-ab9b-df363819ffd0`
+- Repos touched: deepseek-harness (source: transcript scan)
 - Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.dsh\sessions\--C-Projects-general--\session-226854a6-f7ee-4dd6-9ff3-20fa04887aeb
+- Transcript: C:\Users\SteveDempsey\.claude\projects\C--Projects-general-DS-harness\34530cc1-8bb5-428d-b059-777568a78fdb.jsonl
 
 <!-- claude-memory-actor:end -->
