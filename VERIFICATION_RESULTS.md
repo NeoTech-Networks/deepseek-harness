@@ -1,3 +1,20 @@
+## 2026-09-24 - 0.1.7-rc.1 installed and verified live
+
+| Check | Result | Evidence |
+|---|---|---|
+| installer | 314,354,720 bytes, sha256 `74de6ccff16bb17188dc2446dbb6c8c5385aac84c5c7f585d3d4a7e8c91bd901`; packaged self-test passed (DOCX, XLSX, PPTX to PDF, skill CLI) | `C:\Projects\logs\2026-09-24\dsh-017-port\installer-hash.txt`, `package6.log` |
+| finish-install.ps1 | `SETUP COMPLETE. Running 0.1.7-rc.1`, `FINISH EXIT 0` | `C:\Projects\logs\2026-09-24\dsh-017-port\finish-install-run.log` |
+| uninstall rows | exactly 1, `7808434f-469e-5eba-848e-edf64d3b94ce`, `DisplayVersion 0.1.7-rc.1` | HKCU uninstall key read 2026-09-24 |
+| processes | 5 | `Get-Process "DeepSeek Harness"` 2026-09-24 |
+| local features in the running code | 34 of 34, read from the installed `app.asar` | `dsh_local_features_check.py` 2026-09-24 |
+| settings migration | 7 of 7 sections IMPORTED; home patch MATCHES; vault switched to the 0.1.7 manifest | finish-install log |
+| AGENTS.md hardlink | OK before and after (2 links, one file id) | finish-install log |
+| sessions answer | Claude Opus 5.5 (operator's test) and headless `deepseek-flash` both answered | operator test; `live-headless-out.txt` |
+| MCP servers | 7 of 7 answered a real call (composio_platform after one transient fetch failure; playwright listed) | live session 2026-09-24 |
+| hook bridge | 14 of 14 invocations exit 0 (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop) | live session log 2026-09-24 |
+| on screen | mode, All Sessions, stage-mark spinner, ABC group header with fold, A to Z folders, count badge, usage percentages | `C:\Projects\logs\2026-09-24\dsh-017-port\app-0.1.7.png` |
+| NOT VERIFIED | Session footer (folder on screen maps to no dashboard); Ctrl+Shift+A (not pressed, archives a real session) | OPEN_ISSUES 38 |
+
 ## 2026-09-24 - 0.1.7-rc.1 port gates (build tree, not installed)
 
 | Check | Result | Evidence |

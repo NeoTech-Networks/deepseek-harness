@@ -1,31 +1,32 @@
 # Next session prompt
 
-Continue deepseek-harness: the 0.1.7-rc.1 port. Everything is built and gated; only
-packaging and the install are left. The running app is still 0.1.5-rc.2 and untouched.
+Continue deepseek-harness. The desktop app runs **0.1.7-rc.1**, installed and verified
+2026-09-24 (branch `update/v0.1.7-rc.1`, HEAD `e3bed68e71`, build worktree `C:\d17`).
+Nothing is pending an install. Read CURRENT_STATE and VERIFICATION_RESULTS 2026-09-24 first.
 
-## First, confirm the one blocker is cleared
+## Open work, in priority order
 
-Packaging needs Visual Studio 2022 Build Tools (C++ workload) and a Windows SDK. Check:
+1. **Land the `C:\Claude` changes (OPEN_ISSUES 37).** The shared checkout is about 80
+   commits behind and holds other sessions' uncommitted work. The `ds-harness-update`
+   skill rewrite for 0.1.7 sits there uncommitted: commit it through a worktree PR,
+   with `skill_version.py ds-harness-update --bump`. Do not commit in the shared checkout.
+2. **Repoint `dsh_update_check.py` (OPEN_ISSUES 42)**: it reads the removed seed file and
+   says `installed NOT FOUND`. Read the uninstall key instead.
+3. **See the two unseen features (OPEN_ISSUES 38)**: the Session footer on a dashboard
+   Session, and Ctrl+Shift+A on a throwaway session. OPEN_ISSUES 36(b) and 36(c) are
+   satisfied by the 2026-09-24 verification; archive item 36 when 38 closes.
+4. **Upstream `dsh-v0.1.7-rc.2` exists (2026-09-24).** Not taken. If the operator wants it:
+   run the `ds-harness-update` skill (now written for 0.1.7), worktree at a SHORT root such
+   as `C:\d172`, `CI=true`, `.env.windows`, `package:desktop:win:x64:unsigned`, and
+   re-derive the operator's mode (OPEN_ISSUES 39).
+5. **Housekeeping, not before about 2026-10-01**: remove the 0.1.5 leftovers in `~\.dsh`
+   (OPEN_ISSUES 40) and prune the old `C:\Projects\worktrees\dsh-*` trees (OPEN_ISSUES 41).
 
-    Test-Path "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
+## Rules that still hold
 
-If it is still missing, the operator installs it from an ELEVATED PowerShell:
+- Never run `state_file_cap.py --repo` or `state_file_reconcile.py --apply` on this repo
+  (skill ledger 21). Push state commits BY SHA from a healthy worktree with `CI=true`.
+- Never run the installer from inside the app.
 
-    winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-
-## Then
-
-1. Package from PowerShell in `C:\Projects\worktrees\dsh-update-0.1.7-rc.1`, with `$env:CI='true'`
-   and `C:\Windows\System32` first on PATH: `pnpm run package:desktop:win:x64:unsigned`.
-   `apps\desktop\.env.windows` is already in place (app id + mandatory-update opt-out).
-2. Prove the packaged build: `py C:\Projects\worktrees\claude-dsh-017-tools\bin\dsh_local_features_check.py --asar <win-unpacked>\resources\app.asar`
-   must read 34 of 34 (branch `chore/dsh-017-tools`, NOT merged yet: merge it only after
-   this proof). Confirm the uninstall key derives to 7808434f-469e-5eba-848e-edf64d3b94ce.
-3. Before handing over: `C:\Claude` must have pulled claude-cowork-config `60b0ebcf`
-   (bridge reads session.v4), and `finish-install.ps1 -WhatIf` must print the migration plan.
-4. Hand the operator ONE line, for a new PowerShell window:
-   `powershell -ExecutionPolicy Bypass -File "C:\Projects\worktrees\dsh-update-0.1.7-rc.1\finish-install.ps1"`
-5. Then the plan's Verification table, and Step 8 of the ds-harness-update skill.
-
-Evidence and the full map: `C:\Projects\logs\2026-09-24\dsh-017-port\` (feature-map.md, merge-gates.md, hooks-placement.md).
-Plan: `C:\Users\SteveDempsey\.claude\plans` (the 0.1.7-rc.1 upgrade plan).
+Evidence: `C:\Projects\logs\2026-09-24\dsh-017-port\`. Runbook:
+`C:\Projects\repos\playbooks\DeepSeek Harness\05-neotech-fork.md` (section 3A, ledger 42 to 55).
