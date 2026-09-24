@@ -453,7 +453,7 @@
 
 ### `ask_user_question`
 
-继续操作前，如果需要确认、选择或缺失的信息，请向用户提出简明问题。发送一个或多个问题，每个问题都带一个稳定 id，该 id 会在答案中原样返回。
+继续操作前，如果需要确认、选择或缺失的信息，请向用户提出简明问题。发送一个或多个问题，每个问题都带一个稳定 id，该 id 会在答案中原样返回。每段最多两句话，段落之间用空行分隔；背景、取舍和列表请放进 `detail`，不要把问题行写长。
 
 ```json
 {
@@ -472,7 +472,11 @@
           },
           "question": {
             "type": "string",
-            "description": "The specific question to ask the user."
+            "description": "The question itself, written as short paragraphs of at most two sentences each."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Optional markdown rendered under the question. Use it for background, tradeoffs and lists rather than lengthening the question line."
           },
           "header": {
             "type": "string",
@@ -689,7 +693,7 @@ bash 工具是 bash 执行器 seam 面向模型的消费方。组合中有 job �
 
 ### `pwsh`
 
-执行 PowerShell 命令（`pwsh -Command`）并返回 stdout/stderr。每次调用都在新的 pwsh 进程中运行：调用之间不保留任何状态（cwd、变量、函数），请传入 `workdir`，不要使用 `cd`。路径采用 Windows 原生形式（`C:\...`）；使用 `$env:NAME` 读取环境变量。非零退出会报告为 `[exit code: N]`。当前 harness 环境信息通过托管的 `$env:DSH_*` 变量公开，需要时请检查这些变量。命令可能在文件沙箱中运行；被阻止的文件操作报告为 `[sandbox: file access denied under <mode> mode]`，这是策略拒绝，而不是命令缺陷，请勿换一种方式重试。较长的输出会截断，只保留尾部；如可用，完整输出会保存到文件并报告其路径。在 Windows 上，被强制终止的命令会以 `[exit code: 1]` 结算且不带信号标记，请将其视为中断，而不是命令失败。对于长时间运行的命令，请设置 `run_in_background: true`：调用会立即返回 job id；使用 `job_output` 读取输出，使用 `job_kill` 停止任务。到达超时的前台命令不会被杀：它以同样的方式转入后台，返回其 job id 与已捕获的输出。
+执行 PowerShell 命令（`pwsh -Command`）并返回 stdout/stderr。每次调用都在新的 pwsh 进程中运行：调用之间不保留任何状态（cwd、变量、函数），请传入 `workdir`，不要使用 `cd`。路径采用 Windows 原生形式（`C:\...`）；使用 `$env:NAME` 读取环境变量。非零退出会报告为 `[exit code: N]`。当前 harness 环境信息通过托管的 `$env:DSH_*` 变量公开，需要时请检查这些变量。命令可能在文件沙箱中运行；被阻止的文件操作报告为 `[sandbox: file access denied under <mode> mode]`，这是策略拒绝，而不是命令缺陷，请勿换一种方式重试。较长的输出会截断，只保留尾部；如可用，完整输出会保存到文件并报告其路径。在 Windows 上，被强制终止的命令会以 `[exit code: 1]` 结算且不带信号标记，请将其视为中断，而不是命令失败。以 `param(...)` 声明开头的命令会被自动包进脚本块，因为执行器要在命令之前固定输出编码；必须以 `using` 开头的命令无法通过 `-Command` 运行，请写入 `.ps1` 文件后用 `pwsh -File <path>` 执行。PowerShell 字符串：反斜杠不是转义符，`$` 永远会开始一个变量或作用域限定符，因此包含 `$` 的正则或模式（例如 `$script:` 片段）必须用单引号（`-Pattern '^\$script:'`）；放在双引号里 PowerShell 会以 `ParserError: Variable reference is not valid` 失败。对于长时间运行的命令，请设置 `run_in_background: true`：调用会立即返回 job id；使用 `job_output` 读取输出，使用 `job_kill` 停止任务。到达超时的前台命令不会被杀：它以同样的方式转入后台，返回其 job id 与已捕获的输出。
 
 ```json
 {

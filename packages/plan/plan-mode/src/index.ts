@@ -66,10 +66,78 @@ declare module '@deepseek-ai/cordis' {
  */
 export const EXIT_PLAN_MODE = 'exit_plan_mode'
 
+/** A fenced-code delimiter. Lines between two of them are not markdown. */
+const CODE_FENCE_LINE = /^(?:```|~~~)/
+
+/** A level-1 heading line: the plan's title. */
+const TITLE_LINE = /^#\s+\S/
+
+/** A level-2-or-deeper heading line. */
+const SUB_HEADING_LINE = /^#{2,6}\s+\S/
+
+/**
+ * Explain why a plan is not acceptable, or `undefined` when it is.
+ *
+ * What this check is for is that the model sent a PLAN, which means a titled
+ * document, rather than prose or a running commentary. It is not for where the
+ * title sits. The check used to conflate the two by testing only the first
+ * content line, and every widening since has been the same bug reported again:
+ *
+ *  * `/^#\s+\S/` on the trimmed plan rejected a plan opening with a blockquote
+ *    (a deployment's operator-metadata block) or with blank lines.
+ *  * Skipping only blank and blockquote lines still rejected a plan opening
+ *    with a lead-in sentence, an italic note, a bullet list or an HTML comment.
+ *    Measured 2026-09-21: that refusal costs a turn, it recurs across every
+ *    repo and backend because it is a property of how models write, and the
+ *    deployment cannot tune it away (the guidance section lives in the shipped
+ *    preset, which user presets include rather than copy).
+ *
+ * So the title is looked for ANYWHERE in the plan instead of on one line, and
+ * the two real faults are still caught and now named apart: a plan with no `#`
+ * title but sub-headings, and a plan with no heading at all. A heading that
+ * appears only inside a fenced code block does not count, which is stricter
+ * than the line-one check ever was.
+ *
+ * Nothing is rewritten. The plan is presented and stored exactly as the model
+ * sent it; every consumer downstream finds the title with a multi-line search.
+ * @param plan - the plan argument as supplied by the model.
+ * @returns a one-clause fault description, or `undefined` when the plan passes.
+ */
+export function describePlanFault(plan: string): string | undefined {
+  if (plan.trim().length === 0) return 'the plan is empty'
+  let fenced = false
+  let firstSubHeading: string | undefined
+  let firstContent: string | undefined
+  for (const raw of plan.split('\n')) {
+    const line = raw.trim()
+    if (CODE_FENCE_LINE.test(line)) {
+      fenced = !fenced
+      continue
+    }
+    if (fenced || line === '') continue
+    if (TITLE_LINE.test(line)) return undefined
+    if (firstSubHeading === undefined && SUB_HEADING_LINE.test(line)) firstSubHeading = line
+    if (firstContent === undefined) firstContent = line
+  }
+  if (firstContent === undefined) return 'the plan has no content outside code fences'
+  if (firstSubHeading !== undefined) {
+    return `the plan has no "#" title; its highest heading is "${firstSubHeading.slice(0, 60)}"`
+  }
+  return `the plan has no markdown heading at all (it opens "${firstContent.slice(0, 60)}")`
+}
+
 /** Deployment-owned plan guidance. */
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Pin plan mode active on every newly created non-subagent session whose log carries no plan state. Defaults to false. */
+  defaultActive?: boolean
+}
+
+/** Validated plan-mode config. */
+export interface ResolvedPlanModeConfig {
+  section: string
+  defaultActive: boolean
 }
 
 /** The review question's id, echoed in the answer this tool reads. */
@@ -103,7 +171,7 @@ function firstHeading(plan: string): string | undefined {
  * @param config Raw plugin config.
  * @returns A detached validated config.
  */
-export function resolveConfig(config: PlanModeConfig): PlanModeConfig {
+export function resolveConfig(config: PlanModeConfig): ResolvedPlanModeConfig {
   const section = (config as Partial<PlanModeConfig>).section
   if (typeof section !== 'string') {
     throw new Error('PlanModeConfig needs a string `section`')
@@ -111,11 +179,15 @@ export function resolveConfig(config: PlanModeConfig): PlanModeConfig {
   if (section.trim() === '') {
     throw new Error('PlanModeConfig needs a non-empty `section`')
   }
-  const unknown = Object.keys(config).filter(key => key !== 'section')
-  if (unknown.length > 0) {
-    throw new Error(`PlanModeConfig has unknown key(s) ${unknown.join(', ')} — config is { section }`)
+  const defaultActive = (config as Partial<PlanModeConfig>).defaultActive ?? false
+  if (typeof defaultActive !== 'boolean') {
+    throw new Error('PlanModeConfig `defaultActive` must be a boolean when provided')
   }
-  return { section }
+  const unknown = Object.keys(config).filter(key => key !== 'section' && key !== 'defaultActive')
+  if (unknown.length > 0) {
+    throw new Error(`PlanModeConfig has unknown key(s) ${unknown.join(', ')} - config is { section, defaultActive }`)
+  }
+  return { section, defaultActive }
 }
 
 const planUnitStateSchema: ZodType<PlanUnitState> = zod.object({
@@ -126,6 +198,7 @@ const planUnitStateSchema: ZodType<PlanUnitState> = zod.object({
     wanted: zod.boolean(),
   }).strict().nullable(),
   activeAtLastHeader: zod.boolean().nullable(),
+  logged: zod.boolean(),
 }).strict()
 
 /** Wire payload schema of the `plan` projection. */
@@ -137,9 +210,9 @@ const planProjectionSchema: ZodType<PlanProjection> = zod.object({
 /** Projection of logged plan selections and committed mode. */
 export const planProjectionDefinition = {
   key: 'plan',
-  stateVersion: 3,
+  stateVersion: 4,
   stateSchema: planUnitStateSchema,
-  init: () => ({ active: false, wanted: null, running: null, activeAtLastHeader: null }),
+  init: () => ({ active: false, wanted: null, running: null, activeAtLastHeader: null, logged: false }),
   apply: (state, event) => {
     if (event.type === 'command/run' && event.data.name === 'plan') {
       if (event.data.args === undefined) return state
@@ -153,7 +226,7 @@ export const planProjectionDefinition = {
       return { ...state, wanted, running: null }
     }
     if (event.type === 'plan/mode') {
-      return { ...state, active: event.data.active, wanted: null }
+      return { ...state, active: event.data.active, wanted: null, logged: true }
     }
     if (event.type === 'request/header') {
       return { ...state, activeAtLastHeader: state.active }
@@ -180,6 +253,9 @@ export class PlanModeController extends Service {
   /** Validated deployment-owned guidance. */
   private readonly section: string
 
+  /** Whether newly created sessions pin plan mode active by default. */
+  private readonly defaultActive: boolean
+
   /**
    * Latest selection per session awaiting the next accepted in-turn pre-step.
    * `narrate` is true for user selections and false for the exit tool, whose
@@ -189,7 +265,9 @@ export class PlanModeController extends Service {
 
   constructor(ctx: Context, config: PlanModeConfig = { section: '' }) {
     super(ctx, 'planMode')
-    this.section = resolveConfig(config).section
+    const resolved = resolveConfig(config)
+    this.section = resolved.section
+    this.defaultActive = resolved.defaultActive
     let disposed = false
     // Pre-step is outside Session.append publication, so it can append the
     // log-only mode event inside an open turn without re-entering the session.
@@ -226,6 +304,22 @@ export class PlanModeController extends Service {
     })
 
     ctx.sessionProjections.register(planProjectionDefinition)
+
+    // A deployment opt-in pins plan mode active on a fresh session before the
+    // first step, so the guidance section is present from turn 1. Existing
+    // sessions are swept once for hot-reload safety; forked and resumed
+    // sessions keep the plan/mode events they already carry.
+    if (this.defaultActive) {
+      ctx.on('session/created', (session) => {
+        this.pinInitialPlanMode(session)
+      })
+      const sessions = ctx.get('sessions')
+      if (sessions !== undefined) {
+        for (const session of sessions.list()) {
+          this.pinInitialPlanMode(session)
+        }
+      }
+    }
 
     // The command child activates only when a command registry is composed.
     ctx.inject(['commands'], (commandCtx) => {
@@ -298,8 +392,9 @@ export class PlanModeController extends Service {
         if (!this.loggedActive(agent.session)) {
           throw new Error(`${EXIT_PLAN_MODE} is only available in plan mode`)
         }
-        if (!/^#\s+\S/.test(args.plan.trim())) {
-          throw new Error(`${EXIT_PLAN_MODE} requires a non-empty markdown plan starting with a # heading`)
+        const planFault = describePlanFault(args.plan)
+        if (planFault !== undefined) {
+          throw new Error(`${EXIT_PLAN_MODE} requires a markdown plan with a # heading: ${planFault}`)
         }
         const interaction = ctx.get('userQuestions')
         if (interaction === undefined) {
@@ -369,6 +464,20 @@ export class PlanModeController extends Service {
 
   private loggedActive(session: Session): boolean {
     return this.planState(session).active
+  }
+
+  /**
+   * Pin plan mode active on a session whose log carries no plan state, when
+   * the deployment opted into a creation-time default. Subagents are never
+   * pinned: a child owned by a live agent cannot open the exit review. Forked
+   * and resumed sessions keep the plan/mode events they already carry. The
+   * check reads the plan projection's `logged` bit instead of scanning the
+   * event history.
+   */
+  private pinInitialPlanMode(session: Session): void {
+    if (session.header.origin === 'subagent') return
+    if (this.planState(session).logged) return
+    session.append('plan/mode', { active: true })
   }
 
   private hasOpenTurn(session: Session): boolean {

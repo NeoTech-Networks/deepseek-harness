@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /** File-tree presentation over controlled directory watches and deferred listings. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent } from '@testing-library/react'
+import { act, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { makeTranslate, RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
 import type { RemoteFailure } from '@deepseek-ai/dsh-api-remotes/client'
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
@@ -315,5 +315,115 @@ describe('failureLine', () => {
   it('carries an unclassified failure\'s own message', () => {
     const failure = { code: 'remote/transport', message: 'socket closed' } as unknown as RemoteFailure
     expect(failureLine(t, failure)).toBe('读取失败：socket closed')
+  })
+})
+
+describe('new-session gestures', () => {
+  const SUB_LEVEL: DirLevel = {
+    entries: [
+      { name: 'service-pages', type: 'directory' },
+      { name: 'overlord', type: 'directory' },
+      { name: '.git', type: 'directory' },
+      { name: 'README.md', type: 'file', size: 1 },
+    ],
+    truncated: false,
+  }
+
+  async function mounted() {
+    const hands = mountBody()
+    await act(() => hands.script.watches.ready(ROOT))
+    await act(() => hands.script.settle({ ok: true, value: ROOT_LEVEL }))
+    const dir = hands.view.container.querySelector(`[data-files-path="${ROOT}/src"] > button`)!
+    return { ...hands, dir }
+  }
+
+  async function pick(view: ReturnType<typeof mountBody>['view'], target: Element, label: string): Promise<void> {
+    act(() => { fireEvent.contextMenu(target, { clientX: 40, clientY: 20 }) })
+    const entry = await waitFor(() => view.getByRole('menuitem', { name: label }))
+    act(() => { fireEvent.click(entry) })
+  }
+
+  it('"New session here" on a directory row adopts that directory', async () => {
+    const { view, dir, cap } = await mounted()
+    await pick(view, dir, zh['menu.newSessionHere'])
+    expect(cap.openDirectory).toHaveBeenCalledWith(`${ROOT}/src`)
+    expect(cap.openSubDirectories).not.toHaveBeenCalled()
+  })
+
+  it('the root header offers the same menu for the workspace root', async () => {
+    const { view, cap } = await mounted()
+    const header = view.container.querySelector('[data-files-path]')!.parentElement!
+    await pick(view, header, zh['menu.newSessionHere'])
+    expect(cap.openDirectory).toHaveBeenCalledWith(ROOT)
+  })
+
+  it('offers no menu when the Workspace services are not composed', async () => {
+    const hands = mountBody()
+    hands.cap.available.mockReturnValue(false)
+    await act(() => hands.script.watches.ready(ROOT))
+    await act(() => hands.script.settle({ ok: true, value: ROOT_LEVEL }))
+    const dir = hands.view.container.querySelector(`[data-files-path="${ROOT}/src"] > button`)!
+    act(() => { fireEvent.contextMenu(dir, { clientX: 1, clientY: 1 }) })
+    expect(hands.view.queryByRole('menuitem')).toBeNull()
+  })
+
+  it('the bulk flow lists sub-folders only, all ticked, and opens them under the inherited group', async () => {
+    const { view, dir, cap, script } = await mounted()
+    await pick(view, dir, zh['menu.newSessionEach'])
+    expect(script.outstanding()).toEqual([`${ROOT}/src`])
+    await act(() => script.settle({ ok: true, value: SUB_LEVEL }))
+    const dialog = await waitFor(() => view.getByRole('dialog'))
+    const rows = [...dialog.querySelectorAll('[data-files-bulk-path]')].map(row => row.getAttribute('data-files-bulk-path'))
+    expect(rows).toEqual([`${ROOT}/src/overlord`, `${ROOT}/src/service-pages`])
+    expect((dialog.querySelector('input:not([type])') as HTMLInputElement).value).toBe('sig-railway-services')
+    act(() => { fireEvent.click(view.getByRole('button', { name: zh['bulk.open'] })) })
+    await waitFor(() => {
+      expect(cap.openSubDirectories).toHaveBeenCalledWith([`${ROOT}/src/overlord`, `${ROOT}/src/service-pages`], 'sig-railway-services')
+    })
+    await waitFor(() => { expect(view.queryByRole('dialog')).toBeNull() })
+    expect(view.container.querySelector('[data-files-bulk-outcome]')?.textContent).toBe('已就绪 2 个工作区。')
+  })
+
+  it('deselecting narrows the open, select-all toggles, and a build without groups sends no label', async () => {
+    const { view, dir, cap, script } = await mounted()
+    cap.supportsGroups.mockReturnValue(false)
+    await pick(view, dir, zh['menu.newSessionEach'])
+    await act(() => script.settle({ ok: true, value: SUB_LEVEL }))
+    const dialog = await waitFor(() => view.getByRole('dialog'))
+    expect(dialog.querySelector('input:not([type])')).toBeNull()
+    const open = view.getByRole('button', { name: zh['bulk.open'] }) as HTMLButtonElement
+    const all = dialog.querySelector('[data-files-bulk-all]')!
+    act(() => { fireEvent.click(all) })
+    expect(open.disabled).toBe(true)
+    act(() => { fireEvent.click(all) })
+    expect(open.disabled).toBe(false)
+    act(() => { fireEvent.click(dialog.querySelector(`[data-files-bulk-path="${ROOT}/src/service-pages"]`)!) })
+    act(() => { fireEvent.click(open) })
+    await waitFor(() => {
+      expect(cap.openSubDirectories).toHaveBeenCalledWith([`${ROOT}/src/overlord`], '')
+    })
+  })
+
+  it('reports an empty folder, a failed listing, and a failed open', async () => {
+    const { view, dir, cap, script } = await mounted()
+    await pick(view, dir, zh['menu.newSessionEach'])
+    await act(() => script.settle({ ok: true, value: { entries: [], truncated: false } }))
+    const dialog = await waitFor(() => view.getByRole('dialog'))
+    expect(dialog.textContent).toContain(zh['bulk.none'])
+    expect((view.getByRole('button', { name: zh['bulk.open'] }) as HTMLButtonElement).disabled).toBe(true)
+    act(() => { fireEvent.click(view.getByRole('button', { name: zh['bulk.cancel'] })) })
+    await waitFor(() => { expect(view.queryByRole('dialog')).toBeNull() })
+
+    await pick(view, dir, zh['menu.newSessionEach'])
+    await act(() => script.settle({ ok: false, error: new RemoteError('workspace-file/not-found', 'gone', { path: `${ROOT}/src` }) }))
+    await waitFor(() => { expect(view.container.querySelector('[data-files-bulk-outcome]')?.textContent).toBe('gone') })
+
+    await pick(view, dir, zh['menu.newSessionEach'])
+    await act(() => script.settle({ ok: true, value: SUB_LEVEL }))
+    await waitFor(() => view.getByRole('dialog'))
+    cap.openSubDirectories.mockRejectedValueOnce(new Error('open blew up'))
+    act(() => { fireEvent.click(view.getByRole('button', { name: zh['bulk.open'] })) })
+    await waitFor(() => { expect(view.container.querySelector('[data-files-bulk-outcome]')?.textContent).toBe('open blew up') })
+    expect(view.getByRole('dialog')).toBeTruthy()
   })
 })

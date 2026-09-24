@@ -449,7 +449,7 @@ Source: [`packages/experimental/browser-use-stagehand-native/src/index.ts`](../p
 
 ### `ask_user_question`
 
-Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. Send one or more questions, each with a stable id that will be echoed in the answer.
+Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. Send one or more questions, each with a stable id that will be echoed in the answer. Keep each paragraph to at most two sentences and separate paragraphs with a blank line; put background, tradeoffs and lists in `detail` instead of lengthening the question line.
 
 ```json
 {
@@ -468,7 +468,11 @@ Ask the user a concise question when you need confirmation, a choice, or missing
           },
           "question": {
             "type": "string",
-            "description": "The specific question to ask the user."
+            "description": "The question itself, written as short paragraphs of at most two sentences each."
+          },
+          "detail": {
+            "type": "string",
+            "description": "Optional markdown rendered under the question. Use it for background, tradeoffs and lists rather than lengthening the question line."
           },
           "header": {
             "type": "string",
@@ -685,7 +689,7 @@ Deliveries belong to the calling Session; Web ui-deliverables supplies source-fi
 
 ### `pwsh`
 
-Execute a PowerShell command (`pwsh -Command`) and return its stdout/stderr. Each call runs in a fresh pwsh process: no state (cwd, variables, functions) persists between calls — pass `workdir` instead of using `cd`. Paths use native Windows form (`C:\...`); read environment variables with `$env:NAME`. Non-zero exits are reported as `[exit code: N]`. Current harness environment facts are exposed through managed `$env:DSH_*` variables; inspect them when needed. Commands may run under a file sandbox; a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]` — a policy denial, not a bug in the command; do not retry another way. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. Set `run_in_background: true` for long-running commands: the call returns a job id immediately; read its output with `job_output` and stop it with `job_kill`. A foreground command that reaches its timeout is not killed: it moves to the background the same way, returning its job id and the output so far.
+Execute a PowerShell command (`pwsh -Command`) and return its stdout/stderr. Each call runs in a fresh pwsh process: no state (cwd, variables, functions) persists between calls — pass `workdir` instead of using `cd`. Paths use native Windows form (`C:\...`); read environment variables with `$env:NAME`. Non-zero exits are reported as `[exit code: N]`. Current harness environment facts are exposed through managed `$env:DSH_*` variables; inspect them when needed. Commands may run under a file sandbox; a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]` — a policy denial, not a bug in the command; do not retry another way. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. On Windows a force-killed command settles as `[exit code: 1]` without a signal marker — treat it as an interruption, not a command failure. A command that opens with a `param(...)` declaration is wrapped in a script block for you, because the executor pins output encoding ahead of the command; a command that must open with `using` cannot run through `-Command` at all: write it to a `.ps1` file and run that with `pwsh -File <path>`. PowerShell strings: a backslash is NOT an escape and `$` always starts a variable or a scope qualifier, so a regex or pattern containing `$` (for example a `$script:` fragment) must be SINGLE-quoted (`-Pattern '^\$script:'`); inside double quotes PowerShell fails with `ParserError: Variable reference is not valid`. Set `run_in_background: true` for long-running commands: the call returns a job id immediately; read its output with `job_output` and stop it with `job_kill`. A foreground command that reaches its timeout is not killed: it moves to the background the same way, returning its job id and the output so far.
 
 ```json
 {

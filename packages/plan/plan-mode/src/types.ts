@@ -33,6 +33,8 @@ export interface PlanUnitState {
   running: { commandId: CommandId; wanted: boolean } | null
   /** Active state recorded by the latest `request/header`, or null. */
   activeAtLastHeader: boolean | null
+  /** Whether the log carries any `plan/mode` event (a creation-time default never overrides one). */
+  logged: boolean
 }
 
 declare module '@deepseek-ai/dsh-session-projection/types' {

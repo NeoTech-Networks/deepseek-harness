@@ -15,7 +15,7 @@ import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SidebarRightTabActions } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import { filesFace } from '../src/client/face.ts'
-import type { FilesInjected } from '../src/client/face.ts'
+import type { FilesInjected, FilesOpenCapability } from '../src/client/face.ts'
 import { FilesBody } from '../src/client/FilesBody.tsx'
 import type { FilesBodyProps } from '../src/client/FilesBody.tsx'
 import { zh } from '../src/client/locales.ts'
@@ -45,6 +45,29 @@ interface MockedTabActions {
   readonly close: Mock<SidebarRightTabActions['close']>
 }
 
+/** The Workspace capability as recording mocks. */
+export type MockedCapability = FilesOpenCapability & {
+  readonly available: Mock<FilesOpenCapability['available']>
+  readonly supportsGroups: Mock<FilesOpenCapability['supportsGroups']>
+  readonly openDirectory: Mock<FilesOpenCapability['openDirectory']>
+  readonly openSubDirectories: Mock<FilesOpenCapability['openSubDirectories']>
+  readonly groupFor: Mock<FilesOpenCapability['groupFor']>
+}
+
+/**
+ * A composed Workspace capability whose calls record and succeed.
+ * @returns the mocked capability; flip `available` or `supportsGroups` per spec.
+ */
+export function mockCapability(): MockedCapability {
+  return {
+    available: vi.fn<FilesOpenCapability['available']>(() => true),
+    supportsGroups: vi.fn<FilesOpenCapability['supportsGroups']>(() => true),
+    openDirectory: vi.fn<FilesOpenCapability['openDirectory']>(async () => {}),
+    openSubDirectories: vi.fn<FilesOpenCapability['openSubDirectories']>(async paths => paths.length),
+    groupFor: vi.fn<FilesOpenCapability['groupFor']>(() => 'sig-railway-services'),
+  }
+}
+
 /** What a spec holds after mounting: the rendered view and every hand on the tree. */
 export interface Mounted {
   readonly view: RenderResult
@@ -53,6 +76,7 @@ export interface Mounted {
   readonly face: FilesInjected
   readonly controller: AbortController
   readonly tabActions: MockedTabActions
+  readonly cap: MockedCapability
   /** Render a fresh body over the same store and face, as a tab switch remounts it. */
   readonly remount: () => RenderResult
 }
@@ -61,7 +85,8 @@ export interface Mounted {
 function harness(cwd: string | null) {
   const instance = createFilesStore().create()
   const script = scriptedList()
-  const face = filesFace(script.list, script.watch)(SESSION, instance.actions)
+  const cap = mockCapability()
+  const face = filesFace(script.list, script.watch, cap)(SESSION, instance.actions)
   const controller = new AbortController()
   onTestFinished(async () => {
     controller.abort()
@@ -92,7 +117,7 @@ function harness(cwd: string | null) {
     ...face,
     t: makeTranslate(zh),
   }
-  return { instance, script, face, controller, tabActions, shared }
+  return { instance, script, face, controller, tabActions, cap, shared }
 }
 
 /**

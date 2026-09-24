@@ -3,7 +3,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime, { RUN_CODE_NAME, defineContentToolFixture } from '@deepseek-ai/dsh-tools'
-import { Session, SessionId, type SessionEvent, type UserMessage } from '@deepseek-ai/dsh-session'
+import { Session, SessionId, SessionStore, type SessionEvent, type UserMessage } from '@deepseek-ai/dsh-session'
 import AgentRegistry, { agentEvents, type Agent } from '@deepseek-ai/dsh-agent'
 import { createScope } from '@deepseek-ai/dsh-scope'
 import UserQuestionService, {
@@ -192,13 +192,22 @@ describe('resolveConfig', () => {
   it('returns a detached plan config', () => {
     const config = { section: TEST_PLAN_SECTION }
     const resolved = resolveConfig(config)
-    expect(resolved).toEqual(config)
+    expect(resolved).toEqual({ section: TEST_PLAN_SECTION, defaultActive: false })
     expect(resolved).not.toBe(config)
   })
 
   it('rejects fields outside the plan policy config', () => {
     expect(() => resolveConfig({ section: TEST_PLAN_SECTION, tools: ['read'] } as unknown as PlanModeConfig))
-      .toThrow('unknown key(s) tools — config is { section }')
+      .toThrow('unknown key(s) tools - config is { section, defaultActive }')
+  })
+
+  it('accepts and validates the optional defaultActive flag', () => {
+    expect(resolveConfig({ section: TEST_PLAN_SECTION, defaultActive: true }))
+      .toEqual({ section: TEST_PLAN_SECTION, defaultActive: true })
+    // A YAML string where a boolean belongs reaches the plugin untyped.
+    const wrongType: PlanModeConfig = { section: TEST_PLAN_SECTION }
+    Reflect.set(wrongType, 'defaultActive', 'yes')
+    expect(() => resolveConfig(wrongType)).toThrow('`defaultActive` must be a boolean when provided')
   })
 })
 
@@ -218,6 +227,62 @@ describe('foldPlanMode', () => {
     session.append('plan/mode', { active: false })
     expect(foldPlanMode(session.snapshotEvents(), 1)).toBe(true)
     expect(foldPlanMode(session.snapshotEvents(), 0)).toBe(false)
+  })
+})
+
+describe('defaultActive', () => {
+  async function setupPinning(config: PlanModeConfig): Promise<Context> {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await mountProjectionSeam(ctx)
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(PlanModeController, config)
+    return ctx
+  }
+
+  it('pins a freshly created session active when the deployment opts in', async () => {
+    const ctx = await setupPinning({ section: TEST_PLAN_SECTION, defaultActive: true })
+    const session = ctx.sessions.create(SessionId('default-active-fresh'))
+    expect(foldPlanMode(session.snapshotEvents())).toBe(true)
+    expect(session.snapshotEvents().filter(event => event.type === 'plan/mode')).toHaveLength(1)
+    expect(ctx.sessionProjections.stateOf(session, 'plan')?.logged).toBe(true)
+  })
+
+  it('leaves fresh sessions inactive when defaultActive is omitted', async () => {
+    const ctx = await setupPinning({ section: TEST_PLAN_SECTION })
+    const session = ctx.sessions.create(SessionId('default-active-off'))
+    expect(foldPlanMode(session.snapshotEvents())).toBe(false)
+    expect(session.snapshotEvents().some(event => event.type === 'plan/mode')).toBe(false)
+  })
+
+  it('skips subagent sessions', async () => {
+    const ctx = await setupPinning({ section: TEST_PLAN_SECTION, defaultActive: true })
+    const session = ctx.sessions.create(SessionId('default-active-subagent'), { meta: { origin: 'subagent' } })
+    expect(foldPlanMode(session.snapshotEvents())).toBe(false)
+  })
+
+  it('preserves a logged inactive plan/mode event on resume', async () => {
+    const ctx = await setupPinning({ section: TEST_PLAN_SECTION, defaultActive: true })
+    const parent = Session.create(SessionId('default-active-parent'))
+    parent.append('plan/mode', { active: false })
+    const resumed = ctx.sessions.create(SessionId('default-active-resume'), { seed: parent.snapshotEvents() })
+    expect(foldPlanMode(resumed.snapshotEvents())).toBe(false)
+    expect(resumed.snapshotEvents().filter(event => event.type === 'plan/mode')).toHaveLength(1)
+  })
+
+  it('pins pre-existing sessions once at mount (hot-reload sweep)', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    const preExisting = ctx.sessions.create(SessionId('default-active-sweep'))
+    const optedOut = ctx.sessions.create(SessionId('default-active-sweep-off'))
+    optedOut.append('plan/mode', { active: false })
+    await mountProjectionSeam(ctx)
+    await ctx.plugin(SystemPrompt)
+    await ctx.plugin(ToolRuntime)
+    await ctx.plugin(PlanModeController, { section: TEST_PLAN_SECTION, defaultActive: true })
+    expect(foldPlanMode(preExisting.snapshotEvents())).toBe(true)
+    expect(foldPlanMode(optedOut.snapshotEvents())).toBe(false)
   })
 })
 
@@ -864,13 +929,54 @@ describe('exit_plan_mode', () => {
 
   it('rejects an empty or heading-less plan before asking the reviewer', async () => {
     const { ctx, agent, asked } = await setupWithReview({ selected: ['Approve'] })
-    for (const plan of ['', 'do things']) {
-      const result = await callExit(ctx, agent, plan)
-      expect(result.isError).toBe(true)
-      expect(result.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a non-empty markdown plan starting with a # heading' }])
-    }
+    const empty = await callExit(ctx, agent, '')
+    expect(empty.isError).toBe(true)
+    expect(empty.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the plan is empty' }])
+
+    const headingless = await callExit(ctx, agent, 'do things')
+    expect(headingless.isError).toBe(true)
+    expect(headingless.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the plan has no markdown heading at all (it opens "do things")' }])
+
+    // A plan with sub-headings but no title is still refused, and the message
+    // names the highest heading it found so the model adds a title instead of
+    // rewriting the plan.
+    const subheading = await callExit(ctx, agent, '### Contract gap list\n\nbody')
+    expect(subheading.isError).toBe(true)
+    expect(subheading.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the plan has no "#" title; its highest heading is "### Contract gap list"' }])
+
+    // A `#` line inside a fenced block is a shell comment, not a title.
+    const fencedOnly = await callExit(ctx, agent, 'setup notes\n\n```sh\n# Real title\n```\n')
+    expect(fencedOnly.isError).toBe(true)
+    expect(fencedOnly.content).toEqual([{ type: 'text', text: 'Error: exit_plan_mode requires a markdown plan with a # heading: the plan has no markdown heading at all (it opens "setup notes")' }])
+
     expect(asked).toHaveLength(0)
     expect(foldPlanMode(agent.session.snapshotEvents())).toBe(true)
+  })
+
+  it('accepts a plan whose # title follows any lead-in', async () => {
+    // Every shape here was refused at some point by a check that tested one
+    // line instead of looking for a title. The blockquote case was a
+    // deployment's operator-metadata block (fixed 2026-09-08); the rest are
+    // how models actually open a plan, and each one cost a whole turn.
+    for (const plan of [
+      '> _Operator metadata only._\n\n# Real title\n\nbody',
+      '\n\n# Real title\n\nbody',
+      '> one\n> two\n\n# Real title\n\nbody',
+      '_Note: this plan builds on an earlier review._\n\n# Real title\n\nbody',
+      'This plan covers two repos.\n\n# Real title\n\nbody',
+      '- context one\n- context two\n\n# Real title\n\nbody',
+      '<!-- generated from the review -->\n\n# Real title\n\nbody',
+      '```sh\n# not a title\n```\n\n# Real title\n\nbody',
+    ]) {
+      const { ctx, agent, asked } = await setupWithReview({ selected: ['Approve'] })
+      const result = await callExit(ctx, agent, plan)
+      // Accepted: the validator let it through and the reviewer was asked.
+      // (Leaving plan mode itself lands at the next accepted pre-step, which
+      // is asserted by the approval tests, not here.)
+      expect(result.isError).toBeFalsy()
+      expect(asked).toHaveLength(1)
+      expect(asked[0]?.questions[0]?.detail).toBe(plan)
+    }
   })
 
   it('degrades to the manual exit when no user-questions seam is composed', async () => {

@@ -22,9 +22,12 @@ export const zh = {
   'input.commands': '添加文件或调用指令',
   'input.file': '文件',
   'input.stop': '停止生成',
+  'input.shortcutUnavailable': '当前会话无法接受输入，快捷键暂不可用',
   'input.send': '发送消息',
   'input.send.queue': '排队发送',
   'input.send.steer': '插话发送',
+  'input.chordHint': 'Ctrl+Shift+S 保存状态 · Ctrl+Shift+P 发布到生产',
+  'input.shortcutMoved': '快捷键已更改：Ctrl+Shift+S 保存状态，Ctrl+Shift+P 发布到生产',
   'attachment.pending': '待发送附件',
   'attachment.scrollLeft': '向左滚动附件',
   'attachment.scrollRight': '向右滚动附件',
@@ -356,6 +359,8 @@ export const zh = {
   'terminal.expandRest': '… 其余 {n} 行',
   'terminal.sendInput': '（发送输入）',
   'terminal.session': '终端 {sessionId}',
+  'footer.dashboard': '仪表盘：',
+  'footer.designProject': '设计项目：',
 } satisfies Record<string, string>
 
 /** The conversation namespace key union. */
@@ -376,9 +381,12 @@ export const en = {
   'input.commands': 'Add files or run commands',
   'input.file': 'File',
   'input.stop': 'Stop generating',
+  'input.shortcutUnavailable': 'This session cannot accept input right now, so the shortcut did nothing',
   'input.send': 'Send message',
   'input.send.queue': 'Queue message',
   'input.send.steer': 'Steer message',
+  'input.chordHint': 'Ctrl+Shift+S saves state · Ctrl+Shift+P deploys',
+  'input.shortcutMoved': 'Composer shortcuts changed: Ctrl+Shift+S saves state, Ctrl+Shift+P deploys',
   'attachment.pending': 'Pending attachments',
   'attachment.scrollLeft': 'Scroll attachments left',
   'attachment.scrollRight': 'Scroll attachments right',
@@ -712,4 +720,6 @@ export const en = {
   // aligned with these English values.
   'terminal.sendInput': '(send input)',
   'terminal.session': 'Terminal {sessionId}',
+  'footer.dashboard': 'Dashboard:',
+  'footer.designProject': 'Design Project:',
 } satisfies Record<ConversationKey, string>

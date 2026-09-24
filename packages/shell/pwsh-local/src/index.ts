@@ -48,6 +48,42 @@ export const ENV_OVERRIDES = {
 export const ENCODING_PREAMBLE =
   '[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false); $OutputEncoding = [System.Text.UTF8Encoding]::new($false); '
 
+/**
+ * Whether a command opens with a `param(...)` declaration.
+ *
+ * `param(...)` must be the FIRST statement of the script text, and the UTF-8
+ * preamble rides line 1 of every command. Without this check a param-led
+ * command reaches PowerShell with `param` no longer first and fails with
+ * `param: The term 'param' is not recognized as a name of a cmdlet, function,
+ * script file, or executable program.` (the 2026-09-13 defect). Leading
+ * whitespace and whole-line comments are skipped, because a real script may
+ * carry either above the declaration.
+ *
+ * @param command - the caller's command text.
+ * @returns whether the command opens with a param declaration.
+ */
+function isParamLed(command: string): boolean {
+  const stripped = command.replace(/^(?:\s+|#[^\n]*\n)+/, '')
+  return /^param\s*\(/i.test(stripped)
+}
+
+/**
+ * Build line 1's script text: the encoding preamble followed by the caller's
+ * command, or, for a param-led command, the same command inside a script block
+ * where `param` keeps its meaning.
+ *
+ * The closing brace rides its own line so a trailing line comment in the
+ * command cannot swallow it.
+ *
+ * @param command - the caller's command text.
+ * @returns the text handed to `-Command`.
+ */
+export function commandText(command: string): string {
+  return isParamLed(command)
+    ? `${ENCODING_PREAMBLE}& { ${command}\n}`
+    : `${ENCODING_PREAMBLE}${command}`
+}
+
 /** Default SIGTERM→SIGKILL grace period (the `graceMs` config). */
 const DEFAULT_GRACE_MS = 3_000
 
@@ -191,7 +227,7 @@ export class PwshLocalExecutor extends ShellExecutor {
    * `@deepseek-ai/dsh-pwsh-sandbox`).
    */
   protected argv(spec: ShellExecSpec): string[] {
-    return [this.pwshPath, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', `${ENCODING_PREAMBLE}${spec.command}`]
+    return [this.pwshPath, '-NoLogo', '-NoProfile', '-NonInteractive', '-Command', commandText(spec.command)]
   }
 
   /** Map one resolved spec plus its argv onto a fully-specified subprocess spawn. */
