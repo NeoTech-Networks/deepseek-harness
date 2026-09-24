@@ -1,0 +1,117 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-size: var(--dsw-alias-font-size-sm, 12px);
+  color: var(--dsw-alias-text-primary, #1f2328);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--dsw-alias-border-secondary, rgb(0 0 0 / 8%));
+}
+
+.title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 0 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 8px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--dsw-alias-fill-secondary, rgb(0 0 0 / 4%));
+}
+
+.rowName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rootRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 6px;
+}
+
+.rootRow .row {
+  font-weight: 600;
+}
+
+.other {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.note {
+  padding: 4px 8px 4px 24px;
+  opacity: 0.6;
+}
+
+.failure {
+  padding: 4px 8px 4px 24px;
+  color: var(--dsw-alias-text-danger, #b3261e);
+}
+
+.addRow {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--dsw-alias-border-secondary, rgb(0 0 0 / 8%));
+}
+
+.addRow input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.preview {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  font-family: var(--dsw-alias-font-mono, ui-monospace, monospace);
+  font-size: var(--dsw-alias-font-size-sm, 12px);
+  white-space: pre;
+  tab-size: 2;
+}
+
+.previewPath {
+  position: sticky;
+  top: 0;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--dsw-alias-border-secondary, rgb(0 0 0 / 8%));
+  background: var(--dsw-alias-bg-primary, #fff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.75;
+}

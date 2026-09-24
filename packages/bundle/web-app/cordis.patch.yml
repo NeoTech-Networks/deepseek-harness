@@ -274,6 +274,13 @@
     - id: ui-sidebar-files
       name: '@deepseek-ai/dsh-client-ui-sidebar-files'
 
+    # The right Sidebar's pinned-directory explorer: roots kept on the
+    # `pinned-files` entry, identical in every Session and Workspace, plus its
+    # own file preview. It opens itself once per Session only when that entry's
+    # live `autoOpen` field is true (default false).
+    - id: ui-sidebar-explorer
+      name: '@deepseek-ai/dsh-client-ui-sidebar-explorer'
+
     - id: ui-settings
       name: '@deepseek-ai/dsh-client-ui-settings'
 
