@@ -5356,6 +5356,9 @@ importers:
       '@deepseek-ai/dsh-api-remotes':
         specifier: workspace:*
         version: link:../../api/remotes
+      '@deepseek-ai/dsh-api-workspace-controller':
+        specifier: workspace:*
+        version: link:../../api/workspace-controller
       '@deepseek-ai/dsh-api-workspace-files':
         specifier: workspace:*
         version: link:../../api/workspace-files
@@ -5389,6 +5392,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:*
         version: link:../ui-slots
+      '@deepseek-ai/dsh-client-ui-workspace':
+        specifier: workspace:*
+        version: link:../ui-workspace
       '@deepseek-ai/dsh-session':
         specifier: workspace:*
         version: link:../../core/session

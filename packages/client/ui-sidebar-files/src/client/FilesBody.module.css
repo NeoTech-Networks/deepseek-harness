@@ -176,3 +176,74 @@
 .titleIcon {
   flex: none;
 }
+
+/* The directory menu's zero-size anchor: placement comes from getAnchorRect. */
+.menuAnchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* "New session in each sub-folder" dialog. */
+.bulkBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 260px;
+}
+
+.bulkField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bulkLabel {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
+
+.bulkList {
+  max-height: 320px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.bulkRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 3px 4px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.bulkRow:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.bulkRow input {
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
+.bulkFooter {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.bulkOutcome {
+  padding: 8px 10px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+}
