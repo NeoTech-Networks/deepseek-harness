@@ -82,7 +82,7 @@ describe('the workspace-links fold', () => {
     expect(workspaceLinksProjection.apply(state, userEvent(4, '   '))).toBe(state)
   })
 
-  it('refuses a plugin-authored message, which is not the operator speaking', () => {
+  it('refuses a non-user message, which is not the operator speaking', () => {
     const state = fold([])
     const event = {
       type: 'user/message',
@@ -90,7 +90,9 @@ describe('the workspace-links fold', () => {
       time: 1,
       data: createUserMessage({
         content: [{ type: 'text', text: URL }],
-        source: { kind: 'plugin', plugin: 'test' },
+        // 0.1.7 dropped the shared `plugin` source kind; any non-user kind
+        // stands in for a message the operator did not type.
+        source: { kind: 'system-prompt' },
       }),
       surfaceOp: 'append',
     } as SessionEvent
