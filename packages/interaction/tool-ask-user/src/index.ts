@@ -14,7 +14,6 @@ export const name = 'tool-ask-user'
 export const inject = ['tools', 'userQuestions']
 
 const description = 'Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. '
-  + 'Send one or more questions, each with a stable id that will be echoed in the answer. '
   + 'Keep each paragraph to at most two sentences and separate paragraphs with a blank line; '
   + 'put background, tradeoffs and lists in `detail` instead of lengthening the question line.'
 

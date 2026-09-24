@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-llm-route-fallback",
   "description": "Tool-schema route fallback: move a request off the flash route onto the pro route instead of shrinking its tool schemas",
-  "version": "0.1.7-rc.1",
+  "version": "0.1.7-rc.2",
   "publishConfig": {
     "access": "public"
   },
