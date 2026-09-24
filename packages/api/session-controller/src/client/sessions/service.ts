@@ -30,6 +30,10 @@ export interface SessionSummary {
   /** Human-facing label: durable title, project basename, then session id. */
   displayTitle: string
   cwd?: string
+  /** Front-door URL of the dashboard this Session's workspace is associated with; absent when there is no association. */
+  dashboardUrl?: string
+  /** Name of the Claude Design project behind that dashboard; absent when there is no association. */
+  designProject?: string
   parentId?: SessionId
   /** Coarse durable origin for navigation filtering; not a continuation capability. */
   origin?: 'subagent'
@@ -625,6 +629,8 @@ export class ClientSessions implements ISessions {
           : { projectionValues: entry.projectionValues }),
         ...(entry.title !== undefined ? { title: entry.title } : {}),
         ...(entry.cwd !== undefined ? { cwd: entry.cwd } : {}),
+        ...(entry.dashboardUrl !== undefined ? { dashboardUrl: entry.dashboardUrl } : {}),
+        ...(entry.designProject !== undefined ? { designProject: entry.designProject } : {}),
         ...(entry.parentSessionId !== undefined ? { parentId: entry.parentSessionId } : {}),
         ...(entry.origin !== undefined ? { origin: entry.origin } : {}),
       }

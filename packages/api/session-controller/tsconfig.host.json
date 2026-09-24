@@ -20,7 +20,9 @@
     "src/media-references.ts",
     "src/model-selection-projection.ts",
     "src/archived-session-gate.ts",
-    "src/skill-catalog.ts"
+    "src/skill-catalog.ts",
+    "src/workspace-links.ts",
+    "src/workspace-links-projection.ts"
   ],
   "references": [
     { "path": "../../../vendor/cordis" },
