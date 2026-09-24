@@ -2215,6 +2215,8 @@ export interface Config {
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Pin plan mode active on every newly created non-subagent session whose log carries no plan state. Defaults to false. */
+  defaultActive?: boolean
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-plan-mode -->
