@@ -148,7 +148,7 @@ if (result.timedOut) console.log('timed out after', result.timeoutMs)
 - **命令字符串是 PowerShell 文本**——`-Command` 域没有 shell 引号层，但面向模型的命令由 PowerShell 自己解析，因此 PowerShell 语法错误是命令失败，而非启动失败。
 - **后台提供方失败提示就是整条 stderr 流**——`SubprocessHandle.done` 可能在目标命令开始执行前或后被拒绝，而 subprocess 服务不会为从未上报结果的目标命令 缓冲任何输出，因此执行器把不声明失败阶段的 `subprocess failed before reporting an outcome: …` 作为观测到的 stderr 流提供（偏移读取方按各自偏移重读），并只折入恰好一个 `readOutput()` 增量；丢弃了该增量的消耗式读取方只能经 `observed.stderr` 恢复它。
 - **Windows 终止不报告信号**——被强制终止的进程以退出码 1、`signal: null` 结算，因此基于信号的状态分类在 Windows 上不适用；`kill()` 发起的停止仍会直接标记为 `killed`。
-- **编码 preamble 位于命令之前**——PowerShell 要求 `param(...)`、`#requires` 与 `using` 语句位于脚本最顶部，因此以其中一种开头的命令无法在 UTF-8 输出 preamble 下运行；`param(...)` 脚本请包进 `& { … }`，`using`/`#requires` 脚本请改从文件运行。
+- **编码 preamble 位于命令之前**——PowerShell 要求 `param(...)`、`#requires` 与 `using` 语句位于脚本最顶部，而 UTF-8 输出 preamble 占据第 1 行。以 `param(...)` 开头的命令会被自动包进脚本块，因此无需改动即可运行；`#requires` 在 `-Command` 下不生效，`using` 语句必须改从文件运行。
 - **Windows PowerShell 5.1 下的非 ASCII stdin 可能被错误解码**——preamble 只固定输出编码；`[Console]::InputEncoding` 保持主机默认，因为在重定向 stdin 下设置它会抛出异常；pwsh 7 默认 UTF-8，不受影响。
 
 <a id="dev-note"></a>
