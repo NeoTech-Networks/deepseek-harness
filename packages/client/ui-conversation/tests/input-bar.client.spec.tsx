@@ -11,7 +11,7 @@
 import './control-row-dom.ts'
 import type { InboxState } from '@deepseek-ai/dsh-agent/types'
 import type { GlobalStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
-import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import { $getRoot, $isTextNode } from 'lexical'
 import {
@@ -78,6 +78,8 @@ interface BenchOptions {
   subagent?: Exclude<SessionSnapshot['subagent'], null>
   disabled?: boolean
   inert?: boolean
+  /** Drop the machine faces entirely, the bar's no-current-Session state. */
+  noMachine?: boolean
   blocked?: { readonly reason: string }
   workspacePickerOpen?: boolean
   onRequestWorkspace?: () => void
@@ -192,7 +194,7 @@ function bench(over?: BenchOptions) {
           : key === 'imageLimits' ? over?.imageLimits
             : key === 'contextPressure' ? over?.contextPressure : undefined)),
     useInput: bindSnapshotSelector(shell.state),
-    inputActions: shell.actions,
+    inputActions: over?.noMachine === true ? undefined : shell.actions,
     keyboard: shell,
     addFiles: over?.addFiles ?? (() => null),
     useFileUploads: bindSnapshotSelector(createSnapshotStore<DraftFileUploads>(over?.fileUploads ?? {})),
@@ -576,6 +578,158 @@ describe('image draft rail', () => {
       ])
     })
     expect(result.view.getByRole('alert').textContent).toContain('图片读取服务不可用')
+  })
+})
+
+describe('operator shortcuts', () => {
+  const chord = (code: string, extra: KeyboardEventInit = {}): KeyboardEvent =>
+    new window.KeyboardEvent('keydown', { code, ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true, ...extra })
+
+  it('Ctrl+Shift+S fills the composer with the save-state command and submits it', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('KeyS'))
+    expect(sink).toHaveBeenCalledWith('/save-state', [], 'queue', expect.any(AbortSignal))
+  })
+
+  it('Ctrl+Shift+P fills the composer with the production promote phrase and submits it', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('KeyP'))
+    expect(sink).toHaveBeenCalledWith('deploy to production', [], 'queue', expect.any(AbortSignal))
+  })
+
+  // Requires BOTH Ctrl and Shift. A lone Ctrl+S or Shift+S must not fire, and
+  // neither may a bare key, because those are ordinary editor keystrokes.
+  it('does NOT act without both Ctrl and Shift', () => {
+    const { sink } = bench({})
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', ctrlKey: true, bubbles: true, cancelable: true }))
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', shiftKey: true, bubbles: true, cancelable: true }))
+    fireEvent(window, new window.KeyboardEvent('keydown', { code: 'KeyS', bubbles: true, cancelable: true }))
+    expect(sink).not.toHaveBeenCalled()
+  })
+
+  it('ignores the chord with an extra modifier or for another key', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('KeyS', { altKey: true }))
+    fireEvent(window, chord('KeyS', { metaKey: true }))
+    fireEvent(window, chord('KeyA'))
+    expect(sink).not.toHaveBeenCalled()
+  })
+
+  it('refuses out loud while the composer is inert (no live session)', () => {
+    const { sink, view } = bench({ inert: true })
+    fireEvent(window, chord('KeyS'))
+    expect(sink).not.toHaveBeenCalled()
+    expect(view.getByRole('alert').textContent).toBeTruthy()
+  })
+
+  // Measured 2026-09-11 against the installed build: 26 of 181 promote-phrase
+  // submissions in the session logs were doubles, 22 of them 3 to 10 ms apart,
+  // each pair carrying two client request ids. A held chord on a keydown
+  // binding auto-repeats, and an OS repeat arrives with repeat: true.
+  //
+  // Only Date is faked: the latch reads Date.now(), and stepping the clock past
+  // it per case is what keeps the module-scope latch from leaking between
+  // tests. Real timers are left alone so Lexical and React schedule normally.
+  let clock = Date.parse('2026-09-11T12:00:00.000Z')
+
+  beforeEach(() => {
+    clock += 60_000
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(clock)
+  })
+
+  afterEach(() => { vi.useRealTimers() })
+
+  it('ignores an auto-repeat of the held chord', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('KeyP', { repeat: true }))
+    fireEvent(window, chord('KeyS', { repeat: true }))
+    expect(sink).not.toHaveBeenCalled()
+  })
+
+  it('submits once when the same chord arrives twice in the same millisecond', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('KeyP'))
+    fireEvent(window, chord('KeyP'))
+    expect(sink).toHaveBeenCalledTimes(1)
+  })
+
+  it('still submits a deliberate second chord after the latch window', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('KeyP'))
+    vi.setSystemTime(clock + 400)
+    fireEvent(window, chord('KeyP'))
+    expect(sink).toHaveBeenCalledTimes(2)
+  })
+
+  // A refusal is not a send: the inert toast must not arm the latch, or a press
+  // during a takeover would swallow the operator's next real press.
+  it('does not arm the latch when it refuses an inert composer', () => {
+    const inert = bench({ inert: true })
+    fireEvent(window, chord('KeyS'))
+    expect(inert.sink).not.toHaveBeenCalled()
+    const live = bench({})
+    fireEvent(window, chord('KeyS'))
+    expect(live.sink).toHaveBeenCalledTimes(1)
+  })
+
+  // The two-listener mechanism, reproduced: every mounted composer listens on
+  // the window, so one chord reaches all of them. The latch is module scope
+  // rather than a per-instance ref precisely because a ref cannot see its twin.
+  it('submits once when two composers are mounted in one window', () => {
+    const first = bench({})
+    const second = bench({})
+    fireEvent(window, chord('KeyP'))
+    expect(first.sink.mock.calls.length + second.sink.mock.calls.length).toBe(1)
+  })
+
+  // The bar renders the same DOM inert while no Session is current. The chord
+  // listener used to be absent in that state, which is indistinguishable from a
+  // broken shortcut. Measured 2026-09-11: that silence is what the operator
+  // spent hours on after the chord moved off Alt.
+  it('answers the chord out loud when the machine faces are absent (no live session)', () => {
+    const { sink, view } = bench({ noMachine: true })
+    fireEvent(window, chord('KeyS'))
+    expect(sink).not.toHaveBeenCalled()
+    expect(view.getByRole('alert').textContent).toBe('当前会话无法接受输入，快捷键暂不可用')
+  })
+
+  // Chromium derives `code` from the hardware scan code, so a keyboard, KVM or
+  // remote session that carries none delivers the letter with an EMPTY code and
+  // the chord would otherwise die silently.
+  it('resolves the chord from the typed character when the scan code is missing', () => {
+    const { sink } = bench({})
+    fireEvent(window, chord('', { key: 's' }))
+    expect(sink).toHaveBeenLastCalledWith('/save-state', [], 'queue', expect.any(AbortSignal))
+    vi.setSystemTime(clock + 400)
+    fireEvent(window, chord('', { key: 'p' }))
+    expect(sink).toHaveBeenLastCalledWith('deploy to production', [], 'queue', expect.any(AbortSignal))
+  })
+
+  // The chord moved off Alt in 0.1.5-rc.2. Alt+letter is delivered as a keyup
+  // carrying altKey on Windows, so the old keys are answerable there without
+  // touching the menu bar the Alt keydown wakes.
+  it('names the new keys when the old Alt chord is released, and never submits', () => {
+    const { sink, view } = bench({})
+    fireEvent(window, new window.KeyboardEvent('keyup', {
+      code: 'KeyP', key: 'p', altKey: true, bubbles: true, cancelable: true,
+    }))
+    expect(sink).not.toHaveBeenCalled()
+    expect(view.getByRole('alert').textContent).toContain('Ctrl+Shift+P')
+  })
+
+  it('stays quiet for a bare Alt release, another Alt letter, and the current chord', () => {
+    const { view } = bench({})
+    fireEvent(window, new window.KeyboardEvent('keyup', {
+      code: 'AltLeft', key: 'Alt', bubbles: true, cancelable: true,
+    }))
+    fireEvent(window, new window.KeyboardEvent('keyup', {
+      code: 'KeyA', key: 'a', altKey: true, bubbles: true, cancelable: true,
+    }))
+    fireEvent(window, new window.KeyboardEvent('keyup', {
+      code: 'KeyS', key: 's', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true,
+    }))
+    expect(view.queryByRole('alert')).toBeNull()
   })
 })
 
