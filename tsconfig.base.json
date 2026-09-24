@@ -224,6 +224,8 @@
       "@deepseek-ai/dsh-api-workspace-files": ["./packages/api/workspace-files/src"],
       "@deepseek-ai/dsh-api-workspace-files/types": ["./packages/api/workspace-files/src/types.ts"],
       "@deepseek-ai/dsh-api-workspace-files/client": ["./packages/api/workspace-files/src/client/index.ts"],
+      "@deepseek-ai/dsh-account-usage/types": ["./packages/llm/account-usage/src/types.ts"],
+      "@deepseek-ai/dsh-account-usage/client": ["./packages/llm/account-usage/src/client/index.ts"],
       "@deepseek-ai/dsh-client-resources": ["./packages/client/resources/src"],
       "@deepseek-ai/dsh-client-resources/client": ["./packages/client/resources/src/client"],
       "@deepseek-ai/dsh-client-ui-sidebar-files": ["./packages/client/ui-sidebar-files/src"],
@@ -326,6 +328,7 @@
       "@deepseek-ai/dsh-session-format-catalog/message-projections": ["./packages/session/session-format-catalog/src/message-projections.ts"],
       "@deepseek-ai/dsh-native-command/types": ["./packages/util/native-command/src/types.ts"],
       // BEGIN generated package aliases — pnpm run gen-tsconfig-paths
+      "@deepseek-ai/dsh-account-usage": ["./packages/llm/account-usage/src"],
       "@deepseek-ai/dsh-acp": ["./packages/acp/acp/src"],
       "@deepseek-ai/dsh-acp-app": ["./packages/bundle/acp-app/src"],
       "@deepseek-ai/dsh-agent": ["./packages/core/agent/src"],

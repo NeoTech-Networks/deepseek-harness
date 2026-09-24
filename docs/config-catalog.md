@@ -9,6 +9,32 @@ This file is GENERATED from source (`scripts/gen-config-catalog.ts`) and verifie
 
 A `Requires:` line lists the service keys the plugin `inject`s: its `cordis.yml` tree must also load providers for those services. Scope is the harness tier (`packages/`); the vendored cordis plugins a config tree may also load (the console logger, …) are pinned upstream source ([vendoring policy](../vendor/README.md)) and not catalogued here.
 
+<a id="deepseek-aidsh-account-usage"></a>
+
+## `@deepseek-ai/dsh-account-usage`
+
+Requires: `typert`
+
+```ts config-catalog
+/** Where the account's usage report lives and how hard this service may ask. */
+export interface Config {
+  /** Full URL of the usage report. */
+  readonly endpoint: string
+  /** Beta opt-in header value sent with the request. */
+  readonly beta: string
+  /** Registered name of the plugin owning the credential record. */
+  readonly credentialScope: string
+  /** That plugin's own addressing unit for the record, its provider route key. */
+  readonly credentialId: string
+  /** Milliseconds one answer stays good for; every caller shares it. */
+  readonly cacheMs: number
+  /** Milliseconds before one read of the report is abandoned. */
+  readonly timeoutMs: number
+}
+```
+
+Source: [`packages/llm/account-usage/src/index.ts:58`](../packages/llm/account-usage/src/index.ts)
+
 <a id="deepseek-aidsh-acp"></a>
 
 ## `@deepseek-ai/dsh-acp`

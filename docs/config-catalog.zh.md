@@ -11,6 +11,32 @@
 
 `Requires:` 行列出插件通过 `inject` 注入的服务键：其 `cordis.yml` 树还必须加载这些服务的提供者。范围限定为 harness 层级（`packages/`）；配置树还可能加载的 vendored cordis 插件（控制台日志记录器等）固定为上游源代码（参见 [vendoring policy](../vendor/README.md)），未收录于此目录。
 
+<a id="deepseek-aidsh-account-usage"></a>
+
+## `@deepseek-ai/dsh-account-usage`
+
+需要： `typert`
+
+```ts config-catalog
+/** Where the account's usage report lives and how hard this service may ask. */
+export interface Config {
+  /** Full URL of the usage report. */
+  readonly endpoint: string
+  /** Beta opt-in header value sent with the request. */
+  readonly beta: string
+  /** Registered name of the plugin owning the credential record. */
+  readonly credentialScope: string
+  /** That plugin's own addressing unit for the record, its provider route key. */
+  readonly credentialId: string
+  /** Milliseconds one answer stays good for; every caller shares it. */
+  readonly cacheMs: number
+  /** Milliseconds before one read of the report is abandoned. */
+  readonly timeoutMs: number
+}
+```
+
+来源： [`packages/llm/account-usage/src/index.ts:58`](../packages/llm/account-usage/src/index.ts)
+
 <a id="deepseek-aidsh-acp"></a>
 
 ## `@deepseek-ai/dsh-acp`
