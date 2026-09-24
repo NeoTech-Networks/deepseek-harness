@@ -106,6 +106,9 @@
     },
     {
       "path": "../../credentials/deepseek-account"
+    },
+    {
+      "path": "../../llm/account-usage/tsconfig.host.json"
     }
   ]
 }
