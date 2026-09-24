@@ -354,6 +354,13 @@ Host service backing the generated `ctx.remote.workspace` namespace.
 @Remote('rename') rename(request: WorkspaceRenameRequest): Promise<WorkspaceValue>
 
 /**
+ * Assign or clear one Workspace grouping label.
+ * @param request - Workspace identity and proposed group; blank clears.
+ * @returns the updated Workspace projection.
+ */
+@Remote('setGroup') setGroup(request: WorkspaceSetGroupRequest): Promise<WorkspaceValue>
+
+/**
  * Remove one Workspace registration while retaining files and Sessions.
  * @param request - Workspace identity to remove.
  * @returns deletion confirmation.

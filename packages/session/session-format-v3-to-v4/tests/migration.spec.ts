@@ -75,6 +75,7 @@ describe('V3 to V4 source preservation', () => {
     const before = structuredClone(rows)
     expect(migrate(rows)).toEqual({ events: rows, cut: 0 })
     expect(restoreHistorical(rows, header).events).toEqual(rows)
+    expect(restore(rows).events).toEqual(rows)
     expect(rows).toEqual(before)
   })
 

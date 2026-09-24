@@ -14,7 +14,7 @@ import type { WorkspaceBrowserInjected, WorkspacePickerInjected } from '@deepsee
 import {
   type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
   type RenameSessionInjected, type RowToastInjected, type SessionArchiveConfirmInjected, type SessionRenameDialogInjected,
-  type WorkspaceViewStoreHandle,
+  type SessionStatusDialogInjected, type SessionStatusMenuInjected, type WorkspaceViewStoreHandle,
 } from '../src/client/contract/slots.ts'
 import { WorkspaceBrowser } from '../src/client/rows/WorkspaceBrowser.tsx'
 import { ArchiveSessionMenuItem, ArchiveSessionRowButton, SessionArchiveConfirmDialog } from '../src/client/session-actions/ArchiveSession.tsx'
@@ -22,6 +22,9 @@ import { ForkSessionMenuItem } from '../src/client/session-actions/ForkSession.t
 import { PinSessionMenuItem, PinSessionRowButton } from '../src/client/session-actions/PinSession.tsx'
 import { RenameSessionMenuItem, SessionRenameDialog } from '../src/client/session-actions/RenameSession.tsx'
 import { RowActionToast } from '../src/client/session-actions/RowActionToast.tsx'
+import {
+  ClearSessionStatusMenuItem, SessionStatusDialog, SetSessionStatusMenuItem,
+} from '../src/client/session-actions/SessionStatus.tsx'
 import { WorkspacePicker } from '../src/client/WorkspacePicker.tsx'
 import { FLAT_SESSION_ORDER_KEY } from '../src/client/stores.ts'
 import { UNGROUPED_KEY } from '../src/client/tree.ts'
@@ -215,9 +218,9 @@ describe('ui-workspace apply', () => {
     await Promise.resolve()
     expect(after.slots.entries('conversation.hero.workspace')[0]!.component).toBe(WorkspacePicker)
     // The row actions follow the browser's own declaration, whenever it lands.
-    expect(after.slots.entries(MENU_ITEM)).toHaveLength(4)
+    expect(after.slots.entries(MENU_ITEM)).toHaveLength(6)
     expect(after.slots.entries(ROW_ACTION)).toHaveLength(2)
-    expect(after.slots.entries('shell.overlay')).toHaveLength(3)
+    expect(after.slots.entries('shell.overlay')).toHaveLength(4)
   })
 
   it('declares the two Session row lists and registers the shipped actions and overlay surfaces into them', async () => {
@@ -237,6 +240,8 @@ describe('ui-workspace apply', () => {
       ['pin', 100, PinSessionMenuItem, 'workspace'],
       ['rename', 200, RenameSessionMenuItem, 'workspace'],
       ['fork', 300, ForkSessionMenuItem, 'workspace'],
+      ['set-status', 350, SetSessionStatusMenuItem, 'workspace'],
+      ['clear-status', 360, ClearSessionStatusMenuItem, 'workspace'],
       ['archive', 400, ArchiveSessionMenuItem, 'workspace'],
     ])
     expect(rows(ROW_ACTION)).toEqual([
@@ -245,6 +250,7 @@ describe('ui-workspace apply', () => {
     ])
     expect(rows('shell.overlay')).toEqual([
       ['workspace.session-rename', undefined, SessionRenameDialog, 'workspace'],
+      ['workspace.session-status', undefined, SessionStatusDialog, 'workspace'],
       ['workspace.session-archive', undefined, SessionArchiveConfirmDialog, 'workspace'],
       ['workspace.row-toast', undefined, RowActionToast, 'workspace'],
     ])
@@ -290,6 +296,21 @@ describe('ui-workspace apply', () => {
     expect(pin.hooks.pinned.getSnapshot()).toEqual(new Set(['one', 'two']))
     expect(pin.hooks.pinned.getSnapshot()).not.toBe(pinned)
     expect(archive.hooks.archived.getSnapshot()).toEqual(new Set())
+  })
+
+  it('raises the declared-status dialog from the row menu and settles it from the dialog', async () => {
+    const b = await bench()
+    declare(b.slots, 'sidebar.workspaces', 'shell.overlay')
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const menu = faceOf(entry(b.slots, MENU_ITEM, 'set-status')) as SessionStatusMenuInjected
+    const dialog = faceOf(entry(b.slots, 'shell.overlay', 'workspace.session-status')) as SessionStatusDialogInjected
+    expect(dialog.hooks.statusRequest.getSnapshot()).toBeNull()
+    menu.requestSessionStatus(sid('one'), 'Session one')
+    expect(dialog.hooks.statusRequest.getSnapshot()).toEqual({ sessionId: 'one', displayTitle: 'Session one' })
+    dialog.settleSessionStatus()
+    expect(dialog.hooks.statusRequest.getSnapshot()).toBeNull()
+    // Set and Clear share one face.
+    expect(Object.keys(faceOf(entry(b.slots, MENU_ITEM, 'clear-status')))).toEqual(Object.keys(menu))
   })
 
   it('pins through the navigation service, which fronts the Session in its group and the flat list of the browser view', async () => {
@@ -589,9 +610,9 @@ describe('ui-workspace apply', () => {
     declare(b.slots, 'sidebar.workspaces', 'conversation.hero.workspace', 'conversation.empty.workspace', 'shell.overlay')
     const fiber = b.ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
-    expect(b.slots.entries(MENU_ITEM)).toHaveLength(4)
+    expect(b.slots.entries(MENU_ITEM)).toHaveLength(6)
     expect(b.slots.entries(ROW_ACTION)).toHaveLength(2)
-    expect(b.slots.entries('shell.overlay')).toHaveLength(3)
+    expect(b.slots.entries('shell.overlay')).toHaveLength(4)
     await fiber.dispose()
     expect(b.slots.entries('sidebar.workspaces')).toHaveLength(0)
     expect(b.slots.entries('conversation.hero.workspace')).toHaveLength(0)

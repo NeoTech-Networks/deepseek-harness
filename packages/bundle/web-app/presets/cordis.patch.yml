@@ -38,6 +38,10 @@
             name: '@deepseek-ai/dsh-command-goal'
           - id: tool-goal
             name: '@deepseek-ai/dsh-tool-goal'
+          - id: command-session-status
+            name: '@deepseek-ai/dsh-command-session-status'
+          - id: tool-session-status
+            name: '@deepseek-ai/dsh-tool-session-status'
           - id: planning
             name: cordis:group
             group: true
