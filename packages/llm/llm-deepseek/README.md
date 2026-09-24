@@ -60,6 +60,7 @@ A request selects the route with `provider: deepseek-official`; the model id pas
 | `defaultContextWindow` | `1,000,000` | Capacity fallback for models without an exact value |
 | `models` | V41 Flash + V4 Pro | Advisory catalog shown by discovery consumers |
 | `streamIdleTimeoutMs` | `300,000` | Maximum provider idle time per outstanding stream read |
+| `streamFirstPayloadTimeoutMs` | `25,000` | Maximum wait for the first content event; heartbeats, `ping` and `message_start` do not satisfy it; expiry is a retryable `TIMEOUT`; `0` disables it |
 | `maxRequestFilesBytes` | `128 MiB` | File-mode request-image byte budget; a request whose retained images exceed it fails with `IMAGE_OFFLOAD_REQUIRED` |
 | `maxInlineRequestImageBytes` | `20 MiB` | Independent base64 fallback high watermark |
 | `maxImagesPerRequest` | `600` | High watermark for retained request-image count |

@@ -47,7 +47,11 @@ function start(
 
 async function harness(
   baseURL: string,
-  options: { streamIdleTimeoutMs?: number; initialDelayMs?: number } = {},
+  options: {
+    streamIdleTimeoutMs?: number
+    streamFirstPayloadTimeoutMs?: number
+    initialDelayMs?: number
+  } = {},
 ): Promise<Context> {
   vi.stubEnv('DEEPSEEK_API_KEY', 'mock-key')
   const ctx = new Context()
@@ -55,6 +59,7 @@ async function harness(
   await ctx.plugin(LlmDeepSeek, {
     baseURL,
     streamIdleTimeoutMs: options.streamIdleTimeoutMs ?? 1_000,
+    streamFirstPayloadTimeoutMs: options.streamFirstPayloadTimeoutMs ?? 1_000,
     retryPolicy: {
       mode: 'normal',
       maxRetries: 2,
@@ -258,6 +263,42 @@ describe('bounded retry through the real DeepSeek HTTP/SSE adapter', () => {
       .toEqual(['TIMEOUT'])
     expect(finalAssistantText(agent)).toBe('recovered after timeout')
   })
+
+  it('recovers from a keep-alive-only stall the idle watchdog cannot see', async () => {
+    // The 2026-09-14 `deepseek-flash` outage in miniature: HTTP 200, a
+    // text/event-stream, and nothing but `: keep-alive` on it. Every comment
+    // rearms the idle watchdog, so that watchdog alone would hold this call
+    // open until the provider gave up (measured at about fifteen minutes) and
+    // then surface the non-retryable STREAM_CLOSED.
+    //
+    // The idle timeout here is deliberately set FAR longer than the
+    // first-payload bound: if the comments were still counting as progress,
+    // nothing would fail before this test's own timeout.
+    const server = await start(['keepalive_stall', 'success'], {
+      apiKey: 'mock-key',
+      successText: 'recovered after a keep-alive stall',
+    })
+    context = await harness(server.baseURL, {
+      streamIdleTimeoutMs: 30_000,
+      streamFirstPayloadTimeoutMs: 300,
+    })
+    const agent = await context.agentLoop.create(SessionId('wire-keepalive-stall'), {
+      provider: 'deepseek-official',
+      model: 'mock-model',
+    })
+
+    await sendAndWait(context, agent)
+
+    expect(server.requests.map(record => record.behavior)).toEqual(['keepalive_stall', 'success'])
+    // Zero data payloads were written, so nothing could have been committed.
+    expect(server.requests[0]?.chunksSent).toBe(0)
+    expect(agent.session.snapshotEvents().filter(event => event.type === 'llm/retry').map(event => event.data.failure.code))
+      .toEqual(['TIMEOUT'])
+    expect(agent.session.snapshotEvents().filter(event => event.type === 'assistant/message')
+      .map(event => [event.data.turn, event.data.step]))
+      .toEqual([[1, 1]])
+    expect(finalAssistantText(agent)).toBe('recovered after a keep-alive stall')
+  }, 15_000)
 
   it('stops after the configured transport retry budget is exhausted', async () => {
     const server = await start(['connection_reset', 'connection_reset', 'connection_reset'], {
