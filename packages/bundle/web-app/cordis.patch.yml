@@ -499,6 +499,12 @@
 - id: tool-goal
   disabled: true
 
+- id: command-session-status
+  disabled: true
+
+- id: tool-session-status
+  disabled: true
+
 - id: plan-mode
   disabled: true
 

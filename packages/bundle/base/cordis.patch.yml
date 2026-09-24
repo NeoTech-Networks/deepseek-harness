@@ -318,6 +318,14 @@
     - id: command-goal
       name: '@deepseek-ai/dsh-command-goal'
 
+    # Durable declared session status (fork): the `session/status` event, the
+    # `sessionStatus` projection, and the vocabulary service; `/status` below.
+    - id: session-status
+      name: '@deepseek-ai/dsh-session-status'
+
+    - id: command-session-status
+      name: '@deepseek-ai/dsh-command-session-status'
+
     - id: plan-mode
       name: '@deepseek-ai/dsh-plan-mode'
       config:
@@ -435,6 +443,9 @@
     # domain, driver, and `/goal` command are above.
     - id: tool-goal
       name: '@deepseek-ai/dsh-tool-goal'
+
+    - id: tool-session-status
+      name: '@deepseek-ai/dsh-tool-session-status'
 
     # Fresh-agent Ralph iteration over a build-time-fixed script. Off by
     # default: the tool description restricts `ralph` to runs the human

@@ -52,6 +52,8 @@ import type { SessionActivity, WorkspaceId, WorkspaceView } from '@deepseek-ai/d
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { ShortcutCatalogEntry } from '@deepseek-ai/dsh-client-shortcuts/client'
 import type { WorkspaceShortcutState } from '../shortcuts.ts'
+// Type-only: also pulls the `sessionStatus` projection merge into the Client face.
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/client'
 import type { createWorkspaceViewStore } from '../stores.ts'
 
 /**
@@ -409,6 +411,43 @@ export interface SessionRenameDialogInjected {
   /** Rename a Session (explicit user title; resolves on host acceptance). */
   renameSession: (sessionId: SessionId, title: string) => Promise<void>
 }
+
+/** Declared-status menu share: raise the dialog, or clear the row's status directly. */
+export interface SessionStatusMenuInjected {
+  /** Ask for the status dialog for one row. */
+  requestSessionStatus: (sessionId: SessionId, displayTitle: string) => void
+  /** Clear the row's declared status. */
+  clearSessionStatus: (sessionId: SessionId) => void
+}
+
+/** A declared-status change the status action asked for; the dialog entry opens on it. */
+export interface SessionStatusTarget {
+  /** Session whose status is set. */
+  sessionId: SessionId
+  /** Row title named under the dialog heading. */
+  displayTitle: string
+}
+
+/** Status dialog share: the pending request, its settlement, and the two Host hops. */
+export interface SessionStatusDialogInjected {
+  hooks: {
+    /** The status change asked for, until the dialog consumes or cancels it. */
+    statusRequest: HostObservable<SessionStatusTarget | null>
+  }
+  /** Consume or cancel the pending request. */
+  settleSessionStatus: () => void
+  /** Set (vocabulary id) or clear (null) a Session's declared status. */
+  setSessionStatus: (sessionId: SessionId, statusId: string | null) => Promise<void>
+  /** Read the deployment's declared status vocabulary, in declaration order. */
+  listSessionStatuses: (sessionId: SessionId) => Promise<readonly SessionStatusValue[]>
+}
+
+/** Props of the status dialog entry in `shell.overlay`. */
+export type SessionStatusDialogProps =
+  PropsRuntime<'shell.overlay'>
+  & PropsLocale<'workspace'>
+  & Omit<SessionStatusDialogInjected, 'hooks'>
+  & PropsHooks<SessionStatusDialogInjected['hooks']>
 
 /** Row toast share: the notice on display, its dismissal, and the two actions the archived notice offers. */
 export interface RowToastInjected {

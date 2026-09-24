@@ -370,6 +370,14 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@deepseek-ai/dsh-session-query-sqlite` | yes | Concrete ctx.sessionQuery backend with SQLite FTS5 search |
 | `@deepseek-ai/dsh-tool-session-query` | yes | Workspace-authorized model-facing session history search, trace, and event read tools |
 
+## session-status
+
+| Package | Config | Description |
+|---|---|---|
+| `@deepseek-ai/dsh-command-session-status` | no | Human-facing /status slash command for declared session status |
+| `@deepseek-ai/dsh-session-status` | yes | Durable declared session status (waiting to deploy, stuck, finished) over the DeepSeek Harness session log |
+| `@deepseek-ai/dsh-tool-session-status` | no | Model-facing set_session_status tool over the DeepSeek Harness session-status domain |
+
 ## settings
 
 | Package | Config | Description |

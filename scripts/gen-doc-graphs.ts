@@ -603,6 +603,14 @@ const SERVICE_ROLES: ServiceRole[] = [
     note: 'Stores tasks independently of Session activation and queues due messages in the original Session.',
   },
   {
+    key: 'sessionStatus',
+    pkg: 'session-status',
+    title: 'Declared session statuses',
+    mode: 'seam',
+    consumers: ['tool-session-status', 'command-session-status'],
+    note: 'Owns the status vocabulary, the whole-value session/status event, and the sessionStatus projection; a human prompt clears the status.',
+  },
+  {
     key: 'goals',
     pkg: 'goal',
     title: 'Same-session goal domain',

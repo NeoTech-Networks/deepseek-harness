@@ -38,6 +38,8 @@ import {
   type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
   type SessionArchiveConfirmInjected, type SessionArchiveConfirmRequest,
   type RenameSessionInjected, type RowToast, type RowToastInjected, type RowToastState, type SessionRenameDialogInjected,
+
+  type SessionRenameTarget, type SessionStatusDialogInjected, type SessionStatusMenuInjected, type SessionStatusTarget,
   type WorkspaceBrowserInjected, type WorkspacePickerInjected,
 } from './contract/slots.ts'
 import { createWorkspaceShortcutControls, installWorkspaceShortcuts } from './shortcuts.ts'
@@ -50,6 +52,9 @@ import { ForkSessionMenuItem } from './session-actions/ForkSession.tsx'
 import { PinSessionMenuItem, PinSessionRowButton } from './session-actions/PinSession.tsx'
 import { RenameSessionMenuItem, SessionRenameDialog } from './session-actions/RenameSession.tsx'
 import { RowActionToast } from './session-actions/RowActionToast.tsx'
+import {
+  ClearSessionStatusMenuItem, SessionStatusDialog, SetSessionStatusMenuItem,
+} from './session-actions/SessionStatus.tsx'
 import { WorkspacePicker } from './WorkspacePicker.tsx'
 import { en, zh, type WorkspaceKey } from './locales.ts'
 
@@ -213,6 +218,38 @@ export function apply(ctx: Context): void {
       })
     },
   })
+  const statusRequest = createSnapshotStore<SessionStatusTarget | null>(null)
+  const setSessionStatus: SessionStatusDialogInjected['setSessionStatus'] = async (sessionId, statusId) => {
+    const result = await sessions.using(
+      sessionId,
+      { source: 'workspaceOperation' },
+      reference => reference.binding.session.setStatus(statusId),
+    )
+    if (!result.ok) throw new Error(result.error.message)
+  }
+  const listSessionStatuses: SessionStatusDialogInjected['listSessionStatuses'] = async (sessionId) => {
+    const result = await sessions.using(
+      sessionId,
+      { source: 'workspaceOperation' },
+      reference => reference.binding.session.listStatuses(),
+    )
+    if (!result.ok) throw new Error(result.error.message)
+    return result.value.statuses
+  }
+  const statusMenuInjected = (): SessionStatusMenuInjected => ({
+    requestSessionStatus: (sessionId, displayTitle) => { statusRequest.set({ sessionId, displayTitle }) },
+    clearSessionStatus: (sessionId) => {
+      setSessionStatus(sessionId, null).catch((reason: unknown) => {
+        console.warn('session status clear rejected:', reason)
+      })
+    },
+  })
+  const statusDialogInjected = (): SessionStatusDialogInjected => ({
+    hooks: { statusRequest },
+    settleSessionStatus: () => { statusRequest.set(null) },
+    setSessionStatus,
+    listSessionStatuses,
+  })
   const renameInjected = (): RenameSessionInjected => ({ requestSessionRename })
   const renameDialogInjected = (): SessionRenameDialogInjected => ({
     hooks: { renameRequest },
@@ -283,6 +320,8 @@ export function apply(ctx: Context): void {
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'pin', order: 100, locale: NS, inject: pinInjected }, PinSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'rename', order: 200, locale: NS, inject: renameInjected }, RenameSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'fork', order: 300, locale: NS, inject: forkInjected }, ForkSessionMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'set-status', order: 350, locale: NS, inject: statusMenuInjected }, SetSessionStatusMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'clear-status', order: 360, locale: NS, inject: statusMenuInjected }, ClearSessionStatusMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'archive', order: 400, locale: NS, inject: archiveInjected }, ArchiveSessionMenuItem)
   })
   ctx.slots.inject('sidebar.workspaces.session.row.action', function* () {
@@ -295,6 +334,9 @@ export function apply(ctx: Context): void {
     yield ctx.slots.register({
       name: 'shell.overlay', id: 'workspace.session-rename', locale: NS, inject: renameDialogInjected,
     }, SessionRenameDialog)
+    yield ctx.slots.register({
+      name: 'shell.overlay', id: 'workspace.session-status', locale: NS, inject: statusDialogInjected,
+    }, SessionStatusDialog)
     yield ctx.slots.register({
       name: 'shell.overlay', id: 'workspace.session-archive', locale: NS, inject: archiveConfirmInjected,
     }, SessionArchiveConfirmDialog)
