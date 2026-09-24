@@ -78,6 +78,8 @@ flowchart LR
   svc_settingsController["ctx.settingsController<br/>Host settings-surface Remote controller"]
   pkg_api_workspace_files["api-workspace-files"]
   svc_workspaceFiles["ctx.workspaceFiles<br/>Host workspace file Remote service"]
+  pkg_vision_routing["vision-routing"]
+  svc_visionRouting["ctx.visionRouting<br/>Automatic image description for text-only sessions"]
   pkg_api_pinned_files["api-pinned-files"]
   svc_pinnedFiles["ctx.pinnedFiles<br/>Operator pinned-directory Remote service"]
   pkg_account_usage["account-usage"]
@@ -410,6 +412,7 @@ flowchart LR
   pkg_typert_registry --> svc_typert
   pkg_user_approval --> svc_approval
   pkg_user_questions --> svc_userQuestions
+  pkg_vision_routing --> svc_visionRouting
   pkg_web --> svc_web
   pkg_web_fetch_http --> svc_web
   pkg_web_search_deepseek --> svc_web
@@ -595,6 +598,7 @@ flowchart LR
 | `ctx.credentialsController` | `core` | [`api-settings-controller`](../packages/api/settings-controller) | - | - | - | Projects the credential-reference seam onto the generated Remote namespace: batch fan-out, view projection, and refusal mapping live here, not on the seam Definition. |
 | `ctx.settingsController` | `core` | [`api-settings-controller`](../packages/api/settings-controller) | - | - | - | Projects the user-settings seam onto the generated Remote namespace: the read is always redacted and every refusal is classified here, not on the seam Definition. |
 | `ctx.workspaceFiles` | `core` | [`api-workspace-files`](../packages/api/workspace-files) | - | - | - | Serves stat, paged text, byte windows, directory listings, and the change feed for files inside a Session's workspace root, confined by lstat, containment, and a stat re-check. |
+| `ctx.visionRouting` | `core` | [`vision-routing`](../packages/vision/vision-routing) | - | - | - | Describes attached images with an image-capable route so a text-only model receives text instead of a rejected message. |
 | `ctx.pinnedFiles` | `core` | [`api-pinned-files`](../packages/api/pinned-files) | - | - | - | Serves the operator-pinned roots anywhere on the Host, kept as the pinned-files entry live Config, deliberately outside the Session workspace fence. |
 | `ctx.accountUsage` | `core` | [`account-usage`](../packages/llm/account-usage) | - | - | - | Reads the stored subscription grant Host-side and reports the rolling and weekly limit occupancy of the account as percentages; every fault degrades to a status carrying the last figures read. |
 | `ctx.workspaceChanges` | `core` | [`workspace-changes`](../packages/deliverables/workspace-changes) | - | - | - | Serves the summary each workspace/changes event announced and each listed file's turn-start and turn-end comparison, by Session and event sequence, until that Session is disposed; the log carries only the turn. |

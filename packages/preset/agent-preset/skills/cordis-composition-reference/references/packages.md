@@ -472,6 +472,12 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 |---|---|---|
 | `@deepseek-ai/dsh-typert-loader` | yes | Loader integration for generated Typert package contributions |
 
+## vision
+
+| Package | Config | Description |
+|---|---|---|
+| `@deepseek-ai/dsh-vision-routing` | yes | Automatic image description for text-only model sessions via the DeepSeek vision model |
+
 ## web
 
 | Package | Config | Description |

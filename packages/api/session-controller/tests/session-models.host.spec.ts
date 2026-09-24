@@ -737,4 +737,79 @@ describe('Web session model selection', () => {
     })
     await ctx.fiber.dispose()
   })
+
+  describe('vision routing for a text-only selection', () => {
+    interface VisionFake {
+      enabled: () => boolean
+      describe: (refs: readonly { attachmentId: string }[]) => Promise<string>
+    }
+
+    async function visionHarness(vision: VisionFake | undefined) {
+      const { ctx, agent, sessionId } = await harness()
+      registerTextOnly(ctx)
+      const savedRef = {
+        attachmentId: 'saved-image', mediaType: 'image/png' as const, bytes: 1, width: 1, height: 1,
+      }
+      ctx.provide('attachments', Object.setPrototypeOf({
+        saveImages: () => Promise.resolve([savedRef]),
+      }, AttachmentStore.prototype) as never)
+      if (vision !== undefined) ctx.provide('visionRouting', vision as never)
+      const followup = vi.fn()
+      Object.assign(agent, { followup })
+      const remote = createSessionTestRemote(ctx, {
+        defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
+        cwd: '/tmp',
+      })
+      expectValue(await remote.selectModel(request({
+        sessionId, provider: 'text-only', model: 'plain',
+      })))
+      const image = { type: 'image' as const, mediaType: 'image/png' as const, data: 'AQ==' }
+      const prompt = () => remote.prompt(promptRequest({
+        sessionId, mode: 'queue', content: [{ type: 'text', text: 'what is this' }, image],
+      }))
+      return { ctx, followup, prompt }
+    }
+
+    function textOf(message: UserMessage): string {
+      return message.content
+        .filter((block): block is Extract<typeof message.content[number], { type: 'text' }> => block.type === 'text')
+        .map(block => block.text)
+        .join(' ')
+    }
+
+    it('admits the image as a vision-model description instead of refusing it', async () => {
+      const describe = vi.fn((refs: readonly { attachmentId: string }[]) => Promise.resolve(`described ${refs.length} image(s)`))
+      const { ctx, followup, prompt } = await visionHarness({ enabled: () => true, describe })
+      expectValue(await prompt())
+      expect(describe).toHaveBeenCalledOnce()
+      expect(describe.mock.calls[0]?.[0].map(ref => ref.attachmentId)).toEqual(['saved-image'])
+      const message = followup.mock.calls[0]?.[0] as UserMessage
+      expect(textOf(message)).toContain('what is this')
+      expect(textOf(message)).toContain('[Attached image description (vision model): described 1 image(s)]')
+      expect(message.content.some(block => block.type === 'image')).toBe(false)
+      await ctx.fiber.dispose()
+    })
+
+    it('keeps the send with a note when the description fails', async () => {
+      const describe = vi.fn(() => Promise.reject(new Error('vision route offline')))
+      const { ctx, followup, prompt } = await visionHarness({ enabled: () => true, describe })
+      expectValue(await prompt())
+      const message = followup.mock.calls[0]?.[0] as UserMessage
+      expect(textOf(message)).toContain('[Attached image description unavailable: vision route offline]')
+      expect(message.content.some(block => block.type === 'image')).toBe(false)
+      await ctx.fiber.dispose()
+    })
+
+    it('still refuses the image when the vision service is switched off', async () => {
+      const describe = vi.fn(() => Promise.resolve('unused'))
+      const { ctx, followup, prompt } = await visionHarness({ enabled: () => false, describe })
+      expect(await prompt()).toMatchObject({
+        ok: false,
+        error: { code: 'session/attachment-invalid', details: { reason: 'MODEL_DOES_NOT_SUPPORT_IMAGES' } },
+      })
+      expect(describe).not.toHaveBeenCalled()
+      expect(followup).not.toHaveBeenCalled()
+      await ctx.fiber.dispose()
+    })
+  })
 })

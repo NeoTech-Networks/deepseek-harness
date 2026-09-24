@@ -145,6 +145,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   directoryPickerController: 'workspace.md',
   accountUsage: 'account-usage.md',
   pinnedFiles: 'sidebar-right.md',
+  visionRouting: 'vision.md',
 }
 
 /**

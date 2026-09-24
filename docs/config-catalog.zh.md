@@ -3975,6 +3975,34 @@ export type ApprovalPolicy = 'ask' | 'never'
 
 来源： [`packages/interaction/user-approval/src/index.ts:135`](../packages/interaction/user-approval/src/index.ts)
 
+<a id="deepseek-aidsh-vision-routing"></a>
+
+## `@deepseek-ai/dsh-vision-routing`
+
+```ts config-catalog
+/** Plugin configuration. Every field is optional; defaults point at the shipped vision model. */
+export interface Config {
+  /** Exact vision-model route. Defaults to `deepseek-official/deepseek-flash`. */
+  visionRoute?: VisionRoute
+  /** Instruction sent with the images. Defaults to the stable describe rubric. */
+  prompt?: string
+  /** Output-token cap for one description. Defaults to 4096. */
+  maxTokens?: number
+  /** End-to-end deadline for one description. Defaults to 60 seconds. */
+  timeoutMs?: number
+}
+
+/** Exact provider/model route the vision model runs on. */
+export interface VisionRoute {
+  /** Provider route key the vision model is served by. */
+  readonly provider: string
+  /** Exact model id on that provider. */
+  readonly model: string
+}
+```
+
+来源： [`packages/vision/vision-routing/src/index.ts:57`](../packages/vision/vision-routing/src/index.ts)
+
 <a id="deepseek-aidsh-web"></a>
 
 ## `@deepseek-ai/dsh-web`
