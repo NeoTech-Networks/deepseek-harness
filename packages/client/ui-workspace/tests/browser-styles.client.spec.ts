@@ -33,6 +33,19 @@ function declarationsFrom(source: string, selector: string): Map<string, string>
 const declarations = (selector: string): Map<string, string> | undefined => declarationsFrom(css, selector)
 const rowDeclarations = (selector: string): Map<string, string> | undefined => declarationsFrom(rowsCss, selector)
 
+describe('fork folder presentation', () => {
+  it('indents Session rows under their Workspace folder while keeping the tree depth variable', () => {
+    expect(declarations(".groupSection [data-row-key^='session:']")?.get('padding-inline-start'))
+      .toBe('calc(28px + var(--dsh-workspace-indent, 0px))')
+  })
+
+  it('styles the named group header at 13px/18px', () => {
+    const header = declarations('.groupHeader')
+    expect(header?.get('font-size')).toBe('13px')
+    expect(header?.get('line-height')).toBe('18px')
+  })
+})
+
 describe('WorkspaceBrowser.module.css list', () => {
   const root = declarations('.root')
   const listArea = declarations('.listArea')

@@ -704,3 +704,11 @@
 :global([data-ds-dark-theme]) .groupHeader {
   color: var(--dsw-static-deepseek-400);
 }
+
+/* Session rows nest under their Workspace folder (fork): an attribute selector
+   keeps the rows' own class and AnimatedRows keys untouched, and the
+   upstream depth variable still stacks for tree mode. Flat mode has no
+   group section, so its rows stay flush. */
+.groupSection [data-row-key^='session:'] {
+  padding-inline-start: calc(28px + var(--dsh-workspace-indent, 0px));
+}
