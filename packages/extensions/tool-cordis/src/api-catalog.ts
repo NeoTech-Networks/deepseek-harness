@@ -3446,6 +3446,26 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'visionRouting',
+    summary: 'The automatic image-description service, registered as `ctx.visionRouting`.',
+    description: 'The automatic image-description service, registered as `ctx.visionRouting`.',
+    methods: [
+      {
+        signature: 'enabled(): boolean',
+        description: 'Whether automatic image description is switched on: the subagent-model-selection preference is enabled and names at least one candidate route. A misconfigured preference (enabled but no image-capable route) still reports true here; the route resolution in describe owns the precise capability check.',
+        parameters: [],
+        returns: 'true when describe() may run; false keeps the caller\'s current behavior.',
+      },
+      {
+        signature: 'async describe(refs: readonly ImageAttachmentRef[], signal?: AbortSignal): Promise<string>',
+        description: 'Describe one ordered image batch with the vision model.',
+        parameters: [{ name: 'refs', description: 'durable image references, in attachment order.' }, { name: 'signal', description: 'optional cancellation fused into the internal deadline.' }],
+        returns: 'the model-facing description text; empty when `refs` is empty.',
+        throws: ['VisionDescriptionError when no image-capable route exists or the call fails.'],
+      },
+    ],
+  },
+  {
     key: 'web',
     summary: 'The web access service.',
     description: 'The web access service. Registered as `ctx.web` (one instance per context).\n\nSelection semantics (resolved at execution time, never order-dependent):\n\n- A configured id that is registered and `available()` → that provider.\n- A configured id not registered → `WEB_PROVIDER_CONFIGURED_MISSING`.\n- A configured id registered but unavailable → `WEB_PROVIDER_CONFIGURED_UNAVAILABLE`.\n- No id configured, exactly one registered usable provider → that provider.\n- No id configured, multiple usable providers → `WEB_PROVIDER_AMBIGUOUS`.\n- No id configured, no usable provider → `WEB_PROVIDER_UNAVAILABLE`.',

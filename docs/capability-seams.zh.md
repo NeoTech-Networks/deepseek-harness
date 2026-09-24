@@ -80,6 +80,8 @@ flowchart LR
   svc_settingsController["ctx.settingsController<br/>Host settings-surface Remote controller"]
   pkg_api_workspace_files["api-workspace-files"]
   svc_workspaceFiles["ctx.workspaceFiles<br/>Host workspace file Remote service"]
+  pkg_vision_routing["vision-routing"]
+  svc_visionRouting["ctx.visionRouting<br/>Automatic image description for text-only sessions"]
   pkg_api_pinned_files["api-pinned-files"]
   svc_pinnedFiles["ctx.pinnedFiles<br/>Operator pinned-directory Remote service"]
   pkg_account_usage["account-usage"]
@@ -415,6 +417,7 @@ flowchart LR
   pkg_typert_registry --> svc_typert
   pkg_user_approval --> svc_approval
   pkg_user_questions --> svc_userQuestions
+  pkg_vision_routing --> svc_visionRouting
   pkg_web --> svc_web
   pkg_web_fetch_http --> svc_web
   pkg_web_search_deepseek --> svc_web
@@ -599,6 +602,7 @@ flowchart LR
 | `ctx.credentialsController` | `core` | [`api-settings-controller`](../packages/api/settings-controller) | - | - | - | 把凭据引用 seam 投影到生成的 Remote namespace：批量扇出、视图投影与拒绝映射都在这里，而不在 seam Definition 上。 |
 | `ctx.settingsController` | `core` | [`api-settings-controller`](../packages/api/settings-controller) | - | - | - | 把用户设置 seam 投影到生成的 Remote namespace：读取一律脱敏，所有拒绝在这里分类，而不在 seam Definition 上。 |
 | `ctx.workspaceFiles` | `core` | [`api-workspace-files`](../packages/api/workspace-files) | - | - | - | 为会话工作区根内的文件提供 stat、分页文本、字节窗口、目录列举与变更流，经 lstat、包含关系与 stat 重检限定。 |
+| `ctx.visionRouting` | `core` | [`vision-routing`](../packages/vision/vision-routing) | - | - | - | 用支持图像的路由描述附加图像，使纯文本模型收到文本而不是被拒绝的消息。 |
 | `ctx.pinnedFiles` | `core` | [`api-pinned-files`](../packages/api/pinned-files) | - | - | - | 在 Host 上任意位置提供操作者固定的根目录，保存为 pinned-files 条目的实时 Config，刻意位于 Session 工作区围栏之外。 |
 | `ctx.accountUsage` | `core` | [`account-usage`](../packages/llm/account-usage) | - | - | - | 在 Host 侧读取已存储的订阅授权，并以百分比报告账号的滚动与每周额度占用；每种故障都降级为携带最近一次读数的状态。 |
 | `ctx.workspaceChanges` | `core` | [`workspace-changes`](../packages/deliverables/workspace-changes) | - | - | - | Serves the summary each workspace/changes event announced and each listed file's turn-start and turn-end comparison, by Session and event sequence, until that Session is disposed; the log carries only the turn. |

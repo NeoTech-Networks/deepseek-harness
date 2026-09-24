@@ -88,6 +88,31 @@ function latestCompletedPrefixBoundary(events: readonly SessionEvent[]): Session
   return boundary
 }
 
+/** Structural face of the optional `ctx.visionRouting` Host service. */
+interface VisionRoutingAccess {
+  enabled(): boolean
+  describe(refs: readonly ImageAttachmentRef[], signal?: AbortSignal): Promise<string>
+}
+
+/**
+ * Wrap a vision description as a model-facing text block.
+ * @param description - the vision model's text.
+ * @returns the bracketed block the text-only model receives.
+ */
+function imageDescriptionBlock(description: string): string {
+  return `[Attached image description (vision model): ${description}]`
+}
+
+/**
+ * Wrap a failed vision description as a model-facing note.
+ * @param error - the describe failure.
+ * @returns the bracketed note the text-only model receives instead.
+ */
+function imageDescriptionUnavailable(error: unknown): string {
+  const reason = error instanceof Error ? error.message : String(error)
+  return `[Attached image description unavailable: ${reason}]`
+}
+
 /** Implements Session business commands delegated by the Session Controller Remote service. */
 export class SessionCommandController {
   /**
@@ -381,22 +406,46 @@ export class SessionCommandController {
     const hasImage = request.content.some(part => part.type === 'image')
     const admit = async (): Promise<SessionPromptValue> => {
       try {
+        // Set only when a text-only model receives images and the optional
+        // vision-routing service is switched on: the images are then described
+        // by an image-capable route instead of being refused.
+        let vision: VisionRoutingAccess | undefined
         if (hasImage) {
           const current = this.agents.selectionFor(agent).current
           const model = await this.ctx.llm.resolveModelInfo(current.provider, current.model)
           if (model.inputModalities !== undefined && !model.inputModalities.includes('image')) {
-            throw new RemoteError(
-              'session/attachment-invalid',
-              `Model "${current.model}" does not support image input.`,
-              { reason: 'MODEL_DOES_NOT_SUPPORT_IMAGES' },
-            )
+            const routing = this.ctx.get('visionRouting') as VisionRoutingAccess | undefined
+            if (routing === undefined || !routing.enabled()) {
+              throw new RemoteError(
+                'session/attachment-invalid',
+                `Model "${current.model}" does not support image input.`,
+                { reason: 'MODEL_DOES_NOT_SUPPORT_IMAGES' },
+              )
+            }
+            vision = routing
           }
         }
         const admission = resolvePromptFileReceipts(
           request.content,
           receiptId => this.ctx.fileUploads.resolve(agent, receiptId),
         )
-        const content = await this.ctx.attachments.admitPromptContent(admission.content)
+        let content = await this.ctx.attachments.admitPromptContent(admission.content)
+        if (vision !== undefined) {
+          const refs: ImageAttachmentRef[] = []
+          for (const part of content) {
+            if (part.type === 'image') refs.push(part.attachment)
+          }
+          let description: string
+          try {
+            description = imageDescriptionBlock(await vision.describe(refs))
+          } catch (error) {
+            description = imageDescriptionUnavailable(error)
+          }
+          // Replace the raw image blocks with the vision model's text so the
+          // text-only model sees only the description, never an image it
+          // cannot read.
+          content = [...content.filter(part => part.type !== 'image'), { type: 'text', text: description }]
+        }
         const message: UserMessage = createUserMessage({ content, source })
         if (this.ctx.agents.get(agent.id) !== agent) {
           throw new RemoteError(
