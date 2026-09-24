@@ -620,42 +620,6 @@
   }
 }
 
-/* Declared-status dialog (fork). */
-.statusList {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.statusOption {
-  display: block;
-  width: 100%;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  font-size: 13px;
-  line-height: 18px;
-  text-align: left;
-  color: var(--dsw-alias-label-primary);
-  cursor: pointer;
-}
-
-.statusOption:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.statusOption:disabled {
-  cursor: default;
-  opacity: 0.5;
-}
-
-.statusLoading {
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--dsw-alias-label-tertiary);
-}
-
 /* One named Workspace group header (fork), above its Workspace sections. The
    label doubles as the fold control, so it is a full-width button. 13px/18px
    is the built-in size for every group (operator, 2026-09-16). */
