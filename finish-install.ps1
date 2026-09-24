@@ -375,6 +375,10 @@ if ($migrating) {
     Copy-Item $newManifest (Join-Path $vaultRepo 'vault.manifest.yaml') -Force
     Write-Host "[dsh-config-vault] switched to the 0.1.7 manifest; snapshotting the migrated settings..."
     & py $VaultTool snapshot --reason "post-install $version (0.1.7 migration)" 2>&1 | ForEach-Object { Write-Host "  $_" }
+    if ($LASTEXITCODE -ne 0) {
+      # The settings are fine (just verified); only the vault's new baseline is missing.
+      Write-Warning "[dsh-config-vault] the post-install snapshot FAILED (exit $LASTEXITCODE). Take it by hand: py $VaultTool snapshot --reason post-install"
+    }
   }
 } elseif (Test-Path $VaultTool) {
   & py $VaultTool verify 2>&1 | ForEach-Object { Write-Host "  $_" }
