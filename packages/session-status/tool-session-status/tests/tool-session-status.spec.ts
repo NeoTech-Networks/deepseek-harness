@@ -24,7 +24,8 @@ const testToolSignal = new AbortController().signal
 /** A parent Agent backed by a real Session, the shape the tool reads. */
 function agentWithSession(id = 'parent-1'): Agent & { session: Session } {
   const session = Session.create(SessionId(id))
-  return { id: SessionId(id), session } as unknown as Agent & { session: Session }
+  const agent: Agent & { session: Session } = { id: SessionId(id), session } as never
+  return agent
 }
 
 async function setup(): Promise<Context> {

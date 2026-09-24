@@ -115,7 +115,7 @@ describe('resolveConfig', () => {
     ['an empty destination', { to: '' }],
     ['no source routes', { from: [] }],
     ['a blank source route', { from: ['ok', ' '] }],
-    ['a non-string source route', { from: [1 as unknown as string] }],
+    ['a non-string source route', { from: [1 as never] }],
     ['a duplicated source route', { from: [FLASH, FLASH] }],
     ['a destination that is also a source', { from: [FLASH], to: FLASH }],
     ['a zero limit', { limitBytes: 0 }],

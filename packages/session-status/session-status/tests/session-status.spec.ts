@@ -40,7 +40,7 @@ describe('resolveVocabulary', () => {
 
   it('rejects a missing or non-array vocabulary', () => {
     expect(() => resolveVocabulary({} as SessionStatusConfig)).toThrow(/array/)
-    expect(() => resolveVocabulary({ vocabulary: 'x' } as unknown as SessionStatusConfig)).toThrow(/array/)
+    expect(() => resolveVocabulary({ vocabulary: 'x' } as never)).toThrow(/array/)
   })
 
   it('rejects a blank id or label', () => {

@@ -131,7 +131,7 @@ describe('streamFirstPayloadTimeoutMs configuration', () => {
 
   it('is volatile, so a settings form or legacy settings import can write it', () => {
     const parsed = Config({ streamFirstPayloadTimeoutMs: 1_000 })
-    const field = (parsed as unknown as { streamFirstPayloadTimeoutMs: { get: () => number } }).streamFirstPayloadTimeoutMs
+    const field = parsed.streamFirstPayloadTimeoutMs
     expect(typeof field.get).toBe('function')
     expect(field.get()).toBe(1_000)
   })

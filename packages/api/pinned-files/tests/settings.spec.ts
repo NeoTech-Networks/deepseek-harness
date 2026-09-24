@@ -49,7 +49,7 @@ async function harness(options: { entry?: string; settings?: boolean } = {}) {
   if (options.entry !== undefined) {
     Object.defineProperty(ctx.fiber, 'entry', { value: { options: { id: options.entry } }, configurable: true })
   }
-  const config = { maxEntries: 2000, maxBytes: 1024 * 1024, roots, autoOpen } as unknown as Config
+  const config: Config = { maxEntries: 2000, maxBytes: 1024 * 1024, roots, autoOpen }
   const service = new PinnedFiles(ctx, config)
   cleanups.push(async () => {
     await fiber.dispose()
@@ -64,9 +64,8 @@ describe('pinned-files Config', () => {
   })
 
   it('declares roots and autoOpen volatile, with autoOpen off by default', () => {
-    const parsed = PinnedFiles.Config({}) as unknown as Record<string, unknown>
-    const roots = parsed.roots as { get: () => string[] }
-    const autoOpen = parsed.autoOpen as { get: () => boolean }
+    const parsed = PinnedFiles.Config({})
+    const { roots, autoOpen } = parsed
     expect(typeof roots.get).toBe('function')
     expect(typeof autoOpen.get).toBe('function')
     expect(roots.get()).toEqual([])

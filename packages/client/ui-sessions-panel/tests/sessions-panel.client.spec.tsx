@@ -49,7 +49,7 @@ function mount(options: MountOptions = {}) {
     ? base
     : { ...base, byId: { ...base.byId, [main]: { ...base.byId[main], retainedBy: { mainView: 1 } } } }
   const open = vi.fn<(id: SessionId) => void>()
-  const props = {
+  const props: SessionsPanelProps = {
     useSessions: (selector: (s: SessionListState) => unknown) => selector(state),
     useSessionStatus: (selector: (s: SessionStatusSnapshot) => unknown) =>
       selector(options.statuses ?? new Map()),
@@ -67,7 +67,7 @@ function mount(options: MountOptions = {}) {
     open,
     // Copy is the dictionary's contract; the key stands in for the translation.
     t: (key: string) => key,
-  } as unknown as SessionsPanelProps
+  } as never
   const view = render(<SessionsPanel {...props} />)
   const rows = (): string[] =>
     [...view.container.querySelectorAll('[data-sessions-panel-row]')].map(node => node.getAttribute('data-sessions-panel-row') ?? '')
