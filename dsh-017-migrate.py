@@ -301,7 +301,7 @@ def _find_entry(node, entry: str):
     return None
 
 
-def verify(home: Path, staged: Path) -> tuple[int, list[str]]:
+def verify(home: Path, staged: Path, profile: str = 'desktop') -> tuple[int, list[str]]:
     report: list[str] = []
     drift = False
     staged_settings = load((staged / 'settings.yaml').read_text(encoding='utf-8')) or {}
@@ -313,7 +313,7 @@ def verify(home: Path, staged: Path) -> tuple[int, list[str]]:
     if not imported.exists():
         drift = True
         report.append('MISSING: settings.yaml.imported')
-    profile_patch = home / 'profiles' / 'desktop' / 'cordis.patch.yml'
+    profile_patch = home / 'profiles' / profile / 'cordis.patch.yml'
     patch = load(profile_patch.read_text(encoding='utf-8')) if profile_patch.exists() else None
     unimported: dict = {}
     for section, values in staged_settings.items():
@@ -393,6 +393,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument('--out')
     ap.add_argument('--staged')
     ap.add_argument('--force', action='store_true')
+    ap.add_argument('--profile', default='desktop', help='verify: profile whose patch received the import')
     a = ap.parse_args(argv)
     try:
         if a.verb == 'self-test':
@@ -406,7 +407,7 @@ def main(argv: list[str] | None = None) -> int:
             result = apply(home, Path(a.staged), a.force)
             print(result)
             return 0
-        code, report = verify(home, Path(a.staged))
+        code, report = verify(home, Path(a.staged), a.profile)
         for line in report:
             print(line)
         return code
