@@ -130,6 +130,14 @@ export function describePlanFault(plan: string): string | undefined {
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Pin plan mode active on every newly created non-subagent session whose log carries no plan state. Defaults to false. */
+  defaultActive?: boolean
+}
+
+/** Validated plan-mode config. */
+export interface ResolvedPlanModeConfig {
+  section: string
+  defaultActive: boolean
 }
 
 /** The review question's id, echoed in the answer this tool reads. */
@@ -162,7 +170,7 @@ function firstHeading(plan: string): string | undefined {
  * @param config Raw plugin config.
  * @returns A detached validated config.
  */
-export function resolveConfig(config: PlanModeConfig): PlanModeConfig {
+export function resolveConfig(config: PlanModeConfig): ResolvedPlanModeConfig {
   const section = (config as Partial<PlanModeConfig>).section
   if (typeof section !== 'string') {
     throw new Error('PlanModeConfig needs a string `section`')
@@ -170,11 +178,15 @@ export function resolveConfig(config: PlanModeConfig): PlanModeConfig {
   if (section.trim() === '') {
     throw new Error('PlanModeConfig needs a non-empty `section`')
   }
-  const unknown = Object.keys(config).filter(key => key !== 'section')
-  if (unknown.length > 0) {
-    throw new Error(`PlanModeConfig has unknown key(s) ${unknown.join(', ')} — config is { section }`)
+  const defaultActive = (config as Partial<PlanModeConfig>).defaultActive ?? false
+  if (typeof defaultActive !== 'boolean') {
+    throw new Error('PlanModeConfig `defaultActive` must be a boolean when provided')
   }
-  return { section }
+  const unknown = Object.keys(config).filter(key => key !== 'section' && key !== 'defaultActive')
+  if (unknown.length > 0) {
+    throw new Error(`PlanModeConfig has unknown key(s) ${unknown.join(', ')} - config is { section, defaultActive }`)
+  }
+  return { section, defaultActive }
 }
 
 const planUnitStateSchema: ZodType<PlanUnitState> = zod.object({
@@ -185,6 +197,7 @@ const planUnitStateSchema: ZodType<PlanUnitState> = zod.object({
     wanted: zod.boolean(),
   }).strict().nullable(),
   activeAtLastHeader: zod.boolean().nullable(),
+  logged: zod.boolean(),
 }).strict()
 
 /** Wire payload schema of the `plan` projection. */
@@ -196,9 +209,9 @@ const planProjectionSchema: ZodType<PlanProjection> = zod.object({
 /** Projection of logged plan selections and committed mode. */
 export const planProjectionDefinition = {
   key: 'plan',
-  stateVersion: 3,
+  stateVersion: 4,
   stateSchema: planUnitStateSchema,
-  init: () => ({ active: false, wanted: null, running: null, activeAtLastHeader: null }),
+  init: () => ({ active: false, wanted: null, running: null, activeAtLastHeader: null, logged: false }),
   apply: (state, event) => {
     if (event.type === 'command/run' && event.data.name === 'plan') {
       if (event.data.args === undefined) return state
@@ -212,7 +225,7 @@ export const planProjectionDefinition = {
       return { ...state, wanted, running: null }
     }
     if (event.type === 'plan/mode') {
-      return { ...state, active: event.data.active, wanted: null }
+      return { ...state, active: event.data.active, wanted: null, logged: true }
     }
     if (event.type === 'request/header') {
       return { ...state, activeAtLastHeader: state.active }
@@ -239,6 +252,9 @@ export class PlanModeController extends Service {
   /** Validated deployment-owned guidance. */
   private readonly section: string
 
+  /** Whether newly created sessions pin plan mode active by default. */
+  private readonly defaultActive: boolean
+
   /**
    * Latest selection per session awaiting the next accepted in-turn pre-step.
    * `narrate` is true for user selections and false for the exit tool, whose
@@ -248,7 +264,9 @@ export class PlanModeController extends Service {
 
   constructor(ctx: Context, config: PlanModeConfig = { section: '' }) {
     super(ctx, 'planMode')
-    this.section = resolveConfig(config).section
+    const resolved = resolveConfig(config)
+    this.section = resolved.section
+    this.defaultActive = resolved.defaultActive
     let disposed = false
     // Pre-step is outside Session.append publication, so it can append the
     // log-only mode event inside an open turn without re-entering the session.
@@ -285,6 +303,22 @@ export class PlanModeController extends Service {
     })
 
     ctx.sessionProjections.register(planProjectionDefinition)
+
+    // A deployment opt-in pins plan mode active on a fresh session before the
+    // first step, so the guidance section is present from turn 1. Existing
+    // sessions are swept once for hot-reload safety; forked and resumed
+    // sessions keep the plan/mode events they already carry.
+    if (this.defaultActive) {
+      ctx.on('session/created', (session) => {
+        this.pinInitialPlanMode(session)
+      })
+      const sessions = ctx.get('sessions')
+      if (sessions !== undefined) {
+        for (const session of sessions.list()) {
+          this.pinInitialPlanMode(session)
+        }
+      }
+    }
 
     // The command child activates only when a command registry is composed.
     ctx.inject(['commands'], (commandCtx) => {
@@ -429,6 +463,20 @@ export class PlanModeController extends Service {
 
   private loggedActive(session: Session): boolean {
     return this.planState(session).active
+  }
+
+  /**
+   * Pin plan mode active on a session whose log carries no plan state, when
+   * the deployment opted into a creation-time default. Subagents are never
+   * pinned: a child owned by a live agent cannot open the exit review. Forked
+   * and resumed sessions keep the plan/mode events they already carry. The
+   * check reads the plan projection's `logged` bit instead of scanning the
+   * event history.
+   */
+  private pinInitialPlanMode(session: Session): void {
+    if (session.header.origin === 'subagent') return
+    if (this.planState(session).logged) return
+    session.append('plan/mode', { active: true })
   }
 
   private hasOpenTurn(session: Session): boolean {
