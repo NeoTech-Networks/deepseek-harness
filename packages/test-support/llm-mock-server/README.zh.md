@@ -59,6 +59,7 @@ pnpm dsh --profile headless "test provider recovery"
 | `stream_disconnect` | 发送 SSE 标头，然后在第一个事件前重置连接 |
 | `partial_disconnect` | 发送文本增量，然后重置 socket |
 | `stall` | 发送 SSE 标头，并保持空闲，直到客户端／服务器取消 |
+| `keepalive_stall` | 发送 SSE 标头，随后只持续发送 `: keep-alive` 注释：基于字节的空闲看门狗无法察觉的停滞 |
 | `empty` | 发送有效的无内容 stop 和 `[DONE]` |
 | `empty_body` / `stream_eof` / `partial_eof` | 正常结束，但缺少必需的 `[DONE]` 边界 |
 | `malformed_json` / `malformed_event` | 发送无效 SSE JSON 或无效提供方分片形态 |

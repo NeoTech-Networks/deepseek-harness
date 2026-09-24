@@ -1494,6 +1494,14 @@ export interface Config {
   models: Volatile<DeepSeekCatalogModel[]>
   /** Maximum provider idle time while one stream read is outstanding (default five minutes). */
   streamIdleTimeoutMs: Volatile<number>
+  /**
+   * Maximum wait from the response to the stream's first content event
+   * (default 25 seconds). Keep-alive comments, `ping` and `message_start` do not
+   * satisfy or extend it, so a provider that accepts the request and produces
+   * nothing fails as a retryable `TIMEOUT` instead of hanging until its own
+   * cut-off. `0` disables the bound and leaves `streamIdleTimeoutMs` alone.
+   */
+  streamFirstPayloadTimeoutMs: Volatile<number>
   /** Maximum accumulated file-referenced image bytes per chat request (default 128 MiB). */
   maxRequestFilesBytes: Volatile<number>
   /** Maximum accumulated base64 image payload after Files API fallback (default 20 MiB). */

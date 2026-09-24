@@ -12,7 +12,7 @@ import { FileResolutionFailure, RequestFiles } from './request-files.ts'
 import { prepareRequestExtensions } from './request-extensions.ts'
 import { imagePricing, inlineImages, prepareFileIds, prepareImages } from './images.ts'
 import { serialize } from './serialize.ts'
-import { parseSse } from './sse.ts'
+import { boundFirstContent, parseSse } from './sse.ts'
 import { translate } from './translate.ts'
 import { providerError, providerErrorDetail } from './transport.ts'
 
@@ -137,7 +137,14 @@ export class DeepSeekAdapter extends LlmAdapter {
       }
       await extensions.accept()
       if (response.body === null) throw new LlmError('DeepSeek Messages returned no response body', 'EMPTY_RESPONSE')
-      yield* translate(parseSse(response.body, activity), options.model)
+      // Heartbeats (`: keep-alive`, `ping`) and `message_start` still rearm the
+      // idle watchdog, so a paced stream is never cut short; what they can no
+      // longer do is hold the call open forever, because the first-content
+      // bound runs on its own clock from here to the first content event.
+      yield* translate(boundFirstContent(
+        parseSse(response.body, activity),
+        connection.streamFirstPayloadTimeoutMs,
+      ), options.model)
       return
     }
   }
