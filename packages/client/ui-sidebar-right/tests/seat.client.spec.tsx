@@ -437,6 +437,29 @@ describe('RightbarSeat presentation', () => {
     expect(h.frame.closeRightbar).toHaveBeenCalled()
   })
 
+  it('changes the mode from the panel control without deriving a pane from live focus', async () => {
+    const h = await mountSeat()
+    h.open()
+    const panel = element(h.view.container, '[data-sidebar-right-panel]')
+    const commands = vi.spyOn(h.controller, 'commandTarget')
+    // Live focus can sit inside the Sidebar but outside any dock pane, and the
+    // command path resolves no target at all there and drops the click on the
+    // floor. Hold that state still by pointing the document at the panel
+    // itself: the control the operator clicked must still change the mode.
+    const activeElement = Object.getOwnPropertyDescriptor(Document.prototype, 'activeElement')
+    Object.defineProperty(document, 'activeElement', { configurable: true, get: () => panel })
+    try {
+      fireEvent.click(element(h.view.container, '[data-sidebar-right-mode]'))
+      expect(h.layout().mode).toBe('fullscreen')
+      expect(panel.dataset['sidebarRightPanel']).toBe('fullscreen')
+      expect(h.frame.openRightbar).toHaveBeenLastCalledWith(true, true, SESSION)
+      expect(commands).not.toHaveBeenCalled()
+    } finally {
+      if (activeElement === undefined) Reflect.deleteProperty(document, 'activeElement')
+      else Object.defineProperty(document, 'activeElement', activeElement)
+    }
+  })
+
   it('derives narrow fullscreen without recording mode and returns to normal when widened', async () => {
     const h = await mountSeat(767, false)
     h.open()
