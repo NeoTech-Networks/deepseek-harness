@@ -155,8 +155,22 @@ function Wait-AppReady($minutes) {
 function Stop-App {
   # A forced close: Windows and any session inside the app report it as a CRASH.
   # That is expected and is not the install failing.
+  #
+  # Wait for the processes to be ACTUALLY gone, never a fixed sleep. Electron
+  # child processes (GPU, renderer, utility) can outlive the main process by many
+  # seconds after a forced close, and the NSIS installer aborts with exit 2 while
+  # any instance is still alive holding a lock on the install dir. Measured
+  # 2026-09-25: five children of a ~25 hour old launch were still running 3s
+  # after taskkill, the installer exited 2, and nothing was installed. Returns
+  # the number of processes still alive (0 means a clean close).
   taskkill /F /IM "DeepSeek Harness.exe" /T 2>$null | Out-Null
-  Start-Sleep -Seconds 3
+  $deadline = (Get-Date).AddSeconds(60)
+  $alive = @(Get-Process -Name 'DeepSeek Harness*' -ErrorAction SilentlyContinue).Count
+  while ($alive -gt 0 -and (Get-Date) -lt $deadline) {
+    Start-Sleep -Milliseconds 500
+    $alive = @(Get-Process -Name 'DeepSeek Harness*' -ErrorAction SilentlyContinue).Count
+  }
+  return $alive
 }
 
 function Invoke-Migrator {
@@ -277,7 +291,15 @@ if (-not $snapshotOk) {
 
 # --- 1. Close, 2. install -----------------------------------------------------
 Write-Host "closing the app (Windows will report this as a crash - that is expected, it is a forced close)" -ForegroundColor Yellow
-Stop-App
+$survivors = Stop-App
+if ($survivors -ne 0) {
+  Stop-Guard "$survivors DeepSeek Harness process(es) are still alive 60s after a forced close." @"
+  The installer aborts (exit 2) while any instance is running, so it was NOT
+  started. Close the app by hand (Task Manager) and re-run. If it will not die,
+  sign out and back in.
+"@
+}
+Write-Host "app closed"
 Write-Host "installing $(Split-Path $installer -Leaf) (unsigned: if SmartScreen prompts, choose Run anyway)..."
 $p = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
 Write-Host "installer exit code: $($p.ExitCode)"
@@ -356,7 +378,7 @@ if ($migrating) {
     $unimported = Join-Path $staged 'unimported.yaml'
     if ((Test-Path $unimported) -and (Get-Item $unimported).Length -gt 0) {
       Write-Warning "some sections did not import; re-importing just those (app closes and reopens once)"
-      Stop-App
+      $null = Stop-App
       Copy-Item $imported "$imported.first" -Force
       Copy-Item $unimported (Join-Path $dshHome 'settings.yaml') -Force
       Start-Process $exe
@@ -386,7 +408,7 @@ if ($migrating) {
   if ($VaultCode -eq 0) { $settingsVerdict = 'OK' }
   elseif ($VaultCode -eq 3) {
     Write-Warning "DRIFT: this install changed or removed some of your settings. Repairing from the snapshot."
-    Stop-App
+    $null = Stop-App
     Restore-AgentsHardlink
     & py $VaultTool restore --all 2>&1 | ForEach-Object { Write-Host "  $_" }
     Start-Process $exe
