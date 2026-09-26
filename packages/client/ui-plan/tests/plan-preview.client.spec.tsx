@@ -17,6 +17,7 @@ import { planAddress, parsePlanAddress, submittedPlan } from '../src/client/plan
 import { reviewPreviewAddress, isReviewPreviewAddress } from '../src/client/review-preview.ts'
 import { planDefinition } from '../src/client/plan-definition.ts'
 import { createPlanReviewStore } from '../src/client/review-store.ts'
+import { openWhenSeated } from '../src/client/auto-open.ts'
 
 afterEach(cleanup)
 const markdown = '# Keep this plan\n\n## Goal\n\n- Review\n- Implement'
@@ -35,9 +36,11 @@ function reviewProps(review: { plan: string; callId?: typeof plan.callId }, open
     useStore: (select: (state: ReturnType<typeof store.getSnapshot>) => unknown) => select(store.getSnapshot()),
   } as unknown as Parameters<typeof PlanReviewOpen>[0]
 }
-/** A bound `useSidebarMounted` reading one observable seat value. */
-function seatHook(read: () => SessionId | undefined) {
-  return <S,>(select: (session: SessionId | undefined) => S): S => select(read())
+/** The injected `autoOpen`, wired as production wires it, against one observable seat owned by `owner`. */
+type Seat = ReturnType<typeof createSnapshotStore<SessionId | undefined>>
+function seatOpen(mounted: Seat, openReview: Mock, owner = target.session.sessionId) {
+  return (review: unknown, requestKey: string, onOpened: () => void) =>
+    openWhenSeated(mounted, seat => seat === owner, () => { openReview(review, requestKey) }, onOpened)
 }
 
 describe('submitted plan identity', () => {
@@ -237,7 +240,8 @@ describe('plan entry points and document', () => {
     const openReview = vi.fn()
     const store = createPlanReviewStore().create()
     const review = { plan: markdown, ...(logged ? { callId: plan.callId } : {}) }
-    const props = { ...reviewProps(review, openReview, store), useSidebarMounted: seatHook(() => target.session.sessionId) }
+    const seat = createSnapshotStore<SessionId | undefined>(target.session.sessionId)
+    const props = { ...reviewProps(review, openReview, store), autoOpen: seatOpen(seat, openReview) }
     const first = render(<PlanReviewOpen {...props} />)
     expect(openReview).toHaveBeenCalledExactlyOnceWith(review, 'question:1')
     first.rerender(<PlanReviewOpen {...props} />)
@@ -264,23 +268,78 @@ describe('plan entry points and document', () => {
     const store = createPlanReviewStore().create()
     const mounted = createSnapshotStore<SessionId | undefined>(undefined)
     const review = { plan: markdown, callId: plan.callId }
-    const props = { ...reviewProps(review, openReview, store), useSidebarMounted: seatHook(() => mounted.getSnapshot()) }
+    const props = { ...reviewProps(review, openReview, store), autoOpen: seatOpen(mounted, openReview) }
     const view = render(<PlanReviewOpen {...props} />)
     expect(openReview).not.toHaveBeenCalled()
     expect(store.getSnapshot().opened).toEqual({})
     // The manual opener stays available without a seat; the service decides what to do.
     fireEvent.click(screen.getByRole('button', { name: 'Open plan in sidebar' }))
     expect(openReview).toHaveBeenCalledTimes(1)
-    mounted.set(target.session.sessionId)
-    view.rerender(<PlanReviewOpen {...props} />)
+    // No rerender: the seat binding alone must trigger the open.
+    act(() => { mounted.set(target.session.sessionId) })
     expect(openReview).toHaveBeenCalledTimes(2)
     expect(store.getSnapshot().opened).toEqual({ [`call:${plan.callId}`]: true })
-    view.rerender(<PlanReviewOpen {...props} />)
-    mounted.set(undefined)
-    view.rerender(<PlanReviewOpen {...props} />)
-    mounted.set(target.session.sessionId)
+    act(() => { mounted.set(undefined) })
+    act(() => { mounted.set(target.session.sessionId) })
     view.rerender(<PlanReviewOpen {...props} />)
     expect(openReview).toHaveBeenCalledTimes(2)
+  })
+  it('survives a Session switch: stale seat, gap, then its own seat opens exactly once', () => {
+    // The failure this fixes: the previous Session's seat is still reported when
+    // the review mounts, is released, and only then does this Session's seat bind.
+    const openReview = vi.fn()
+    const store = createPlanReviewStore().create()
+    const mounted = createSnapshotStore<SessionId | undefined>('previous-session' as SessionId)
+    const review = { plan: markdown, callId: plan.callId }
+    render(<PlanReviewOpen {...{ ...reviewProps(review, openReview, store), autoOpen: seatOpen(mounted, openReview) }} />)
+    expect(openReview).not.toHaveBeenCalled()
+    act(() => {
+      mounted.set(undefined)
+      mounted.set(target.session.sessionId)
+    })
+    expect(openReview).toHaveBeenCalledExactlyOnceWith(review, 'question:1')
+    expect(store.getSnapshot().opened).toEqual({ [`call:${plan.callId}`]: true })
+  })
+  it('never opens into another Session’s seat', () => {
+    const openReview = vi.fn()
+    const store = createPlanReviewStore().create()
+    const mounted = createSnapshotStore<SessionId | undefined>('other' as SessionId)
+    render(<PlanReviewOpen {...{ ...reviewProps({ plan: markdown }, openReview, store), autoOpen: seatOpen(mounted, openReview) }} />)
+    act(() => { mounted.set(undefined) })
+    act(() => { mounted.set('other' as SessionId) })
+    expect(openReview).not.toHaveBeenCalled()
+    expect(store.getSnapshot().opened).toEqual({})
+  })
+})
+
+describe('openWhenSeated', () => {
+  const me = 'me' as SessionId
+  it('retries after a throwing open and stops after the first success', () => {
+    const mounted = createSnapshotStore<SessionId | undefined>(me)
+    const open = vi.fn<() => void>(() => { throw new Error('sidebarRight: no session surface is mounted') })
+    const opened = vi.fn()
+    openWhenSeated(mounted, seat => seat === me, open, opened)
+    expect(open).toHaveBeenCalledOnce()
+    expect(opened).not.toHaveBeenCalled()
+    open.mockImplementation(() => {})
+    mounted.set(undefined)
+    mounted.set(me)
+    expect(open).toHaveBeenCalledTimes(2)
+    expect(opened).toHaveBeenCalledOnce()
+    mounted.set(undefined)
+    mounted.set(me)
+    expect(open).toHaveBeenCalledTimes(2)
+  })
+  it('opens immediately when its seat is already mounted, and a disposer stops waiting', () => {
+    const now = vi.fn()
+    openWhenSeated(createSnapshotStore<SessionId | undefined>(me), seat => seat === me, now, vi.fn())
+    expect(now).toHaveBeenCalledOnce()
+    const mounted = createSnapshotStore<SessionId | undefined>(undefined)
+    const later = vi.fn()
+    const stop = openWhenSeated(mounted, seat => seat === me, later, vi.fn())
+    stop()
+    mounted.set(me)
+    expect(later).not.toHaveBeenCalled()
   })
   it('renders temporary Markdown and reports expired navigation after reload', () => {
     const address = reviewPreviewAddress(target.session.sessionId, 'window:question:1')

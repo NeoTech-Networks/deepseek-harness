@@ -220,9 +220,22 @@ describe('ui-plan browser apply', () => {
       const review = b.slots.entries('conversation.plan-review.actions')[0]!
       expect(review.component).toBe(PlanReviewOpen)
       const reviewInjected = (review.inject as unknown as (sessionId: SessionId) => PlanReviewOpenInjected)(SID)
-      // The automatic open reads the service's mounted-seat source, not a copy.
-      expect(reviewInjected.hooks.sidebarMounted).toBe(b.mounted)
       const pending = { id: 'review', question: 'Approve?', plan: plan.markdown, callId: plan.callId, approve: { label: 'Approve' } }
+      // The automatic open reads the service's live mounted-seat source: a foreign
+      // seat never receives it, and it opens once this Session's seat binds.
+      b.openResource.mockClear()
+      const opened = vi.fn()
+      b.mounted.set('another-session' as SessionId)
+      const stop = reviewInjected.autoOpen(pending, 'question:1', opened)
+      expect(b.openResource).not.toHaveBeenCalled()
+      b.mounted.set(undefined)
+      b.mounted.set(SID)
+      expect(b.openResource).toHaveBeenCalledExactlyOnceWith(address)
+      expect(opened).toHaveBeenCalledOnce()
+      b.mounted.set(undefined)
+      b.mounted.set(SID)
+      expect(b.openResource).toHaveBeenCalledOnce()
+      stop()
       reviewInjected.openReview(pending, 'question:1')
       expect(b.openResource).toHaveBeenLastCalledWith(address)
       b.subagentAddress.mockReturnValue({ parentSessionId: 'parent' as SessionId, childSessionId: SID, mode: 'continuable' })

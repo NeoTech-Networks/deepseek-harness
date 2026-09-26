@@ -24,6 +24,7 @@ import { planResourceProvider } from './plan-resource.ts'
 import { planAddress, parsePlanAddress } from './plan.ts'
 import { isReviewPreviewAddress, reviewPreviewAddress } from './review-preview.ts'
 import { createPlanReviewStore } from './review-store.ts'
+import { openWhenSeated } from './auto-open.ts'
 import { PlanChip } from './PlanModeControl.tsx'
 import { en, zh, type PlanKey } from './locales.ts'
 
@@ -96,15 +97,21 @@ export function apply(ctx: ClientContext): void {
   }, PlanCards))
   ctx.slots.inject('conversation.plan-review.actions', () => ctx.slots.register({
     name: 'conversation.plan-review.actions', id: previewId, locale: NS, store: reviewStore,
-    inject: (sessionId: SessionId): PlanReviewOpenInjected => ({
-      openReview: (review, requestKey) => {
+    inject: (sessionId: SessionId): PlanReviewOpenInjected => {
+      const openReview: PlanReviewOpenInjected['openReview'] = (review, requestKey) => {
         if (review.callId !== undefined) { open(sessionId).openPlan(review.callId); return }
         ctx.sidebarRight.openResource(reviewPreviewAddress(sessionId, `${reviewWindow}:${requestKey}`), {
           params: { planReview: { markdown: review.plan, title: extractMarkdownPlainText(review.plan, { mode: 'first-line' }) } },
         })
-      },
-      hooks: { sidebarMounted: ctx.sidebarRight.mounted },
-    }),
+      }
+      // A subagent's review may show in its parent's seat; no other Session's.
+      const owns = (seat: SessionId): boolean => seat === sessionId || seat === ctx.sessions.subagentAddress(sessionId)?.parentSessionId
+      return {
+        openReview,
+        autoOpen: (review, requestKey, onOpened) =>
+          openWhenSeated(ctx.sidebarRight.mounted, owns, () => { openReview(review, requestKey) }, onOpened),
+      }
+    },
   }, PlanReviewOpen))
   ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({
     name: 'sidebar.right.pane.tab', key: previewId, locale: NS,
