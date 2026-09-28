@@ -15,6 +15,17 @@
 - STILL FAILING, ALL PRE-EXISTING AND UNCHANGED BY THIS UPDATE: `verify-client-ui-i18n` (2 hard-coded strings in `ui-sidebar-explorer/definition.ts`) and `verify-repository-references` (commit hashes in `PORT-0.1.7-FEATURE-MAP.md`), both recorded in OPEN_ISSUES item 3 and both caused by fork-only files. `verify-cordis-config` fails on the CLEAN upstream tag too, so it is upstream's. `verify-module-graph` and `verify-tsconfig-paths` pass (the latter needed no alias work: the three new upstream packages already carry their aliases and project references from the tag). Sixteen generators, all exit 0.
 - ROLLBACK FLOOR untouched: `C:\d17p\...\deepseek-harness-0.1.7-rc.2-win-x64-unsigned.exe`, 287,433,586 bytes.
 
+## Last save-state (2026-09-28T21:34:22.876889+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `1de95b99-9bed-4b81-bcb4-101f281a0cb8`
+- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
+- Plan: (none)
+- Transcript: C:\Users\SteveDempsey\.claude\projects\C--Projects-general-DS-harness\ab143138-bff1-43e0-ab69-db2a9f22ea0a.jsonl
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-26 - plan review auto-open fix (fix/plan-review-autoopen)
 
 - **Bug:** a pending plan review only opened in the right sidebar when it arrived while its session was on screen. Arriving elsewhere, then switching back, left it closed.
@@ -176,3 +187,80 @@ since this machine mandates one worktree per session, the vault could not run in
 the rules require. And the shared-checkout guard creates its worktree inside the repo, so
 `dsh_config_vault.py`'s `git add -A` would have committed a second copy of the whole vault;
 `dsh-config` now ignores `.claude/worktrees/`.
+# CURRENT_STATE (capped newest-first log)
+
+## 2026-09-20 - the 0.1.6 update is BLOCKED by upstream deletions, so the install target fell back to the proven 0.1.5-rc.2 build
+
+`dsh-v0.1.6-alpha.2` is NOT a version bump and the fork cannot take it by rebasing. Two
+layers the fork is built on were deleted upstream, both confirmed by direct reads on the
+tag rather than from notes:
+
+- `seed-store.ts`, `provision-log.ts` and ten more files under `apps/desktop/` are GONE,
+  replaced by a runtime-tree / update-journal / mandatory-update architecture. All four
+  provision milestones (`seed integrity verified`, `staged health check passed`,
+  `staging profile activated as`, `applyRelease finished`), `verifySeedIntegrity` and
+  `integrity.json` return ZERO files on the tag, so `finish-install.ps1`, which references
+  `seed` 21 times, cannot drive it.
+- About a dozen packages are GONE: `packages/session-status/*`, `client/ui-sessions-panel`,
+  `vision/routing`, `llm/account-usage`, `llm/llm-route-fallback`, `api/pinned-files`,
+  `client/ui-sidebar-explorer`, `fs/tool-present`, `code-runtime/*`, `e2b/*`,
+  `workflow/workflow-worker-thread`. `derivePhase` does not exist there. These are where
+  the fork's features live.
+
+A rebase cannot recover either: the local stack never modified `seed-store.ts` (its log
+across `dsh-v0.1.5-rc.2..42db6c8038` is empty), so replaying local diffs can never restore
+an upstream deletion. 8 of the 53 local commits were replayed before stopping. The gates
+cannot catch a wrong choice here, because either route can typecheck, build and package
+while leaving first-run provisioning broken. Operator chose the plan's bounded-effort
+fallback: install the proven 0.1.5-rc.2 build. See OPEN_ISSUES 35.
+
+WHAT IS READY TO INSTALL. `C:\Projects\worktrees\dsh-stage-icons` was fast-forwarded one
+commit (`fe3a1a3c14..42db6c8038`) so its `finish-install.ps1` carries the new hardlink
+guard as well as the 11:55 installer (194,849,563 bytes). The already-built installer is
+untouched by that fast-forward, because the script is not part of the app bundle. All three
+features missing from the running build are PROVEN inside that installer's packaged seed:
+`workspaceLinks` 1, `dsw-stage-arc-spin` 3, `deploying` 12. `dsh_local_features_check.py`
+reads 24 of 27 today and must read 27 of 27 after the install.
+
+SETTINGS COVER WIDENED, and the rules file can no longer be silently unlinked. The vault
+went from 18 protected files to 20: `dashboard-links.json` and `design-links.json` had no
+cover at all and the vault's deny list does not match either. `finish-install.ps1` gained a
+hardlink guard so a missing `~\.dsh\AGENTS.md` is re-linked to `~\.claude\CLAUDE.md` BEFORE
+any vault restore can create a separate file, asserted after each restore and once at the
+end. Identity is compared by FILE ID, never by path string: `fsutil` reports long names
+while `$env:TEMP` hands back `C:\Users\STEVED~1\...`, so a string compare false-fails a
+good link and here a false failure stops the install. Six test modes pass, including a
+shortname regression case for exactly that bug, which was found and fixed before shipping.
+
+TWO TOOLING FIXES, both surfaced by the work above. `C:\Claude\bin\dsh_config_vault.py`
+tested `(root/".git").is_dir()`, so it refused a LINKED WORKTREE, where `.git` is a file;
+since this machine mandates one worktree per session, the vault could not run in the layout
+the rules require. And the shared-checkout guard creates its worktree inside the repo, so
+`dsh_config_vault.py`'s `git add -A` would have committed a second copy of the whole vault;
+`dsh-config` now ignores `.claude/worktrees/`.
+
+## 2026-09-20 - the sidebar row draws the session's live stage: the dsh icons set, built, tested and packaged
+
+- OPERATOR REQUEST, and it framed the work: "update the icons that I use for active sessions and make sure the states are matched perfectly. icons should change when the state changes in the session not when it's done". Design source live in Claude Design, project `dsh icons` (`a3cc06af-8c31-4b18-a8d4-a263381a3364`), page `Session Stage Icons.dc.html`. THE PAGE HAD MOVED BETWEEN PLANNING AND IMPLEMENTATION (etag `1789855882691753` to `1789856748216881`): it now carries EIGHT glyphs, not seven, because a generic `stage.working` spinner was added and Blocked, Failed, Saved and Deploying were redrawn, so the extract was re-read from the live page before any code was written. Frozen copy: `C:\Projects\logs\2026-09-20\dsh-stage-icons\design-extract.md`.
+- WHAT WAS WRONG: `derivePhase` in `packages/client/ui-workspace/src/client/tree.ts` already ranked live facts above a declared hold, so the reactivity was wired; the gap was that only five phases drew a glyph and `running`, the state a session is in for most of its life, fell through to a bare animated dot. The marks that distinguish states were therefore only seen once something declared a status at the end of a run.
+- WHAT CHANGED, commit `fe3a1a3c14`, 23 files, 615 insertions and 107 deletions. (1) Eight stroke glyphs added to `packages/client/ui-primitives/src/icons/index.tsx` at the design's 14px working size, viewBox 24, stroke 2.2, default size 14, with the icon-set assertion moved 75 to 83. (2) `PHASE_GLYPHS` now covers `awaiting-approval`, `awaiting-plan-review`, `awaiting-answer`, `planning`, `running` and `subagents`; `running` draws the Working mark and `liveGlyph` marks it live, with the wrapper pulse cancelled for it so two loops never share one 14px mark. `done` and `idle` keep their dots, and `subagents` keeps its agent mark because the design covers eight stages and delegation is none of them. (3) `STATUS_ICONS` now carries nine ids: the four new ones (`deploying`, `blocked`, `saved`, `failed`) plus the five legacy ids, which stay valid and map to the nearest new mark because an icon id rides a stored `session/status` event and the allowlist only grows. (4) `DEFAULT_VOCABULARY` points at the new marks and gains `failed`, so the Failed mark is reachable from the row menu and the `set_session_status` tool. (5) The glyphs carry NO inline animation and no inline style: each animatable element names itself with `data-part` and `Rows.module.css` owns the keyframes and the transform origins, which is what lets one rule stop all of them for `prefers-reduced-motion` and keeps every glyph's resting frame complete. (6) The 14px reduction the design specifies below 16px is honoured in CSS: one plan check on the middle row and no base line on the hourglass. (7) The second session list is wired too: `SessionsPanel.tsx` draws the same marks at 12px.
+- GATES, all this session: 252 tests passed across 11 files in `ui-primitives`, `ui-workspace`, `ui-sessions-panel` and the three `session-status` packages (the icon spec 98 and the row spec 40, both including new cases for the resting frame and for the slot handing over from live work to a declared hold); `pnpm run typecheck` exit 0; `pnpm run build` exit 0 with "recorded 240 client artifact(s)"; oxlint 0 warnings 0 errors on the staged set. Two pre-existing `typescript(no-unnecessary-condition)` findings remain in `Rows.tsx` and `SessionsPanel.tsx` on the `?? UNKNOWN_STATUS_ICON` lines, which this diff does not touch and which cannot be removed without breaking the tested unknown-id fallback. `verify-client-ui-i18n` still reports the same two `ui-sidebar-explorer` strings as before.
+- GENERATED ARTIFACTS: regenerating the four that this change touches made them current and their `--check` verifiers pass (`verify-tool-catalog`, `verify-cordis-catalog`, `verify-config-catalog`, `verify-persistence-catalog`). `docs/module-graph*` and `docs/event-producer-consumer.md` were deliberately REVERTED: they were already stale on the base commit (the committed module graph at `d9e83fca02` does not name `pkg_session_status`, which exists in that tree) and their diffs carry only other sessions' drift, so leaving them alone keeps this commit honest and leaves those two gates exactly as they were found.
+- VISUAL PROOF, since the desktop app cannot start a second instance while the installed one runs: a standalone page rendering the REAL components out of the built package inside the REAL `Rows.module.css`, screenshotted headlessly (`stage-marks.html`, `shot_1100.png`, and `zoom-14px-paused.png` at 5x). It shows all eight marks, the single plan check and the hourglass without its base line. It does NOT prove the theme colours, because `var(--dsw-alias-state-*)` lives in the app's global theme and not in that stylesheet, and it does not prove the sidebar integration; both need the install.
+- INSTALLER, built with `DSH_DESKTOP_APP_ID=com.deepseek.harness`, `DSH_DESKTOP_ALLOW_UNSIGNED=1`, `DOWNLOAD_TEST_ORIGIN=https://download.neotech.biz` from PowerShell: `deepseek-harness-0.1.5-rc.2-win-x64.exe`, 194,849,563 bytes, 2026-09-20 11:55:36, worktree `C:\Projects\worktrees\dsh-stage-icons`. Markers proven INSIDE the packaged seed before handover: `.../seed/desktop-packages/deepseek-ai-dsh-client-ui-workspace-0.1.5-rc.2.tgz -> package/lib/client.js` carries `dsw-stage-arc-spin` (3), `...deepseek-ai-dsh-session-status...tgz -> package/lib/index.js` carries `deploying` (3), `...deepseek-ai-dsh-client-ui-sessions-panel...tgz -> package/lib/client.js` carries `IconStageWorkingOutline24` (1), and all eight glyph path signatures are in the packed web frontend `index-CkHN3ty-.js`.
+- REFS: `feat/session-stage-icons` and `update/v0.1.5-rc.2` were fast-forward merged and both read back from the fork at `fe3a1a3c148e69b76aba6ec7bd812eee22b76a5a`. Feature registry 27 rows: `session-stage-marks` (marker `dsw-stage-arc-spin`, `dsh-client-ui-workspace`) and `session-status-failed` (marker `deploying`, `dsh-session-status`); both markers verified ABSENT from the running build and present in the packaged one.
+- INSTALL PENDING, and this installer SUPERSEDES the footer-only build of 2026-09-19 18:24:52: it is cut from the same release line and carries the footer work plus the stage marks, so one install covers both. What is owed afterwards is one install and then TWO captures: the populated session footer nobody has ever photographed (OPEN_ISSUES 28 and 33) and the sidebar marks on screen (OPEN_ISSUES 5).
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=dd209731-50ab-486a-b7ec-41d1dd2e1928 at=2026-09-26T23:12:39.006756+00:00
+-->
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=1de95b99-9bed-4b81-bcb4-101f281a0cb8 at=2026-09-28T21:34:22.876889+00:00
+-->
