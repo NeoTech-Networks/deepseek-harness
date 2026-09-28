@@ -21,7 +21,7 @@ import {
   IconChevronsUpDownOutlineRegular, IconClockOutlineRegular, IconCloseFillRegular,
   IconFlatListOutlineRegular, IconFolderCloseRegular, IconProjectAddOutlineRegular,
   IconQueueOutlineRegular, IconSearchOutlineRegular, IconSlidersTwoOutlineRegular,
-  IconWorkspaceTreeOutlineRegular, Menu, Modal, Toast, Tooltip,
+  IconTriangleRightFillRegular, IconWorkspaceTreeOutlineRegular, Menu, Modal, Toast, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type {
   SessionListState, SessionSearchResultItem,
@@ -34,7 +34,7 @@ import type { WorkspaceBrowserProps } from '../contract/slots.ts'
 import type { ArchivedFilter, GroupNode, SessionNode, SessionOrderBy, SessionRowState } from '../tree.ts'
 import {
   deriveFlat, deriveGroups, deriveSearchResults, orderByRecency, owningGroupKey, owningParentFolder,
-  pinCurrentBlank, reconcileManualOrder, sessionMemberIds, UNGROUPED_KEY,
+  pinCurrentBlank, reconcileManualOrder, sectionize, sectionShowsWorkspaces, sessionMemberIds, UNGROUPED_KEY,
 } from '../tree.ts'
 import { ProjectRowItem, SearchResultItem, SessionNodeItem } from './Rows.tsx'
 import { AnimatedRows } from './AnimatedRows.tsx'
@@ -253,6 +253,12 @@ type SessionTreeProps = Pick<
   onRenameRequest: (workspaceId: WorkspaceId, currentTitle: string) => void
   /** Open the browser-owned delete-confirmation dialog for a real Workspace group. */
   onDeleteRequest: (workspaceId: WorkspaceId, currentTitle: string) => void
+  /** Open the browser-owned Set group dialog for a real Workspace (fork). */
+  onSetGroupRequest: (workspaceId: WorkspaceId, currentGroup: string) => void
+  /** Persisted fold state of named group sections, keyed by group label (fork). */
+  sectionExpansion: Readonly<Record<string, boolean>> | undefined
+  /** Persist one named group section's fold (fork). */
+  setSectionExpanded: (key: string, expanded: boolean) => void
   /** Open the rename dialog from a row title double-click. */
   onSessionRenameRequest: (sessionId: SessionNode['id'], currentTitle: string) => void
   /** One Session chosen from search that must be exposed and scrolled into view. */
@@ -282,7 +288,8 @@ function SessionTree({
   list, useSessionStatus, startSession, open, workspaces, ungroupedSessionIds,
   rowState, onLeaveArchivedOnly,
   workspaceReady, animationResetKey, usePanelInfo,
-  onRenameRequest, onDeleteRequest, onSessionRenameRequest,
+  onRenameRequest, onDeleteRequest, onSessionRenameRequest, onSetGroupRequest,
+  sectionExpansion, setSectionExpanded,
   renderSlot,
   insertWorkspaceBefore,
   nestWorkspaces, groupExpansion, setGroupExpanded,
@@ -340,6 +347,11 @@ function SessionTree({
     }),
     [list, workspaces, rowState, statuses, expandedGroups, ungroupedSessionIds],
   )
+  useEffect(() => {
+    if (nestWorkspaces || revealGroup === undefined) return
+    const label = workspaces.find(workspace => workspace.workspaceId === revealGroup)?.group?.trim() ?? ''
+    if (label !== '' && sectionExpansion?.[label] === false) setSectionExpanded(label, true)
+  }, [nestWorkspaces, revealGroup, sectionExpansion, setSectionExpanded, workspaces])
   useEffect(() => {
     for (let key = revealGroup; key !== undefined; key = parents.get(key)) {
       if (groupExpansion[key] === false || (key === revealGroup && groupExpansion[key] !== true)) {
@@ -412,10 +424,14 @@ function SessionTree({
     && workspaceDrag.over.half === 'before'
 
   const rowKeys: string[] = groups.length === 0 ? ['empty'] : []
+  // Named Workspace groups (fork) are a `workspace`-mode presentation: their
+  // members render A-Z, so a drag inside one would snap back and stays off.
+  const nameSorted = (group: GroupNode): boolean => !nestWorkspaces && group.group !== ''
   const renderGroup = (group: GroupNode, depth: number): ReactNode => {
     const workspaceId = group.workspaceId
     const children = childrenByParent.get(group.key) ?? []
-    const compatibleDrag = workspaceDrag !== null && parents.get(workspaceDrag.workspaceId) === parents.get(group.key)
+    const compatibleDrag = workspaceDrag !== null && !nameSorted(group)
+      && parents.get(workspaceDrag.workspaceId) === parents.get(group.key)
     const collapsed = collapsedSessionRows(group.sessions)
     const visible = collapsedSessionRows(group.sessions, sessionLimits[group.key])
     const sessionsExpanded = visible.hiddenCount === 0
@@ -427,7 +443,7 @@ function SessionTree({
     const workspaceMarker = workspaceId !== undefined && workspaceDrag?.over?.id === workspaceId
       ? workspaceDrag.over.half
       : null
-    const workspaceDragProps = workspaceId === undefined ? undefined : {
+    const workspaceDragProps = workspaceId === undefined || nameSorted(group) ? undefined : {
       start: () => {
         workspaceDropCommitted.current = false
         setWorkspaceDrag({ workspaceId, over: null })
@@ -519,6 +535,10 @@ function SessionTree({
               /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
                 if (group.workspaceId !== undefined) onRenameRequest(group.workspaceId, group.label)
               },
+              setGroup: () => {
+              /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
+                if (group.workspaceId !== undefined) onSetGroupRequest(group.workspaceId, group.group)
+              },
               delete: () => {
               /* v8 ignore next -- narrowing guard: the actions object exists only for real-workspace groups. */
                 if (group.workspaceId !== undefined) onDeleteRequest(group.workspaceId, group.label)
@@ -604,7 +624,36 @@ function SessionTree({
     )
   }
 
-  const groupRows = rootGroups.map(group => renderGroup(group, 0))
+  const groupRows: ReactNode[] = []
+  if (nestWorkspaces) {
+    for (const group of rootGroups) groupRows.push(renderGroup(group, 0))
+  } else {
+    for (const section of sectionize(rootGroups)) {
+      const shows = sectionShowsWorkspaces(sectionExpansion, section)
+      if (section.label !== undefined) {
+        const label = section.label
+        rowKeys.push(`section:${section.key}`)
+        groupRows.push(
+          // The named section's own header IS its fold control; the choice is
+          // remembered per group label.
+          <button
+            key={`section:${section.key}`}
+            type="button"
+            className={css.groupHeader}
+            data-row-key={`section:${section.key}`}
+            data-workspace-group={label}
+            aria-expanded={shows}
+            aria-label={t('group.toggle', { name: label })}
+            onClick={() => { setSectionExpanded(section.key, !shows) }}
+          >
+            <IconTriangleRightFillRegular className={clsx(css.groupChevron, shows && css.groupChevronOpen)} />
+            <span className={css.groupHeaderLabel}>{label}</span>
+          </button>,
+        )
+      }
+      if (shows) for (const group of section.workspaces) groupRows.push(renderGroup(group, 0))
+    }
+  }
   return (
     <div className={clsx(css.treeBody, css.wide)}>
       {workspaceDropAtListStart && <span className={css.listTopDropIndicator} aria-hidden="true" />}
@@ -847,6 +896,7 @@ export function WorkspaceBrowser({
   requestSessionRename,
   notifyArchivedNotOpenable,
   renameWorkspace,
+  setGroupWorkspace,
   deleteWorkspace,
   insertWorkspaceBefore,
   unarchiveSession,
@@ -896,6 +946,7 @@ export function WorkspaceBrowser({
   // without the field; they read as the default hide-archived view.
   const archivedFilter = useStore(s => s.archivedFilter ?? 'default')
   const groupExpansion = useStore(s => s.groupExpansion)
+  const sectionExpansion = useStore(s => s.sectionExpansion)
   const sessionOrderByAccount = useStore(s => s.sessionOrderByAccount)
   // Archived sessions are not openable: the row stays visible under the
   // filter but a click explains instead of navigating.
@@ -1161,6 +1212,31 @@ export function WorkspaceBrowser({
     })
   }
 
+  // Group assignment dialog (fork; browser-owned; a blank value clears the group).
+  const [groupTarget, setGroupTarget] = useState<{ workspaceId: WorkspaceId; currentGroup: string } | null>(null)
+  const [groupDraft, setGroupDraft] = useState('')
+  const [groupSetting, setGroupSetting] = useState(false)
+  const [groupError, setGroupError] = useState<string | null>(null)
+  const groupTrimmed = groupDraft.trim()
+  const groupBlocked = groupSetting || groupTarget === null || groupTrimmed === groupTarget.currentGroup
+  const closeGroup = () => {
+    if (groupSetting) return
+    setGroupTarget(null)
+    setGroupError(null)
+  }
+  const confirmGroup = () => {
+    if (groupBlocked) return
+    setGroupSetting(true)
+    setGroupError(null)
+    setGroupWorkspace(groupTarget.workspaceId, groupTrimmed).then(() => {
+      setGroupSetting(false)
+      setGroupTarget(null)
+    }).catch((reason: unknown) => {
+      setGroupSetting(false)
+      setGroupError(reason instanceof Error ? reason.message : String(reason))
+    })
+  }
+
   // The search results' restore button; the row actions own the rest of the
   // Session verbs as slot entries.
   const onSessionUnarchive = (sessionId: SessionNode['id']) => {
@@ -1415,6 +1491,13 @@ export function WorkspaceBrowser({
                   setDeleteTarget({ workspaceId, title })
                   setDeleteError(null)
                 }}
+                onSetGroupRequest={(workspaceId, currentGroup) => {
+                  setGroupTarget({ workspaceId, currentGroup })
+                  setGroupDraft(currentGroup)
+                  setGroupError(null)
+                }}
+                sectionExpansion={sectionExpansion}
+                setSectionExpanded={actions.setSectionExpanded}
               />
             ))}
       </div>
@@ -1452,6 +1535,38 @@ export function WorkspaceBrowser({
           <div className={css.renameError} role="alert">{t('conflict.named', { name: renameTrimmed })}</div>
         )}
         {renameError !== null && <div className={css.renameError} role="alert">{renameError}</div>}
+      </Modal>
+
+      <Modal
+        open={groupTarget !== null}
+        onClose={closeGroup}
+        closeLabel={t('close')}
+        title={t('group.title')}
+        footer={(
+          <>
+            <Button variant="outline" disabled={groupSetting} onClick={closeGroup}>{t('cancel')}</Button>
+            <Button variant="primary" disabled={groupBlocked} onClick={confirmGroup}>{t('group.save')}</Button>
+          </>
+        )}
+      >
+        <input
+          className={css.renameInput}
+          value={groupDraft}
+          aria-label={t('field.groupName')}
+          autoFocus
+          disabled={groupSetting}
+          onFocus={(e) => { e.target.select() }}
+          onChange={(e) => { setGroupDraft(e.target.value); setGroupError(null) }}
+          onCompositionStart={() => { composingRef.current = true }}
+          onCompositionEnd={() => { composingRef.current = false }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !composingRef.current) {
+              e.preventDefault()
+              confirmGroup()
+            }
+          }}
+        />
+        {groupError !== null && <div className={css.renameError} role="alert">{groupError}</div>}
       </Modal>
 
       <Modal

@@ -22,6 +22,7 @@ export const MOCK_LLM_BEHAVIORS = [
   'partial_eof',
   'partial_disconnect',
   'stall',
+  'keepalive_stall',
   'malformed_json',
   'malformed_event',
   'wrong_content_type',
@@ -71,6 +72,9 @@ export const DEFAULT_MOCK_LLM_RANDOM_WEIGHTS: Readonly<MockLlmRandomWeights> = O
 
 /** Largest millisecond delay accepted by Node timers without truncation. */
 export const MAX_MOCK_LLM_TIMER_DELAY_MS = 2_147_483_647
+
+/** Comment cadence of `keepalive_stall`; short so a bound is provable quickly. */
+const KEEPALIVE_STALL_INTERVAL_MS = 25
 
 /** How one accepted request ended at the mock boundary. */
 export type MockLlmRequestOutcome = 'completed' | 'reset' | 'stalled' | 'client_closed' | 'server_error'
@@ -514,6 +518,19 @@ async function runBehavior(
       openSse(response)
       finishRecord(options, record, 'stalled')
       return
+    case 'keepalive_stall': {
+      // A stall that LOOKS alive: the transport keeps producing bytes and the
+      // protocol keeps producing nothing. Observed on a real provider
+      // 2026-09-14, and the reason a byte-based idle watchdog alone cannot
+      // bound a stream. No data payload is ever written, so `chunksSent`
+      // stays zero.
+      openSse(response)
+      const keepAlive = setInterval(() => { response.write(': keep-alive\n\n') }, KEEPALIVE_STALL_INTERVAL_MS)
+      keepAlive.unref()
+      response.once('close', () => { clearInterval(keepAlive) })
+      finishRecord(options, record, 'stalled')
+      return
+    }
     case 'malformed_json':
       openSse(response)
       writeSse(record, response, '{not-json')

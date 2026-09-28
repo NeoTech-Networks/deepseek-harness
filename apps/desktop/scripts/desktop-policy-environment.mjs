@@ -13,9 +13,12 @@ function origin(value, name) {
 /**
  * Resolve mandatory policy metadata before preparing artifacts or accessing signing hardware.
  * @param {NodeJS.ProcessEnv} environment File-owned release settings; the unselected origin is not required.
- * @returns {{ origin: string, allowedPageOrigins: string[], authentication: 'anonymous' | 'feishu-test', [key: string]: unknown }} Selected policy.
+ * @returns {{ origin: string, allowedPageOrigins: string[], authentication: 'anonymous' | 'feishu-test', [key: string]: unknown } | undefined} Selected policy, or undefined when the build opts out.
  */
 export function resolveDesktopPolicyEnvironment(environment) {
+  // NeoTech fork: a locally built app has no update feed, so a mandatory-update block could lock the
+  // UI with nothing to install. `off` is an explicit opt-out; any other value keeps upstream behaviour.
+  if (environment.DSH_DESKTOP_MANDATORY_UPDATE_CONFIG?.trim() === 'off') return undefined
   const deployment = resolveDesktopAutoUpdateEnvironment(environment)
   const name = deployment === 'test' ? 'DSH_DESKTOP_MANDATORY_UPDATE_TEST_ORIGIN' : 'DSH_DESKTOP_MANDATORY_UPDATE_PROD_ORIGIN'
   const selected = origin(environment[name], name)

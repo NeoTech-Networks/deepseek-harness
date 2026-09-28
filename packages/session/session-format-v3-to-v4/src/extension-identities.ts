@@ -68,12 +68,28 @@ export const RELEASED_V3_EVENT_TYPES: ReadonlySet<string> = new Set([
 /* jscpd:ignore-end */
 
 /**
+ * Event names the local 0.1.5 fork's V3 writer released on top of the upstream
+ * vocabulary. Kept apart from {@link RELEASED_V3_EVENT_TYPES}, which is pinned
+ * to the upstream writer by `verify-v3-event-vocabulary`, so live fork logs
+ * still migrate instead of refusing to open.
+ */
+export const FORK_RELEASED_V3_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'session/status',
+])
+
+/** Every V3 event name this reader admits: the upstream vocabulary plus the fork's released additions. */
+export const READABLE_V3_EVENT_TYPES: ReadonlySet<string> = new Set([
+  ...RELEASED_V3_EVENT_TYPES,
+  ...FORK_RELEASED_V3_EVENT_TYPES,
+])
+
+/**
  * Keep unknown ignorable events opaque after header promotion.
  * @param event - original V3 event; this incoming identity conversion is applied once.
  * @returns the same event or an ignorable namespaced event retaining its payload and coordinates.
  */
 export function namespaceV3OpaqueEvent(event: SessionFormatEvent): SessionFormatEvent {
-  return event['ignorable'] === true && !RELEASED_V3_EVENT_TYPES.has(event.type)
+  return event['ignorable'] === true && !READABLE_V3_EVENT_TYPES.has(event.type)
     ? { ...event, type: `plugin:${event.type}`, ignorable: true }
     : event
 }

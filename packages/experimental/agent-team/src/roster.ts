@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { Agent } from '@deepseek-ai/dsh-agent'
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
 import type { MessageId } from '@deepseek-ai/dsh-llm'
 import type { SessionId } from '@deepseek-ai/dsh-session'
 import { foldSubagentDescriptor } from '@deepseek-ai/dsh-subagent'
@@ -139,7 +140,7 @@ export class TeamRoster {
     }]
     for (const member of state.members) {
       const live = this.ctx.agents.get(member.id)
-      const model = live?.options.model ?? root.options.model
+      const model = live?.options.model ?? member.model ?? root.options.model
       result.push({
         id: member.id,
         name: member.name,
@@ -263,8 +264,18 @@ export class TeamRoster {
       description,
       provider: requiredText(request.provider, 'provider', 200),
       context: request.context,
+      ...request.route === undefined ? {} : { model: requiredText(request.route.model, 'model', 200) },
       phase: 'provisioning',
     }
+    const agentOptions = request.route === undefined
+      ? undefined
+      : {
+        provider: requiredText(request.route.llmProvider, 'llmProvider', 200),
+        model: request.route.model,
+        ...request.route.reasoningEffort === undefined
+          ? {}
+          : { reasoningEffort: ReasoningEffortId(requiredText(request.route.reasoningEffort, 'reasoningEffort', 64)) },
+      }
 
     await this.journal.transact(root.id, async () => {
       const state = this.journal.state(root)
@@ -286,6 +297,7 @@ export class TeamRoster {
         request: {
           prompt: request.prompt,
           parent: root,
+          ...agentOptions === undefined ? {} : { agentOptions },
         },
         signal,
       })
@@ -444,7 +456,7 @@ export class TeamRoster {
       description: member.description,
       provider: member.provider,
       context: member.context,
-      ...live?.options.model === undefined ? {} : { model: live.options.model },
+      ...(live?.options.model ?? member.model) === undefined ? {} : { model: live?.options.model ?? member.model },
       diagnostics: [],
     }
   }

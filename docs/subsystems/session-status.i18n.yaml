@@ -1,0 +1,10 @@
+# Bilingual-pair consistency record for session-status.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/subsystems/session-status.md
+/session-status:
+  en: 74ab970947c68c7f
+  zh: 9d955d04f623343c
+/session-status/status-vocabulary:
+  en: bef3df81c6ad98ca
+  zh: 40e479f39784ecf0

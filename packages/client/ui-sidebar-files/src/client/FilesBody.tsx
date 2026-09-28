@@ -7,8 +7,15 @@
  * file opens through the owner's `tabActions` for a `file:` viewer to claim, and
  * anything else is shown but refuses to open. The header uses the shared
  * PathLabel for the root, followed by reload for the expanded directories.
+ *
+ * A right-click on a directory row, or on the root header, opens a small menu
+ * with two "new session" gestures: adopt this one directory, or adopt every
+ * immediate sub-directory (picked in a dialog, optionally under one group
+ * label). The injected face performs the Workspace work; the body only draws
+ * the menu, the dialog and the one-line outcome. The menu is not offered when
+ * the Client has no Workspace services.
  */
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import type { RemoteFailure } from '@deepseek-ai/dsh-api-remotes/client'
@@ -16,11 +23,13 @@ import type { PropsLocale, PropsRuntime, PropsStore, TranslateNS } from '@deepse
 import {
   FileTypeIcon, IconFolderCloseRegular, IconFolderOpenRegular, IconRefreshOutlineRegular, Tooltip, classifyFileType,
   IconPauseOutlineRegular, IconPlayOutlineRegular, PathLabel,
+  Button, Input, Menu, Modal,
 } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives'
 import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceDirectoryEntry } from '@deepseek-ai/dsh-api-workspace-files/types'
 import { childPath } from './face.ts'
-import type { FilesInjected } from './face.ts'
+import type { FilesInjected, SubDirectoryCandidate } from './face.ts'
 import type {} from './locales.ts'
 import type { FilesTabState, createFilesStore } from './store.ts'
 import css from './FilesBody.module.css'
@@ -31,6 +40,10 @@ export type FilesBodyProps =
   & PropsStore<ReturnType<typeof createFilesStore>>
   & FilesInjected
   & PropsLocale<'sidebarFiles'>
+
+/** Menu entry ids for the two "new session" gestures. */
+const MENU_NEW_SESSION_HERE = 'new-session-here'
+const MENU_NEW_SESSION_EACH = 'new-session-each'
 
 /** Natural, case-insensitive name order, so `file2` precedes `file10`. */
 const byName = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
@@ -71,6 +84,8 @@ interface TreeContext {
   readonly state: FilesTabState
   readonly onToggle: (parent: string, path: string) => void
   readonly onOpen: (path: string) => void
+  /** Open the directory menu at the pointer, or undefined when no menu is offered. */
+  readonly onDirectoryMenu: ((path: string, x: number, y: number) => void) | undefined
   readonly t: TranslateNS<'sidebarFiles'>
 }
 
@@ -81,7 +96,16 @@ function Entry({ parent, entry, tree }: { parent: string; entry: WorkspaceDirect
     const expanded = tree.state.expanded.includes(path)
     return (
       <li className={css.item} data-files-entry="directory" data-files-path={path}>
-        <button type="button" className={css.row} aria-expanded={expanded} onClick={() => { tree.onToggle(parent, path) }}>
+        <button
+          type="button"
+          className={css.row}
+          aria-expanded={expanded}
+          onClick={() => { tree.onToggle(parent, path) }}
+          onContextMenu={tree.onDirectoryMenu === undefined ? undefined : (event) => {
+            event.preventDefault()
+            tree.onDirectoryMenu?.(path, event.clientX, event.clientY)
+          }}
+        >
           {expanded ? <IconFolderOpenRegular className={css.icon} /> : <IconFolderCloseRegular className={css.icon} />}
           <span className={css.name}>{entry.name}</span>
         </button>
@@ -133,9 +157,29 @@ function Level({ path, tree }: { path: string; tree: TreeContext }): ReactNode {
   )
 }
 
+/**
+ * A zero-size rectangle at the pointer, for placing the directory menu.
+ * @param x - viewport x.
+ * @param y - viewport y.
+ * @returns the anchor rectangle.
+ */
+function pointRect(x: number, y: number): DOMRect {
+  return { x, y, left: x, top: y, right: x, bottom: y, width: 0, height: 0, toJSON: () => ({}) }
+}
+
+/** The bulk dialog's draft: the folder being split, its sub-folders, and what is ticked. */
+interface BulkDraft {
+  readonly path: string
+  readonly candidates: readonly SubDirectoryCandidate[]
+  readonly selected: readonly string[]
+  readonly group: string
+  readonly listing: boolean
+}
+
 /** The file tree's body: the workspace root and whatever the reader has opened under it. */
 export function FilesBody({
   useTabInfo, sessionId, useSessions, useStore, actions, start, refresh, setAutoRefresh, toggle, t,
+  canOpenSessions, canGroup, openDirectory, listDirectories, openSubDirectories, inheritedGroup,
 }: FilesBodyProps): ReactNode {
   const { tab } = useTabInfo()
   useEffect(() => tab.actions.bindCommands({ refresh: () => { refresh(tab.id) } }), [tab.actions, tab.id, refresh])
@@ -167,6 +211,28 @@ export function FilesBody({
     if (state !== undefined || cwd === undefined || signal.aborted) return
     start(tab.id, cwd, signal)
   }, [state, cwd, tab.id, signal, start])
+  const [menu, setMenu] = useState<{ readonly path: string; readonly x: number; readonly y: number } | null>(null)
+  const [bulk, setBulk] = useState<BulkDraft | null>(null)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [outcome, setOutcome] = useState<string | null>(null)
+  const openMenu = useCallback((path: string, x: number, y: number): void => {
+    setMenu({ path, x, y })
+  }, [])
+  const prepareBulk = useCallback((path: string): void => {
+    setOutcome(null)
+    setBulk({ path, candidates: [], selected: [], group: inheritedGroup(), listing: true })
+    listDirectories(path).then(
+      (candidates) => {
+        setBulk(draft => draft?.path !== path ? draft : {
+          ...draft, candidates, selected: candidates.map(candidate => candidate.path), listing: false,
+        })
+      },
+      (reason: unknown) => {
+        setBulk(null)
+        setOutcome(reason instanceof Error ? reason.message : String(reason))
+      },
+    )
+  }, [inheritedGroup, listDirectories])
 
   if (cwd === undefined) {
     return (
@@ -181,14 +247,59 @@ export function FilesBody({
     onToggle: (parent, path) => { toggle(tab.id, parent, path, state.expanded, signal) },
     // Every row is under the tree's root, so its address is session-relative.
     onOpen: (path) => { tabActions.openResource(fileAddressFor(sessionId, state.root, path)) },
+    onDirectoryMenu: canOpenSessions() ? openMenu : undefined,
     t,
   }
+  const menuItems: readonly MenuEntry[] = [
+    { id: MENU_NEW_SESSION_HERE, label: t('menu.newSessionHere') },
+    { id: MENU_NEW_SESSION_EACH, label: t('menu.newSessionEach') },
+  ]
+  const onMenuSelect = (id: string): void => {
+    const target = menu?.path
+    setMenu(null)
+    /* v8 ignore next -- the menu only selects while open, so its path is present. */
+    if (target === undefined) return
+    if (id === MENU_NEW_SESSION_HERE) openDirectory(target)
+    else if (id === MENU_NEW_SESSION_EACH) prepareBulk(target)
+  }
+  const closeBulk = (): void => { setBulk(null) }
+  const confirmBulk = (): void => {
+    /* v8 ignore next -- the open button is disabled while nothing is selected. */
+    if (bulk === null || bulk.selected.length === 0) return
+    setBulkBusy(true)
+    const group = canGroup() ? bulk.group.trim() : ''
+    openSubDirectories(bulk.selected, group).then(
+      (count) => {
+        setBulkBusy(false)
+        setBulk(null)
+        setOutcome(t('bulk.done', { count: String(count) }))
+      },
+      (reason: unknown) => {
+        setBulkBusy(false)
+        setOutcome(reason instanceof Error ? reason.message : String(reason))
+      },
+    )
+  }
+  const toggleSelected = (path: string): void => {
+    if (bulk === null) return
+    const selected = bulk.selected.includes(path)
+      ? bulk.selected.filter(item => item !== path)
+      : [...bulk.selected, path]
+    setBulk({ ...bulk, selected })
+  }
+  const allSelected = bulk !== null && bulk.candidates.length > 0 && bulk.selected.length === bulk.candidates.length
   const reload = (): void => {
     refresh(tab.id)
   }
   return (
     <div className={css.root} data-files-state="tree" data-files-root={state.root}>
-      <div className={css.header}>
+      <div
+        className={css.header}
+        onContextMenu={tree.onDirectoryMenu === undefined ? undefined : (event) => {
+          event.preventDefault()
+          openMenu(state.root, event.clientX, event.clientY)
+        }}
+      >
         <PathLabel path={state.root} className={css.path} data-files-path />
         <span hidden>
           <button type="button" className={css.tool} aria-label={t('autoRefresh')}
@@ -219,6 +330,69 @@ export function FilesBody({
       >
         <ul className={css.level}><Level path={state.root} tree={tree} /></ul>
       </div>
+      {outcome !== null && <div className={css.bulkOutcome} role="status" data-files-bulk-outcome>{outcome}</div>}
+      <Menu
+        open={menu !== null}
+        anchor={<span className={css.menuAnchor} />}
+        items={menuItems}
+        onSelect={onMenuSelect}
+        onClose={() => { setMenu(null) }}
+        portal
+        getAnchorRect={() => (menu === null ? null : pointRect(menu.x, menu.y))}
+      />
+      <Modal
+        open={bulk !== null}
+        onClose={closeBulk}
+        title={t('bulk.title')}
+        closeLabel={t('bulk.close')}
+        description={t('bulk.description')}
+        footer={(
+          <div className={css.bulkFooter}>
+            <Button variant="ghost" onClick={closeBulk}>{t('bulk.cancel')}</Button>
+            <Button variant="primary" disabled={bulk === null || bulk.selected.length === 0 || bulkBusy} onClick={confirmBulk}>
+              {t('bulk.open')}
+            </Button>
+          </div>
+        )}
+      >
+        {bulk !== null && (
+          <div className={css.bulkBody} data-files-bulk={bulk.path}>
+            {canGroup() && (
+              <label className={css.bulkField}>
+                <span className={css.bulkLabel}>{t('bulk.group')}</span>
+                <Input value={bulk.group} onChange={(event) => { setBulk({ ...bulk, group: event.target.value }) }} />
+              </label>
+            )}
+            {bulk.listing
+              ? <p className={css.note}>{t('loading')}</p>
+              : bulk.candidates.length === 0
+                ? <p className={css.note}>{t('bulk.none')}</p>
+                : (
+                  <ul className={css.bulkList}>
+                    <li>
+                      <button
+                        type="button"
+                        className={css.bulkRow}
+                        data-files-bulk-all
+                        onClick={() => { setBulk({ ...bulk, selected: allSelected ? [] : bulk.candidates.map(item => item.path) }) }}
+                      >
+                        <input type="checkbox" readOnly tabIndex={-1} checked={allSelected} />
+                        <span>{t('bulk.all')}</span>
+                      </button>
+                    </li>
+                    {bulk.candidates.map(candidate => (
+                      <li key={candidate.path}>
+                        <button type="button" className={css.bulkRow} data-files-bulk-path={candidate.path} onClick={() => { toggleSelected(candidate.path) }}>
+                          <input type="checkbox" readOnly tabIndex={-1} checked={bulk.selected.includes(candidate.path)} />
+                          <span className={css.name}>{candidate.name}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

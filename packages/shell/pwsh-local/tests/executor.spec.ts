@@ -15,7 +15,7 @@ import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { PwshLocalExecutor, ENCODING_PREAMBLE, candidatePwshPaths, resolvePwshPath } from '@deepseek-ai/dsh-pwsh-local'
+import { PwshLocalExecutor, ENCODING_PREAMBLE, candidatePwshPaths, commandText, resolvePwshPath } from '@deepseek-ai/dsh-pwsh-local'
 import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
 import SubprocessRuntime from '@deepseek-ai/dsh-subprocess'
 import type { SubprocessHandle, SubprocessOutcome, SubprocessOutputReader, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
@@ -243,6 +243,36 @@ describe('spawn construction (pure, every platform)', () => {
     expect(ENCODING_PREAMBLE).toContain('$OutputEncoding')
   })
 
+  it('wraps a param-led command in a script block so param stays the first statement', () => {
+    // The defect: param(...) must be the first statement, and the preamble
+    // owns line 1, so the bare command reached PowerShell as a call to a
+    // command named `param`.
+    expect(commandText("param([string]$Name = 'world')\nWrite-Output $Name"))
+      .toBe(`${ENCODING_PREAMBLE}& { param([string]$Name = 'world')\nWrite-Output $Name\n}`)
+    // Leading whitespace and whole-line comments still count as param-led.
+    expect(commandText('# why\n\nparam([string]$Name = \'a\')\nWrite-Output $Name')).toContain('& { # why')
+    // Case-insensitive, and a space before the parenthesis is still a declaration.
+    expect(commandText('PARAM ( $Name )')).toContain('& { PARAM ( $Name )')
+    // A trailing line comment cannot swallow the closing brace.
+    expect(commandText('param()\nWrite-Output hi # done')).toMatch(/\n\}$/)
+  })
+
+  it('leaves an ordinary command unwrapped', () => {
+    expect(commandText('Write-Output hi')).toBe(`${ENCODING_PREAMBLE}Write-Output hi`)
+    // `parameters` is not a param declaration.
+    expect(commandText('Write-Output parameters')).toBe(`${ENCODING_PREAMBLE}Write-Output parameters`)
+  })
+
+  it('wraps the argv it actually spawns for a param-led command', async () => {
+    const ctx = createContext()
+    const subprocess = new CapturingSubprocessRuntime(ctx)
+    await ctx.plugin(PwshLocalExecutor)
+    await run(ctx.shell, ctx.shell.resolve({ command: "param([string]$Name = 'world')\nWrite-Output $Name" }))
+    const { argv } = subprocess.specs[0]!
+    expect(argv[5]?.startsWith(ENCODING_PREAMBLE)).toBe(true)
+    expect(argv[5]).toContain('& { param(')
+  })
+
   it('reports both unread stderr and an asynchronous provider rejection exactly once', async () => {
     const ctx = createContext()
     const subprocess = new CapturingSubprocessRuntime(ctx)
@@ -441,6 +471,16 @@ describe.skipIf(!hasPwsh)('PwshLocalExecutor.run', () => {
     expect(result.exitCode).toBe(0)
     expect(lf(result.stdout.text)).toBe('hi\n')
     expect(result.timeoutMs).toBe(10_000)
+  })
+
+  it('runs a param-led script, which the encoding preamble used to break', { timeout: 15_000 }, async () => {
+    const { bash } = await setup({ timeoutMs: 10_000 })
+    const result = await run(bash, bash.resolve({
+      command: "param([string]$Name = 'world')\nWrite-Output \"hello $Name\"",
+    }))
+    expect(result.exitCode).toBe(0)
+    expect(lf(result.stdout.text)).toBe('hello world\n')
+    expect(lf(result.stderr.text)).toBe('')
   })
 
   it('uses config cwd, overridable per call', async () => {

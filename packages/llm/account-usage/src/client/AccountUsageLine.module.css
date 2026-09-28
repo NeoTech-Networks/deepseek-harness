@@ -1,0 +1,123 @@
+/* Account-limits reading on the composer dock strip: the same 13/20 tertiary
+   tier as the session stats row it sits beside, plus a click-open panel on the
+   shared menu surface (r12, elevation-prominent). */
+
+.root {
+  display: block;
+  text-align: center;
+  max-width: var(--dsh-chat-content-width);
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 2px calc(var(--dsh-composer-side-clearance) + 16px) 0px;
+  font-size: var(--dsh-content-font-size-secondary, 13px);
+  line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px));
+}
+
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-tertiary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.trigger:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.warn {
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.critical {
+  color: var(--dsw-alias-state-error-primary);
+}
+
+.sep {
+  color: var(--dsw-alias-separator-primary);
+  margin: 0 6px;
+}
+
+/* Marks a reading that is not a fresh live figure; the panel says why. */
+.staleDot {
+  margin-left: 3px;
+}
+
+.panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  box-sizing: border-box;
+  width: 264px;
+  padding: 12px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--dsw-specific-menu);
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
+  box-shadow: var(--dsw-elevation-prominent);
+  font-size: 12px;
+  line-height: 20px;
+  text-align: left;
+  color: var(--dsw-alias-label-secondary);
+  cursor: default;
+}
+
+.title {
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
+}
+
+.rows {
+  margin: 8px 0 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.row dt {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.row dd {
+  margin: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-primary);
+}
+
+.resets {
+  display: block;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.footnote {
+  margin-top: 6px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.note {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--dsw-alias-border-l3);
+  color: var(--dsw-alias-state-warn-label);
+}

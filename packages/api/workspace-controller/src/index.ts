@@ -21,6 +21,7 @@ import type {
   WorkspacePinSessionRequest,
   WorkspacePinValue,
   WorkspaceRenameRequest,
+  WorkspaceSetGroupRequest,
   WorkspaceUnarchiveSessionRequest,
   WorkspaceUnpinSessionRequest,
   WorkspaceValue,
@@ -114,6 +115,16 @@ export class WorkspaceController extends TypertRemoteService {
   @Remote('rename')
   rename(request: WorkspaceRenameRequest): Promise<WorkspaceValue> {
     return this.commands.rename(request)
+  }
+
+  /**
+   * Assign or clear one Workspace grouping label.
+   * @param request - Workspace identity and proposed group; blank clears.
+   * @returns the updated Workspace projection.
+   */
+  @Remote('setGroup')
+  setGroup(request: WorkspaceSetGroupRequest): Promise<WorkspaceValue> {
+    return this.commands.setGroup(request)
   }
 
   /**

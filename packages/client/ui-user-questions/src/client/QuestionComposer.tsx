@@ -96,6 +96,29 @@ function AnswerField(props: AnswerFieldProps) {
 }
 
 /**
+ * The question's eyebrow and title, shared by the two seats it can occupy:
+ * the pinned strip while minimized, and the expanded scrollport, where it
+ * rides with the detail and the options so one scrollbar spans the whole
+ * question. Only one seat renders at a time, so the heading id stays unique.
+ *
+ * @param props - the heading id, the optional eyebrow, the question text, and an extra class.
+ * @returns The heading block.
+ */
+function QuestionHeading({ id, eyebrow, question, className }: {
+  id: string
+  eyebrow: string | undefined
+  question: string
+  className?: string | undefined
+}) {
+  return (
+    <div className={clsx(css.headingBlock, className)}>
+      {eyebrow !== undefined && <div className={css.eyebrow}>{eyebrow}</div>}
+      <h2 className={css.title} id={id}>{question}</h2>
+    </div>
+  )
+}
+
+/**
  * Composer takeover router. Generic-question drafts live in this entry's
  * Session-scoped Slot store, keyed by the pending carrier, so a strict Session
  * entry remount restores the same request without exposing it to another one.
@@ -274,43 +297,54 @@ function QuestionFlow({ pending, t, useStore, actions }: QuestionFlowProps) {
     submitDrafts(nextDrafts)
   }
 
+  const headingId = `question-${pending.key}-${String(index)}`
+  const headerActions = (
+    <div className={css.headerActions}>
+      <button
+        type="button" className={css.iconButton}
+        aria-label={t(minimized ? 'nav.maximize' : 'nav.minimize')}
+        title={t(minimized ? 'nav.maximize' : 'nav.minimize')}
+        aria-expanded={!minimized}
+        disabled={busy !== null}
+        onClick={() => { setMinimized(current => !current) }}
+      >
+        {minimized ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
+      </button>
+      <button
+        type="button" className={css.iconButton} aria-label={t('nav.cancel')}
+        title={t('nav.cancel')}
+        disabled={busy !== null} onClick={cancelFlow}
+      >
+        <IconCloseOutlineRegular />
+      </button>
+    </div>
+  )
+
   return (
     <div className={css.frame} data-question-key={pending.key}>
       <section
         className={clsx(css.card, minimized && css.cardMinimized)}
-        aria-labelledby={`question-${pending.key}-${String(index)}`}
+        aria-labelledby={headingId}
       >
-        <header className={css.header}>
-          <div className={css.headingBlock}>
-            {question.header !== undefined && <div className={css.eyebrow}>{question.header}</div>}
-            <h2 className={css.title} id={`question-${pending.key}-${String(index)}`}>
-              {question.question}
-            </h2>
-          </div>
-          <div className={css.headerActions}>
-            <button
-              type="button" className={css.iconButton}
-              aria-label={t(minimized ? 'nav.maximize' : 'nav.minimize')}
-              title={t(minimized ? 'nav.maximize' : 'nav.minimize')}
-              aria-expanded={!minimized}
-              disabled={busy !== null}
-              onClick={() => { setMinimized(current => !current) }}
-            >
-              {minimized ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
-            </button>
-            <button
-              type="button" className={css.iconButton} aria-label={t('nav.cancel')}
-              title={t('nav.cancel')}
-              disabled={busy !== null} onClick={cancelFlow}
-            >
-              <IconCloseOutlineRegular />
-            </button>
-          </div>
+        <header className={clsx(css.header, !minimized && css.headerExpanded)}>
+          {/* Minimized, the strip is the whole card, so the heading stays in
+              the pinned header. Expanded, the heading rides the scrollport
+              below and this row floats over the card's top-right corner. */}
+          {minimized && (
+            <QuestionHeading
+              id={headingId} eyebrow={question.header} question={question.question}
+            />
+          )}
+          {headerActions}
         </header>
 
         {!minimized && (
           <>
             <div className={css.body} data-question-scroll>
+              <QuestionHeading
+                id={headingId} eyebrow={question.header} question={question.question}
+                className={css.headingInBody}
+              />
               {question.detail !== undefined && (
                 <div className={css.detail}><MarkdownText text={question.detail} labels={markdownLabels} /></div>
               )}

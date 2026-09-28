@@ -3,8 +3,11 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { Agent } from '@deepseek-ai/dsh-agent'
+import { ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import type {} from '@deepseek-ai/dsh-llm'
 import { TeamTaskId } from '@deepseek-ai/dsh-experimental-agent-team'
-import type { TeamMemberView } from '@deepseek-ai/dsh-experimental-agent-team'
+import type { TeammateRoute, TeamMemberView } from '@deepseek-ai/dsh-experimental-agent-team'
+import type {} from '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { InferValue, ValueSchemaSpec } from '@deepseek-ai/dsh-tools'
 
@@ -153,6 +156,51 @@ function jsonOutput<const S extends ValueSchemaSpec>(schema: S): {
   }
 }
 
+/** Model-facing route fields on `spawn_teammate`. */
+interface TeammateRouteArgs {
+  readonly provider?: string
+  readonly model?: string
+  readonly reasoning_effort?: string
+}
+
+/**
+ * Validate an explicit teammate LLM route against the Host's subagent
+ * model-selection allowlist, then resolve it through the live LLM runtime so an
+ * unknown model or effort fails before any teammate is reserved.
+ * @param ctx - plugin Context that can see the Host settings and LLM runtime.
+ * @param args - model-facing route fields.
+ * @param signal - tool-call cancellation.
+ * @returns the validated route, or undefined when the teammate inherits the Lead route.
+ */
+async function resolveTeammateRoute(
+  ctx: Context,
+  args: TeammateRouteArgs,
+  signal: AbortSignal,
+): Promise<TeammateRoute | undefined> {
+  const { provider, model, reasoning_effort: effort } = args
+  if (provider === undefined && model === undefined && effort === undefined) return undefined
+  if (provider === undefined || model === undefined || provider.length === 0 || model.length === 0) {
+    throw new Error('spawn_teammate: `provider` and `model` must be supplied together (reasoning_effort needs them too)')
+  }
+  if (effort !== undefined && effort.length === 0) throw new Error('spawn_teammate: `reasoning_effort` must be non-empty')
+  const settings = ctx.get('subagentModelSelection')?.current()
+  if (settings === undefined || !settings.enabled) {
+    throw new Error('spawn_teammate: teammate model selection needs subagent model selection enabled in Settings')
+  }
+  if (!settings.allowedModels.some(route => route.provider === provider && route.model === model)) {
+    const allowed = settings.allowedModels.map(route => `${route.provider}/${route.model}`).join(', ')
+    throw new Error(`spawn_teammate: route "${provider}/${model}" is not in the allowed subagent models (${allowed})`)
+  }
+  const llm = ctx.get('llm')
+  if (llm === undefined) throw new Error('spawn_teammate: the `llm` service is unavailable to resolve the teammate route')
+  await llm.resolveCallConfig({
+    provider,
+    model,
+    ...effort === undefined ? {} : { reasoningEffort: ReasoningEffortId(effort) },
+  }, signal)
+  return { llmProvider: provider, model, ...effort === undefined ? {} : { reasoningEffort: effort } }
+}
+
 /** Recover the exact caller guaranteed by Agent-scoped tool discovery. */
 function callingAgent(agent: Agent | undefined, toolName: string): Agent {
   /* v8 ignore next 2 -- Team tools are registered only in an exact Agent scope, so discovery supplies this carrier. */
@@ -184,12 +232,26 @@ function install(agent: Agent, ctx: Context, config: Required<Config>): () => vo
           enum: ['fresh', 'fork'],
           description: 'fresh starts without Lead history; fork inherits completed Lead turns. Defaults to fresh.',
         },
+        provider: {
+          type: 'string',
+          description: 'Optional LLM provider for this teammate (see list_subagent_models). Supply together with model; omit both to run on the Lead\'s model.',
+        },
+        model: {
+          type: 'string',
+          description: 'Optional model id for this teammate. Must be an allowed subagent model. Supply together with provider.',
+        },
+        reasoning_effort: {
+          type: 'string',
+          description: 'Optional reasoning effort for the selected model; omit to use that model\'s default.',
+        },
       },
       output: jsonOutput(SPAWN_VALUE_SCHEMA),
       async execute(args, exec) {
         const agent = callingAgent(exec.agent, 'spawn_teammate')
         const context = args.context ?? 'fresh'
+        const route = await resolveTeammateRoute(ctx, args, exec.signal)
         const result = await ctx.agentTeams.spawnTeammate(agent, {
+          ...route === undefined ? {} : { route },
           name: args.name,
           description: args.description,
           prompt: [

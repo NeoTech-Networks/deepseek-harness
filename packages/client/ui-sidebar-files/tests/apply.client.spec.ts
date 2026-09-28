@@ -12,7 +12,7 @@ import { Context } from '@deepseek-ai/cordis'
 import type { ShortcutCommand } from '@deepseek-ai/dsh-client-shortcuts/client'
 import { SidebarRightTabRegistry } from '@deepseek-ai/dsh-client-ui-sidebar-right/src/client/tab-registry.ts'
 import { FILES_ID, FILES_KIND } from '../src/client/definition.tsx'
-import { apply, inject } from '../src/client/index.ts'
+import { apply, inject, workspaceOpenCapability } from '../src/client/index.ts'
 import { apply as hostApply } from '../src/index.ts'
 import { FilesBody } from '../src/client/FilesBody.tsx'
 import { FilesTitle } from '../src/client/FilesTitle.tsx'
@@ -111,5 +111,100 @@ describe('ui-sidebar-files apply', () => {
     expect(tabs.get(FILES_KIND)).toBeUndefined()
     expect(registered).toEqual([])
     expect(dictionaries.size).toBe(0)
+  })
+})
+
+describe('workspaceOpenCapability', () => {
+  interface Item { workspaceId: string; path: string; title: string; group?: string; sessionIds: string[] }
+  function services(options: { grouping: boolean; items?: Item[] }) {
+    const items: Item[] = options.items ?? []
+    const workspaces: Record<string, unknown> = {
+      list: { getSnapshot: () => ({ items }) },
+      create: vi.fn(async ({ path }: { path: string }) => {
+        const existing = items.find(item => item.path === path)
+        if (existing !== undefined) return existing
+        const created: Item = { workspaceId: `w:${path}`, path, title: path.split('/').at(-1)!, sessionIds: [], ...options.grouping ? { group: '' } : {} }
+        items.push(created)
+        return created
+      }),
+    }
+    if (options.grouping) workspaces.setGroup = vi.fn(async function (this: unknown) { return this })
+    const uiWorkspace = { openWorkspace: vi.fn(async () => {}) }
+    return { workspaces, uiWorkspace, items }
+  }
+
+  it('is unavailable until both Workspace services are composed', () => {
+    const ctx = new Context()
+    const capability = workspaceOpenCapability(ctx)
+    expect(capability.available()).toBe(false)
+    expect(capability.supportsGroups()).toBe(false)
+    expect(capability.groupFor('s-1' as never)).toBe('')
+    return expect(capability.openDirectory('/w/a')).rejects.toThrow('not composed')
+  })
+
+  it('adopts one directory and opens its Workspace', async () => {
+    const ctx = new Context()
+    const { workspaces, uiWorkspace } = services({ grouping: false })
+    ctx.provide('workspaces', workspaces as never)
+    ctx.provide('uiWorkspace', uiWorkspace as never)
+    const capability = workspaceOpenCapability(ctx)
+    expect(capability.available()).toBe(true)
+    expect(capability.supportsGroups()).toBe(false)
+    await capability.openDirectory('/w/overlord')
+    expect(workspaces.create).toHaveBeenCalledWith({ path: '/w/overlord' })
+    expect(uiWorkspace.openWorkspace).toHaveBeenCalledWith('w:/w/overlord')
+  })
+
+  it('adopts each sub-folder, labels ungrouped ones when groups exist, and opens only the first', async () => {
+    const ctx = new Context()
+    const { workspaces, uiWorkspace } = services({
+      grouping: true,
+      items: [{ workspaceId: 'w:/w/kept', path: '/w/kept', title: 'kept', group: 'other', sessionIds: [] }],
+    })
+    ctx.provide('workspaces', workspaces as never)
+    ctx.provide('uiWorkspace', uiWorkspace as never)
+    const capability = workspaceOpenCapability(ctx)
+    expect(capability.supportsGroups()).toBe(true)
+    await expect(capability.openSubDirectories(['/w/a', '/w/kept', '/w/b'], 'sig')).resolves.toBe(3)
+    expect(workspaces.setGroup).toHaveBeenCalledTimes(2)
+    expect(workspaces.setGroup).toHaveBeenNthCalledWith(1, 'w:/w/a', 'sig')
+    expect(workspaces.setGroup).toHaveBeenNthCalledWith(2, 'w:/w/b', 'sig')
+    // setGroup keeps its controller receiver.
+    expect(vi.mocked(workspaces.setGroup as () => unknown).mock.contexts[0]).toBe(workspaces)
+    expect(uiWorkspace.openWorkspace).toHaveBeenCalledTimes(1)
+    expect(uiWorkspace.openWorkspace).toHaveBeenCalledWith('w:/w/a')
+  })
+
+  it('skips labelling for an empty label or a build without groups, and opens nothing for no paths', async () => {
+    const ctx = new Context()
+    const { workspaces, uiWorkspace } = services({ grouping: false })
+    ctx.provide('workspaces', workspaces as never)
+    ctx.provide('uiWorkspace', uiWorkspace as never)
+    const capability = workspaceOpenCapability(ctx)
+    await expect(capability.openSubDirectories(['/w/a'], 'sig')).resolves.toBe(1)
+    await expect(capability.openSubDirectories([], 'sig')).resolves.toBe(0)
+    expect(uiWorkspace.openWorkspace).toHaveBeenCalledTimes(1)
+
+    const grouped = new Context()
+    const withGroups = services({ grouping: true })
+    grouped.provide('workspaces', withGroups.workspaces as never)
+    grouped.provide('uiWorkspace', withGroups.uiWorkspace as never)
+    await workspaceOpenCapability(grouped).openSubDirectories(['/w/a'], '')
+    expect(withGroups.workspaces.setGroup).not.toHaveBeenCalled()
+  })
+
+  it('prefills the owning Workspace group, else its title, else nothing', () => {
+    const ctx = new Context()
+    const { workspaces, uiWorkspace, items } = services({
+      grouping: true,
+      items: [{ workspaceId: 'w1', path: '/w/sig', title: 'sig-railway-services', group: 'sig', sessionIds: ['s-1'] }],
+    })
+    ctx.provide('workspaces', workspaces as never)
+    ctx.provide('uiWorkspace', uiWorkspace as never)
+    const capability = workspaceOpenCapability(ctx)
+    expect(capability.groupFor('s-1' as never)).toBe('sig')
+    items[0]!.group = ''
+    expect(capability.groupFor('s-1' as never)).toBe('sig-railway-services')
+    expect(capability.groupFor('s-2' as never)).toBe('')
   })
 })

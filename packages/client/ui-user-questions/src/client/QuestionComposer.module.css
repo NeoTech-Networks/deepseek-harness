@@ -10,12 +10,13 @@
 /* Figma Input 973:36348 body over the 1019:36938 header: no banner strip —
    the card keeps zero padding and sections carry their own insets. */
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: var(--dsh-chat-content-width);
   /* Composer seat sits in a fixed-height conversation column (overflow
-     hidden): cap the card against the viewport and scroll the option list
+     hidden): cap the card against the viewport and scroll the whole question
      so header and footer actions stay reachable on long batches. */
   max-height: min(60vh, 520px);
   padding: 0 0 10px;
@@ -73,8 +74,28 @@
   padding: 20px 16px 0 24px;
 }
 
+/* Expanded, the action row leaves the flow: the heading now sits at the top
+   of the scrollport, so the buttons float over the card's top-right corner and
+   never scroll away. The card's own surface colour keeps scrolled text from
+   showing through the transparent buttons. */
+.headerExpanded {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 16px 16px 0 0;
+  background: var(--dsw-specific-input-major);
+  border-bottom-left-radius: 12px;
+  z-index: 1;
+}
+
 .headingBlock {
   min-width: 0;
+}
+
+/* The heading's seat inside the scrollport: the same top-left inset the pinned
+   header gave it, with the right margin clearing the floating action row. */
+.headingInBody {
+  margin: 20px 72px 0 24px;
 }
 
 .eyebrow {
@@ -90,6 +111,18 @@
   font-size: 16px;
   line-height: 22px;
   font-weight: 500;
+  /* The question is authored as short paragraphs; keep the blank lines the
+     author wrote instead of collapsing them into one run-on block. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Minimized is a compact strip: the heading collapses to one elided line
+   rather than growing the card back to its expanded height. */
+.cardMinimized .title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detail {

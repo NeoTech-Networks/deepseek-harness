@@ -3,8 +3,8 @@ import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { WorkspaceDirectoryListing } from '@deepseek-ai/dsh-api-workspace-files/types'
-import { childPath, createList, filesFace } from '../src/client/face.ts'
-import type { WorkspaceFilesListRemote } from '../src/client/face.ts'
+import { NO_OPEN_CAPABILITY, childPath, createList, filesFace } from '../src/client/face.ts'
+import type { FilesOpenCapability, WorkspaceFilesListRemote } from '../src/client/face.ts'
 import { createFilesStore } from '../src/client/store.ts'
 import type { DirLevel } from '../src/client/store.ts'
 import { DirectoryNode } from '../src/client/directory-node.ts'
@@ -311,5 +311,74 @@ describe('childPath', () => {
     expect(childPath('/work/app/', 'src')).toBe('/work/app/src')
     expect(childPath('/', 'etc')).toBe('/etc')
     expect(childPath('C:\\work\\', 'src')).toBe('C:\\work/src')
+  })
+})
+
+describe('filesFace new-session helpers', () => {
+  function withCapability(capability?: FilesOpenCapability) {
+    const instance = createFilesStore().create()
+    const script = scriptedList()
+    const face = filesFace(script.list, script.watch, capability)(SESSION, instance.actions)
+    onTestFinished(async () => { await script.dispose() })
+    return { ...script, face }
+  }
+
+  it('offers nothing and refuses the gestures without a composed Workspace capability', async () => {
+    const { face } = withCapability()
+    expect(face.canOpenSessions()).toBe(false)
+    expect(face.canGroup()).toBe(false)
+    expect(face.inheritedGroup()).toBe('')
+    await expect(face.openSubDirectories(['/a'], '')).rejects.toThrow('not composed')
+    await expect(NO_OPEN_CAPABILITY.openDirectory('/a')).rejects.toThrow('not composed')
+  })
+
+  it('lists sub-directories only, without dot-directories, in natural name order', async () => {
+    const { face, settle, list } = withCapability()
+    const listing = face.listDirectories(ROOT)
+    expect(list).toHaveBeenCalledWith(SESSION, ROOT, expect.any(AbortSignal))
+    await settle({
+      ok: true,
+      value: {
+        entries: [
+          { name: 'svc10', type: 'directory' },
+          { name: '.git', type: 'directory' },
+          { name: 'svc2', type: 'directory' },
+          { name: 'README.md', type: 'file', size: 1 },
+        ],
+        truncated: false,
+      },
+    })
+    await expect(listing).resolves.toEqual([
+      { name: 'svc2', path: `${ROOT}/svc2` },
+      { name: 'svc10', path: `${ROOT}/svc10` },
+    ])
+  })
+
+  it('rejects a failed sub-directory listing with its message', async () => {
+    const { face, settle } = withCapability()
+    const listing = face.listDirectories(ROOT)
+    await settle({ ok: false, error: new RemoteError('workspace-file/not-found', 'gone', { path: ROOT }) })
+    await expect(listing).rejects.toThrow('gone')
+  })
+
+  it('delegates to the capability and logs a failed single open instead of throwing', async () => {
+    const capability: FilesOpenCapability = {
+      available: () => true,
+      supportsGroups: () => true,
+      openDirectory: vi.fn(() => Promise.reject(new Error('boom'))),
+      openSubDirectories: vi.fn(async () => 2),
+      groupFor: vi.fn(() => 'sig'),
+    }
+    const { face } = withCapability(capability)
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    expect(face.canOpenSessions()).toBe(true)
+    expect(face.canGroup()).toBe(true)
+    expect(face.inheritedGroup()).toBe('sig')
+    expect(capability.groupFor).toHaveBeenCalledWith(SESSION)
+    face.openDirectory(`${ROOT}/src`)
+    await vi.waitFor(() => { expect(warning).toHaveBeenCalledWith('new session here failed:', expect.any(Error)) })
+    await expect(face.openSubDirectories(['/a', '/b'], 'sig')).resolves.toBe(2)
+    expect(capability.openSubDirectories).toHaveBeenCalledWith(['/a', '/b'], 'sig')
+    warning.mockRestore()
   })
 })

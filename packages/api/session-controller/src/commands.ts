@@ -20,6 +20,7 @@ import { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
 import type { SessionEvent, SessionHeader, SessionId, UserMessage } from '@deepseek-ai/dsh-session'
 import { SessionQueryError, type SessionObservation } from '@deepseek-ai/dsh-session-query'
 import { SessionTitleInvalidError } from '@deepseek-ai/dsh-session-title'
+import { SessionStatusUnknownError, type SessionStatusService } from '@deepseek-ai/dsh-session-status'
 import { canonicalClientTimeZone } from '@deepseek-ai/dsh-util-time'
 import { assertNever } from '@deepseek-ai/dsh-util-values'
 import { RemoteError, remoteErrorOf } from '@deepseek-ai/dsh-typert-protocol'
@@ -47,6 +48,9 @@ import type {
   SessionPromptValue,
   SessionRenameRequest,
   SessionRenameValue,
+  SessionListStatusesValue,
+  SessionSetStatusRequest,
+  SessionSetStatusValue,
   SessionSelectModelRequest,
   SessionSelectModelValue,
   SessionUpdateQueueRequest,
@@ -82,6 +86,31 @@ function latestCompletedPrefixBoundary(events: readonly SessionEvent[]): Session
     boundary = next.seq
   }
   return boundary
+}
+
+/** Structural face of the optional `ctx.visionRouting` Host service. */
+interface VisionRoutingAccess {
+  enabled(): boolean
+  describe(refs: readonly ImageAttachmentRef[], signal?: AbortSignal): Promise<string>
+}
+
+/**
+ * Wrap a vision description as a model-facing text block.
+ * @param description - the vision model's text.
+ * @returns the bracketed block the text-only model receives.
+ */
+function imageDescriptionBlock(description: string): string {
+  return `[Attached image description (vision model): ${description}]`
+}
+
+/**
+ * Wrap a failed vision description as a model-facing note.
+ * @param error - the describe failure.
+ * @returns the bracketed note the text-only model receives instead.
+ */
+function imageDescriptionUnavailable(error: unknown): string {
+  const reason = error instanceof Error ? error.message : String(error)
+  return `[Attached image description unavailable: ${reason}]`
 }
 
 /** Implements Session business commands delegated by the Session Controller Remote service. */
@@ -212,6 +241,47 @@ export class SessionCommandController {
   }
 
   /**
+   * Set or clear one declared session status on a resumed Session.
+   * @param request - Session identity and the vocabulary id, or null to clear.
+   * @returns the resolved status and the durable event sequence.
+   */
+  async setStatus(request: SessionSetStatusRequest): Promise<SessionSetStatusValue> {
+    const agent = await this.resolveAgent(request.sessionId)
+    const service = this.requireSessionStatus()
+    try {
+      if (request.statusId === null) service.clear(agent.session)
+      else service.set(agent.session, request.statusId)
+      return { status: service.current(agent.session), seq: agent.session.seq - 1 }
+    } catch (error) {
+      if (error instanceof SessionStatusUnknownError) {
+        throw new RemoteError('session/status-unknown', error.message, { statusId: request.statusId ?? '' })
+      }
+      throw new RemoteError(
+        'gateway/internal',
+        `failed to set session status for "${request.sessionId}": ${String(error)}`,
+        {},
+      )
+    }
+  }
+
+  /**
+   * Read the deployment's declared status vocabulary, for a row menu that
+   * offers the operator the same choices the tool offers the model.
+   * @returns the vocabulary in declaration order.
+   */
+  listStatuses(): SessionListStatusesValue {
+    return { statuses: this.requireSessionStatus().list() }
+  }
+
+  private requireSessionStatus(): SessionStatusService {
+    const service = this.ctx.get('sessionStatus')
+    if (service === undefined) {
+      throw new RemoteError('gateway/internal', 'session status is unavailable: this deployment mounts no session-status service', {})
+    }
+    return service
+  }
+
+  /**
    * Create a new ordinary Session from an exact event prefix. An explicit
    * `atSeq` is the inclusive cut; an omitted value selects the latest
    * completed-turn prefix. An open cut receives synthetic fork closers.
@@ -336,22 +406,46 @@ export class SessionCommandController {
     const hasImage = request.content.some(part => part.type === 'image')
     const admit = async (): Promise<SessionPromptValue> => {
       try {
+        // Set only when a text-only model receives images and the optional
+        // vision-routing service is switched on: the images are then described
+        // by an image-capable route instead of being refused.
+        let vision: VisionRoutingAccess | undefined
         if (hasImage) {
           const current = this.agents.selectionFor(agent).current
           const model = await this.ctx.llm.resolveModelInfo(current.provider, current.model)
           if (model.inputModalities !== undefined && !model.inputModalities.includes('image')) {
-            throw new RemoteError(
-              'session/attachment-invalid',
-              `Model "${current.model}" does not support image input.`,
-              { reason: 'MODEL_DOES_NOT_SUPPORT_IMAGES' },
-            )
+            const routing = this.ctx.get('visionRouting') as VisionRoutingAccess | undefined
+            if (routing === undefined || !routing.enabled()) {
+              throw new RemoteError(
+                'session/attachment-invalid',
+                `Model "${current.model}" does not support image input.`,
+                { reason: 'MODEL_DOES_NOT_SUPPORT_IMAGES' },
+              )
+            }
+            vision = routing
           }
         }
         const admission = resolvePromptFileReceipts(
           request.content,
           receiptId => this.ctx.fileUploads.resolve(agent, receiptId),
         )
-        const content = await this.ctx.attachments.admitPromptContent(admission.content)
+        let content = await this.ctx.attachments.admitPromptContent(admission.content)
+        if (vision !== undefined) {
+          const refs: ImageAttachmentRef[] = []
+          for (const part of content) {
+            if (part.type === 'image') refs.push(part.attachment)
+          }
+          let description: string
+          try {
+            description = imageDescriptionBlock(await vision.describe(refs))
+          } catch (error) {
+            description = imageDescriptionUnavailable(error)
+          }
+          // Replace the raw image blocks with the vision model's text so the
+          // text-only model sees only the description, never an image it
+          // cannot read.
+          content = [...content.filter(part => part.type !== 'image'), { type: 'text', text: description }]
+        }
         const message: UserMessage = createUserMessage({ content, source })
         if (this.ctx.agents.get(agent.id) !== agent) {
           throw new RemoteError(

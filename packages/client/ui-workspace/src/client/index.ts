@@ -36,14 +36,17 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Type-only: pulls the Session root standard-hook merge.
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import {
-  type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
+  type AllSessionsInjected, type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
   type SessionArchiveConfirmInjected, type SessionArchiveConfirmRequest,
   type RenameSessionInjected, type RowToast, type RowToastInjected, type RowToastState, type SessionRenameDialogInjected,
+
+  type SessionStatusDialogInjected, type SessionStatusMenuInjected, type SessionStatusTarget,
   type WorkspaceBrowserInjected, type WorkspacePickerInjected,
 } from './contract/slots.ts'
 import { createWorkspaceShortcutControls, installWorkspaceShortcuts } from './shortcuts.ts'
 import { UiWorkspaceService } from './navigation.ts'
-import { createWorkspaceViewStore } from './stores.ts'
+import { createAllSessionsStore, createWorkspaceViewStore } from './stores.ts'
+import { AllSessionsSection } from './rows/AllSessions.tsx'
 import { WorkspaceBrowser } from './rows/WorkspaceBrowser.tsx'
 import { ArchiveSessionMenuItem, ArchiveSessionRowButton, SessionArchiveConfirmDialog } from './session-actions/ArchiveSession.tsx'
 import { derive } from './session-actions/derived.ts'
@@ -51,6 +54,9 @@ import { ForkSessionMenuItem } from './session-actions/ForkSession.tsx'
 import { PinSessionMenuItem, PinSessionRowButton } from './session-actions/PinSession.tsx'
 import { RenameSessionMenuItem, SessionRenameDialog } from './session-actions/RenameSession.tsx'
 import { RowActionToast } from './session-actions/RowActionToast.tsx'
+import {
+  ClearSessionStatusMenuItem, SessionStatusDialog, SetSessionStatusMenuItem,
+} from './session-actions/SessionStatus.tsx'
 import { WorkspacePicker } from './WorkspacePicker.tsx'
 import { en, zh, type WorkspaceKey } from './locales.ts'
 
@@ -84,6 +90,16 @@ declare module '@deepseek-ai/dsh-api-session-controller/client' {
 
 /** Dictionary namespace owned by this plugin. */
 const NS = 'workspace'
+
+/**
+ * Single-flight window for the `session.archive` shortcut (Ctrl+Shift+A),
+ * module scope like the composer chords: a second press can land in the same
+ * millisecond. The latch arms only on the path that actually archives; a
+ * refusal is not an action. Since 0.1.7-rc.2 the chord itself is upstream's
+ * registered shortcut; the fork keeps the latch and the refusals around it.
+ */
+const ARCHIVE_CHORD_LATCH_MS = 300
+let archiveChordLatchUntil = 0
 
 /**
  * Required services (cordis fiber inject). The target slots are declared by
@@ -177,28 +193,47 @@ export function apply(ctx: Context): void {
       uiWorkspace.unpinSession(sessionId).catch(() => { notify({ kind: 'unpinFailed' }) })
     },
   })
+  // Archive preserves the log and the account position, so a quiet Session
+  // needs no confirmation; the notice offers undo and the archived filter.
+  // The Host's refusal for running work is the one case that asks first: the
+  // confirmation names that work and offers to stop it. The keyboard chord
+  // takes this same path and additionally says so aloud on any other failure,
+  // because it leaves no menu open to explain itself.
+  const archiveWithNotice = (sessionId: SessionId, announceFailure: boolean): void => {
+    uiWorkspace.archiveSession(sessionId).then(() => {
+      notify({ kind: 'archived', sessionId })
+    }).catch((reason: unknown) => {
+      const activity = activeSessionRefusal(reason)
+      if (activity === undefined) {
+        console.warn('session archive rejected:', reason)
+        if (announceFailure) notify({ kind: 'archiveFailed' })
+        return
+      }
+      const displayTitle = sessions.list.getSnapshot().byId[sessionId]?.displayTitle ?? sessionId
+      archiveRequest.set({ sessionId, displayTitle, activity })
+    })
+  }
   const archiveInjected = (): ArchiveSessionInjected => ({
     hooks: { archived: archivedSet },
-    // Archive preserves the log and the account position, so a quiet Session
-    // needs no confirmation; the notice offers undo and the archived filter.
-    // The Host's refusal for running work is the one case that asks first:
-    // the confirmation names that work and offers to stop it.
-    archiveSession: (sessionId) => {
-      uiWorkspace.archiveSession(sessionId).then(() => {
-        notify({ kind: 'archived', sessionId })
-      }).catch((reason: unknown) => {
-        const activity = activeSessionRefusal(reason)
-        if (activity === undefined) {
-          console.warn('session archive rejected:', reason)
-          return
-        }
-        const displayTitle = sessions.list.getSnapshot().byId[sessionId]?.displayTitle ?? sessionId
-        archiveRequest.set({ sessionId, displayTitle, activity })
-      })
-    },
+    archiveSession: (sessionId) => { archiveWithNotice(sessionId, false) },
     unarchiveSession,
   })
-  installWorkspaceShortcuts(ctx, uiWorkspace, shortcutControls, archiveInjected().archiveSession)
+  // The `session.archive` shortcut (Ctrl+Shift+A) archives the current Session
+  // through the path above, so it inherits the undo notice and the
+  // stop-and-archive confirmation. The fork adds what the row menu would have
+  // made obvious: a not-yet-started or already-archived Session is refused
+  // aloud, a double press archives once, and any other failure is announced.
+  installWorkspaceShortcuts(ctx, uiWorkspace, shortcutControls, (sessionId) => {
+    const current = sessions.list.getSnapshot().byId[sessionId]
+    if (current === undefined || current.blank || archivedSet.getSnapshot().has(sessionId)) {
+      notify({ kind: 'nothingToArchive' })
+      return
+    }
+    const now = Date.now()
+    if (now < archiveChordLatchUntil) return
+    archiveChordLatchUntil = now + ARCHIVE_CHORD_LATCH_MS
+    archiveWithNotice(sessionId, true)
+  })
   const archiveConfirmInjected = (): SessionArchiveConfirmInjected => ({
     hooks: { archiveRequest },
     settleSessionArchive: () => { archiveRequest.set(null) },
@@ -215,6 +250,38 @@ export function apply(ctx: Context): void {
         // Fork or child-title failure leaves the list as it was.
       })
     },
+  })
+  const statusRequest = createSnapshotStore<SessionStatusTarget | null>(null)
+  const setSessionStatus: SessionStatusDialogInjected['setSessionStatus'] = async (sessionId, statusId) => {
+    const result = await sessions.using(
+      sessionId,
+      { source: 'workspaceOperation' },
+      reference => reference.binding.session.setStatus(statusId),
+    )
+    if (!result.ok) throw new Error(result.error.message)
+  }
+  const listSessionStatuses: SessionStatusDialogInjected['listSessionStatuses'] = async (sessionId) => {
+    const result = await sessions.using(
+      sessionId,
+      { source: 'workspaceOperation' },
+      reference => reference.binding.session.listStatuses(),
+    )
+    if (!result.ok) throw new Error(result.error.message)
+    return result.value.statuses
+  }
+  const statusMenuInjected = (): SessionStatusMenuInjected => ({
+    requestSessionStatus: (sessionId, displayTitle) => { statusRequest.set({ sessionId, displayTitle }) },
+    clearSessionStatus: (sessionId) => {
+      setSessionStatus(sessionId, null).catch((reason: unknown) => {
+        console.warn('session status clear rejected:', reason)
+      })
+    },
+  })
+  const statusDialogInjected = (): SessionStatusDialogInjected => ({
+    hooks: { statusRequest },
+    settleSessionStatus: () => { statusRequest.set(null) },
+    setSessionStatus,
+    listSessionStatuses,
   })
   const renameInjected = (): RenameSessionInjected => ({ requestSessionRename })
   const renameDialogInjected = (): SessionRenameDialogInjected => ({
@@ -238,6 +305,7 @@ export function apply(ctx: Context): void {
     requestSessionRename,
     notifyArchivedNotOpenable: () => { notify({ kind: 'archivedNotOpenable' }) },
     renameWorkspace: async (workspaceId, title) => { await workspaces.rename(workspaceId, title) },
+    setGroupWorkspace: async (workspaceId, group) => { await workspaces.setGroup(workspaceId, group) },
     deleteWorkspace: async (workspaceId) => { await workspaces.delete(workspaceId) },
     insertWorkspaceBefore: async (workspaceId, beforeWorkspaceId) => {
       await workspaces.insertBefore(workspaceId, beforeWorkspaceId)
@@ -286,6 +354,8 @@ export function apply(ctx: Context): void {
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'pin', order: 100, locale: NS, inject: pinInjected }, PinSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'rename', order: 200, locale: NS, inject: renameInjected }, RenameSessionMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'fork', order: 300, locale: NS, inject: forkInjected }, ForkSessionMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'set-status', order: 350, locale: NS, inject: statusMenuInjected }, SetSessionStatusMenuItem)
+    yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'clear-status', order: 360, locale: NS, inject: statusMenuInjected }, ClearSessionStatusMenuItem)
     yield ctx.slots.register({ name: 'sidebar.workspaces.session.menu.item', id: 'archive', order: 400, locale: NS, inject: archiveInjected }, ArchiveSessionMenuItem)
   })
   ctx.slots.inject('sidebar.workspaces.session.row.action', function* () {
@@ -299,6 +369,9 @@ export function apply(ctx: Context): void {
       name: 'shell.overlay', id: 'workspace.session-rename', locale: NS, inject: renameDialogInjected,
     }, SessionRenameDialog)
     yield ctx.slots.register({
+      name: 'shell.overlay', id: 'workspace.session-status', locale: NS, inject: statusDialogInjected,
+    }, SessionStatusDialog)
+    yield ctx.slots.register({
       name: 'shell.overlay', id: 'workspace.session-archive', locale: NS, inject: archiveConfirmInjected,
     }, SessionArchiveConfirmDialog)
     // The toast shares the browser's viewing store: it reads the archived
@@ -307,6 +380,16 @@ export function apply(ctx: Context): void {
       name: 'shell.overlay', id: 'workspace.row-toast', locale: NS, store: viewStore, inject: rowToastInjected,
     }, RowActionToast)
   })
+  // The fork's All Sessions quick-nav section, above the browser.
+  ctx.slots.inject('sidebar.allSessions', () => ctx.slots.register(
+    {
+      name: 'sidebar.allSessions',
+      store: createAllSessionsStore(),
+      inject: (): AllSessionsInjected => ({ open: openSession }),
+      locale: NS,
+    },
+    AllSessionsSection,
+  ))
   ctx.slots.inject('conversation.hero.workspace', () => ctx.slots.register(
     {
       name: 'conversation.hero.workspace',

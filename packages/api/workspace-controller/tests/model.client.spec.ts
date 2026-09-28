@@ -16,6 +16,7 @@ import type {
   WorkspacePinSessionRequest,
   WorkspacePinValue,
   WorkspaceRenameRequest,
+  WorkspaceSetGroupRequest,
   WorkspaceUnarchiveSessionRequest,
   WorkspaceUnpinSessionRequest,
   WorkspaceValue,
@@ -111,6 +112,14 @@ class FakeWorkspaceRemote implements WorkspaceRemote {
   rename(request: WorkspaceRenameRequest): Promise<RemoteResult<WorkspaceValue>> {
     this.record('rename', request)
     return this.onRename(request)
+  }
+
+  onSetGroup: (request: WorkspaceSetGroupRequest) => Promise<RemoteResult<WorkspaceValue>> = request =>
+    Promise.resolve(remoteOk({ workspace: { ...workspace(String(request.workspaceId)), group: request.group } }))
+
+  setGroup(request: WorkspaceSetGroupRequest): Promise<RemoteResult<WorkspaceValue>> {
+    this.record('setGroup', request)
+    return this.onSetGroup(request)
   }
 
   delete(request: WorkspaceDeleteRequest): Promise<RemoteResult<WorkspaceDeleteValue>> {
@@ -329,6 +338,12 @@ describe('ClientWorkspaceModel', () => {
     remote.onRename = () => Promise.resolve(workspaceError(new RemoteError('workspace/not-found', 'gone', { workspaceId: wid('one') })))
     await expect(model.rename(wid('one'), 'ignored')).resolves.toMatchObject({ ok: false })
     expect(model.getSnapshot().items[0]?.title).toBe('one')
+
+    await expect(model.setGroup(wid('one'), 'Railway')).resolves.toMatchObject({ ok: true })
+    expect(model.getSnapshot().items[0]?.group).toBe('Railway')
+    remote.onSetGroup = () => Promise.resolve(workspaceError(new RemoteError('workspace/not-found', 'gone', { workspaceId: wid('one') })))
+    await expect(model.setGroup(wid('one'), 'ignored')).resolves.toMatchObject({ ok: false })
+    expect(model.getSnapshot().items[0]?.group).toBe('Railway')
 
     remote.onDelete = () => Promise.resolve(workspaceError(new RemoteError('workspace/not-found', 'gone', { workspaceId: wid('one') })))
     await expect(model.delete(wid('one'))).resolves.toMatchObject({ ok: false })

@@ -23,10 +23,14 @@ The only append point while an agent is running is a prepended `agent/pre-step` 
 interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
   section: string
+  /** Pin plan mode active on every newly created non-subagent session whose log carries no plan state. Defaults to false. */
+  defaultActive?: boolean
 }
 ```
 
 A missing, blank, or non-string `section` and any unknown key fail at plugin load rather than being ignored. While plan mode is active, the exact `section` text renders as the `plan:policy` [system-prompt section](system-prompt.md) at order 50; inactive plan mode contributes no text.
+
+`defaultActive: true` starts every newly created non-subagent Session in plan mode, but only when its log carries no plan state yet, so a Session that already recorded a `plan/mode` choice keeps it on replay. It defaults to false.
 
 ## The exit tool and the `/plan` command
 

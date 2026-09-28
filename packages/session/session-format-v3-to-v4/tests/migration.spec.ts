@@ -65,6 +65,20 @@ describe('V3 to V4 source preservation', () => {
     expect(rows).toEqual(before)
   })
 
+  it('migrates the fork-released session/status event carried by live 0.1.5 logs', () => {
+    // Shape copied from a live fork log: a required (non-ignorable) declared status.
+    const status: SessionFormatEvent = { type: 'session/status', seq: 0, time: 2, data: {
+      status: { id: 'waiting-external', label: 'Waiting on someone else', icon: 'clock', tone: 'attention' },
+      note: 'PR open and not merged',
+    } }
+    const rows = [status, delivery(3)]
+    const before = structuredClone(rows)
+    expect(migrate(rows)).toEqual({ events: rows, cut: 0 })
+    expect(restoreHistorical(rows, header).events).toEqual(rows)
+    expect(restore(rows).events).toEqual(rows)
+    expect(rows).toEqual(before)
+  })
+
   it('rejects generic required V3 extensions before target vocabulary admission', () => {
     const required = { ...fact, type: 'external/required' }
     expect(() => migrate([required])).toThrow('format v3 contains unknown event type "external/required" at seq 0')

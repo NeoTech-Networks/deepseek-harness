@@ -895,6 +895,35 @@ describe('workspace mutation and status', () => {
     expect(workspace.title).toBe('kept')
   })
 
+  it('sets and clears the grouping label, trimming to the stored value', async () => {
+    const dir = await makeDir('group')
+    const { registry } = await harness()
+    const workspace = await registry.create(dir)
+    expect(workspace.group).toBeUndefined()
+    await workspace.setGroup('  Railway  ')
+    expect(workspace.group).toBe('Railway')
+    await workspace.setGroup('')
+    expect(workspace.group).toBeUndefined()
+    await workspace.setGroup(undefined)
+    expect(workspace.group).toBeUndefined()
+  })
+
+  it('keeps a stored grouping label through unrelated writes and restarts', async () => {
+    const dir = await makeDir('group-restart')
+    const pool = new MemoryMediaPool()
+    const first = await harness({ pool })
+    const created = await first.registry.create(dir)
+    await created.setGroup('NeoTech')
+    await created.setTitle('renamed')
+    await first.fiber.dispose()
+
+    const second = await harness({ pool })
+    const reopened = second.registry.list()[0]!
+    expect(reopened.group).toBe('NeoTech')
+    await reopened.setTitle('again')
+    expect(reopened.group).toBe('NeoTech')
+  })
+
   it('reports directory disappearance without mutating the workspace', async () => {
     const dir = await makeDir('vanishing')
     const { registry } = await harness()

@@ -39,11 +39,11 @@ Load a backend, then this plugin, then the tools. The policy listener should be 
 
 ### What changes for the model
 
-With the policy mounted, `write` creates new files but refuses to overwrite an existing file that the session has not read, `edit` requires a prior read of the target, and a file that changed since it was read fails with `FS_STALE_VERSION`. Absence is recorded too: reading a missing file marks it confirmed absent, so a later `write` may recreate it through the guarded-create flow. A session resumes with no observed state, so it must re-read files before guarded mutations succeed again.
+With the policy mounted, `write` creates new files but refuses to overwrite an existing file that the session has not read, `edit` of a never-read file is applied unconditionally, anchored on its exact, unique `old_string` (NeoTech fork, `EDIT_SELF_OBSERVE`, 2026-09-23; upstream refuses it), and a file that changed since it was read fails with `FS_STALE_VERSION`. Absence is recorded too: reading a missing file marks it confirmed absent, so a later `write` may recreate it through the guarded-create flow. A session resumes with no observed state, so it must re-read files before guarded mutations succeed again.
 
 ### Failures and recovery
 
-An edit without a prior observation fails with code `FS_NOT_OBSERVED` and policy reason `edit requires reading "<path>" first`; editing a target observed absent fails with `FS_NOT_FOUND`. The tools normalize unread policy and provider failures to `cannot modify "<path>": file has not been read — read the file, then retry` while preserving the code and original cause. Following the remedy on an externally deleted file records absence, so the next guarded write can recreate it without clobbering a concurrent creator.
+An edit by an actor with no agent session fails with code `FS_NOT_OBSERVED` and policy reason `edit requires reading "<path>" first`; editing a target observed absent fails with `FS_NOT_FOUND`. The tools normalize unread policy and provider failures to `cannot modify "<path>": file has not been read — read the file, then retry` while preserving the code and original cause. Following the remedy on an externally deleted file records absence, so the next guarded write can recreate it without clobbering a concurrent creator.
 
 -----
 
@@ -71,7 +71,7 @@ The plugin is built on two ideas:
 
 ### Decision flow
 
-`fs/write-intent` resolves unseen or confirmed absent to `{ kind: 'createIfAbsent' }` and observed present to `{ kind: 'replaceIfVersion', version: vObserved }`. `fs/edit-intent` rejects an unseen target with `FS_NOT_OBSERVED`, a confirmed-absent target with `FS_NOT_FOUND`, and otherwise supplies the observed version as the compare-and-swap basis. `fs/observed` records `{ kind: 'present', version }` or `{ kind: 'absent' }` for the owner and target — a synchronous, side-effect-only `WeakMap.set`, because successful mutations have already committed.
+`fs/write-intent` resolves unseen or confirmed absent to `{ kind: 'createIfAbsent' }` and observed present to `{ kind: 'replaceIfVersion', version: vObserved }`. `fs/edit-intent` rejects an actor with no session with `FS_NOT_OBSERVED`, resolves a session's unseen target to `undefined` (an unconditional atomic edit, anchored on `old_string`), a confirmed-absent target with `FS_NOT_FOUND`, and otherwise supplies the observed version as the compare-and-swap basis. `fs/observed` records `{ kind: 'present', version }` or `{ kind: 'absent' }` for the owner and target — a synchronous, side-effect-only `WeakMap.set`, because successful mutations have already committed.
 
 ### Single-slot, first-wins
 

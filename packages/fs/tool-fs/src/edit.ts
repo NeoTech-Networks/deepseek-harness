@@ -78,7 +78,7 @@ export function applyEditTool(ctx: Context, sandbox: FsSandboxController): void 
     order: ctx.systemPrompt.getSectionOrder('TOOL_EDIT'),
     text: ({ scope }) => ctx.tools.get('edit', scope) === undefined
       ? ''
-      : 'Read a file before editing it (the default fs-observation-policy requires it), unless you just created or edited it in this session.',
+      : 'Read a file before editing it so old_string matches exactly; an unread edit is allowed and is anchored on that exact match (overwriting an existing file with write still requires a read).',
   })
 
   ctx.tools.register(defineTool({
