@@ -173,6 +173,30 @@ function Stop-App {
   return $alive
 }
 
+# ---------------------------------------------------------------------------
+# LAUNCH ENVIRONMENT. The relaunched app inherits THIS process's environment,
+# and every session inside it inherits the app's. On 2026-09-28 this script was
+# run from a claude-ds shell, so the 0.2.0-rc.1 app came up carrying
+# ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic and the DeepSeek tier
+# map; any `claude` started from inside the harness then went to DeepSeek and
+# failed 401. Before each launch, every ANTHROPIC_* / CLAUDE_CODE_* / CLAUDECODE
+# process variable is put back to its User/Machine value, or removed if neither
+# scope sets it, so the app starts with what a Start-menu launch would give it.
+# ---------------------------------------------------------------------------
+function Reset-LaunchEnvironment {
+  Get-ChildItem env: | Where-Object { $_.Name -match '^(ANTHROPIC_|CLAUDE_CODE_|CLAUDECODE$)' } | ForEach-Object {
+    $n = $_.Name
+    $v = [Environment]::GetEnvironmentVariable($n, 'User')
+    if ($null -eq $v) { $v = [Environment]::GetEnvironmentVariable($n, 'Machine') }
+    if ($null -eq $v) { Remove-Item "env:$n" } else { Set-Item "env:$n" $v }
+  }
+}
+
+function Start-AppClean {
+  Reset-LaunchEnvironment
+  Start-Process $exe
+}
+
 function Invoke-Migrator {
   & py $migrator @args 2>&1 | ForEach-Object { Write-Host "  $_" }
   return $LASTEXITCODE
@@ -346,7 +370,7 @@ if ($migrating) {
 
 # --- 4. Launch and wait ----------------------------------------------------------
 if (-not (Test-Path $exe)) { Stop-Guard "app exe not found after install: $exe" "" }
-Start-Process $exe
+Start-AppClean
 Write-Host "relaunched"
 if ($NoWait) {
   Write-Host "not waiting (-NoWait). Settings were NOT verified." -ForegroundColor Yellow
@@ -381,7 +405,7 @@ if ($migrating) {
       $null = Stop-App
       Copy-Item $imported "$imported.first" -Force
       Copy-Item $unimported (Join-Path $dshHome 'settings.yaml') -Force
-      Start-Process $exe
+      Start-AppClean
       $null = Wait-AppReady 3
       $deadline = (Get-Date).AddMinutes(2)
       while ((Test-Path (Join-Path $dshHome 'settings.yaml')) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 3 }
@@ -411,7 +435,7 @@ if ($migrating) {
     $null = Stop-App
     Restore-AgentsHardlink
     & py $VaultTool restore --all 2>&1 | ForEach-Object { Write-Host "  $_" }
-    Start-Process $exe
+    Start-AppClean
     $null = Wait-AppReady 3
     & py $VaultTool verify 2>&1 | ForEach-Object { Write-Host "  $_" }
     $settingsVerdict = if ($LASTEXITCODE -eq 0) { 'REPAIRED' } else { 'STILL DRIFTED' }
