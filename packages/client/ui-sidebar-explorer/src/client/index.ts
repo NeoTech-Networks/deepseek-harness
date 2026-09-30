@@ -21,7 +21,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import {
-  EXPLORER_ID, EXPLORER_KIND, EXPLORER_TEXT_ID, explorerDefinition, explorerTextDefinition,
+  EXPLORER_ID, EXPLORER_KIND, EXPLORER_PREVIEW_ID, explorerDefinition, explorerTextDefinition,
 } from './definition.ts'
 import { explorerFace, explorerTextFace } from './face.ts'
 import { ExplorerBody } from './ExplorerBody.tsx'
@@ -72,7 +72,7 @@ export function apply(ctx: ClientContext): void {
 
   const textInject = explorerTextFace(ctx.remote)
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
-    { name: 'sidebar.right.pane.tab', key: EXPLORER_TEXT_ID, locale: NS, inject: () => textInject },
+    { name: 'sidebar.right.pane.tab', key: EXPLORER_PREVIEW_ID, locale: NS, inject: () => textInject },
     TextBody,
   )), 'ui-sidebar-explorer: preview tab body')
 

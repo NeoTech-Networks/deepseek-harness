@@ -9,8 +9,8 @@
   en: 6cc2cd9ced70bb09
   zh: 1c0e6cb4ba2ed637
 /tool-schema-catalog/tool-package-map:
-  en: 167287d095eee2f5
-  zh: 18720d5e81379d2f
+  en: 6fd7ff6d18f9bd58
+  zh: 75b6d2f8c7da0ed2
 /tool-schema-catalog/deepseek-ai-dsh-plugin-manager:
   en: e0143916bb634762
   zh: e0143916bb634762
@@ -54,7 +54,7 @@
   en: e713a4a11a15d13c
   zh: e713a4a11a15d13c
 /tool-schema-catalog/deepseek-ai-dsh-tool-ask-user/ask-user-question:
-  en: 055268ba4dcd32f9
+  en: c191460216067bb8
   zh: a1a3c4bfcbf698ed
 /tool-schema-catalog/deepseek-ai-dsh-tools:
   en: 76fbbf0fe38aef10
@@ -84,7 +84,7 @@
   en: b222fc05f3f8ee4a
   zh: b222fc05f3f8ee4a
 /tool-schema-catalog/deepseek-ai-dsh-tool-pwsh/pwsh:
-  en: 447665e21ecb2aed
+  en: 75308c358d9e4b54
   zh: 0de883d9438f6f38
 /tool-schema-catalog/deepseek-ai-dsh-tool-cordis:
   en: 76c7c62f9029b6f5
@@ -168,8 +168,14 @@
   en: 0b517f13dfde11fe
   zh: b7ee7482e8ecde56
 /tool-schema-catalog/deepseek-ai-dsh-tool-goal/update-goal:
-  en: e6b92fac5aad585c
-  zh: 6b3cdd87b059a98f
+  en: d8146a4672a8d564
+  zh: bb593779e52137cf
+/tool-schema-catalog/deepseek-ai-dsh-tool-session-status:
+  en: af017d3d629d8271
+  zh: af017d3d629d8271
+/tool-schema-catalog/deepseek-ai-dsh-tool-session-status/set-session-status:
+  en: ca5f0b5a7948b746
+  zh: 03147021065c7211
 /tool-schema-catalog/deepseek-ai-dsh-schedule:
   en: 573da0cf49b1eed6
   zh: 573da0cf49b1eed6

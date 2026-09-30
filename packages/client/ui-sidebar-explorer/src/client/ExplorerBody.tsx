@@ -16,7 +16,7 @@ import {
   classifyFileType,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PinnedEntry, PinnedRoot } from '@deepseek-ai/dsh-api-pinned-files/types'
-import { EXPLORER_TEXT_KIND } from './definition.ts'
+import { EXPLORER_PREVIEW_KIND } from './definition.ts'
 import type { ExplorerInjected } from './face.ts'
 import type {} from './locales.ts'
 import type { ExplorerTabState, LevelState, createExplorerStore } from './store.ts'
@@ -184,7 +184,7 @@ export function ExplorerBody({
   const tree: TreeContext = {
     state,
     onToggle: (path) => { toggle(tab.id, path, state.levels[path] !== undefined, signal) },
-    onOpen: (path) => { tabActions.openTab(EXPLORER_TEXT_KIND, { params: { path } }) },
+    onOpen: (path) => { tabActions.openTab(EXPLORER_PREVIEW_KIND, { params: { path } }) },
     t,
   }
 

@@ -16,13 +16,13 @@ import { FileTypeIcon, IconFolderCloseRegular, classifyFileType } from '@deepsee
 export const EXPLORER_KIND = 'explorer'
 
 /** The pinned-file preview's kind. */
-export const EXPLORER_TEXT_KIND = 'pinnedText'
+export const EXPLORER_PREVIEW_KIND = 'pinnedText'
 
 /** The tree implementation's identity, and the key its body registers under. */
 export const EXPLORER_ID = '@deepseek-ai/dsh-client-ui-sidebar-explorer'
 
 /** The preview implementation's identity, and the key its body registers under. */
-export const EXPLORER_TEXT_ID = '@deepseek-ai/dsh-client-ui-sidebar-explorer#text'
+export const EXPLORER_PREVIEW_ID = '@deepseek-ai/dsh-client-ui-sidebar-explorer#text'
 
 declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
   interface SidebarRightTabParamsMap {
@@ -60,8 +60,8 @@ export function explorerDefinition(t: TranslateNS<'sidebarExplorer'>): SidebarRi
  */
 export function explorerTextDefinition(t: TranslateNS<'sidebarExplorer'>): SidebarRightTabDefinition {
   return {
-    id: EXPLORER_TEXT_ID,
-    kind: EXPLORER_TEXT_KIND,
+    id: EXPLORER_PREVIEW_ID,
+    kind: EXPLORER_PREVIEW_KIND,
     priority: 'builtin',
     title: () => t('text.label'),
   }
