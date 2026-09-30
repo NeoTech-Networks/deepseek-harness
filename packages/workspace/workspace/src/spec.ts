@@ -27,6 +27,8 @@ export const workspaceRecord = z.object({
   sessionIds: z.array(sessionId),
   createdAt: z.string(),
   updatedAt: z.string(),
+  /** Optional grouping label; absent means ungrouped. Released by the 0.1.5 fork, so live records carry it. */
+  group: z.string().optional(),
 })
 
 /** One stored workspace record, inferred from {@link workspaceRecord}. */

@@ -83,7 +83,7 @@ describe('installModelSelection()', () => {
 
     expect((await ctx.systemPrompt.assemble()).variables).toEqual({})
     await expect(agentEvents(ctx, agent).waterfall(
-      'agent/request', { turn: 1, step: 0, signal }, () => Promise.resolve(seed),
+      'agent/request', { turn: 1, step: 0, tools: [], signal }, () => Promise.resolve(seed),
     )).resolves.toBe(seed)
 
     selection.current = {
@@ -94,7 +94,7 @@ describe('installModelSelection()', () => {
     expect((await ctx.systemPrompt.assemble()).variables).toMatchObject({ provider: 'alpha', model: 'a1' })
     selection.current = { provider: 'beta', model: 'b1' }
     await expect(agentEvents(ctx, agent).waterfall(
-      'agent/request', { turn: 1, step: 0, signal }, () => Promise.resolve(seed),
+      'agent/request', { turn: 1, step: 0, tools: [], signal }, () => Promise.resolve(seed),
     )).resolves.toEqual({
       provider: 'alpha',
       model: 'a1',
@@ -110,13 +110,13 @@ describe('installModelSelection()', () => {
       temperature: 0.2,
     }
     await expect(agentEvents(ctx, agent).waterfall(
-      'agent/request', { turn: 1, step: 1, signal }, () => Promise.resolve(inherited),
+      'agent/request', { turn: 1, step: 1, tools: [], signal }, () => Promise.resolve(inherited),
     )).resolves.toEqual({ provider: 'beta', model: 'b1', temperature: 0.2 })
 
     dispose()
     expect((await ctx.systemPrompt.assemble()).variables).toEqual({})
     await expect(agentEvents(ctx, agent).waterfall(
-      'agent/request', { turn: 2, step: 0, signal }, () => Promise.resolve(seed),
+      'agent/request', { turn: 2, step: 0, tools: [], signal }, () => Promise.resolve(seed),
     )).resolves.toBe(seed)
     await ctx.fiber.dispose()
   })

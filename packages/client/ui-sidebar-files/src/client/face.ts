@@ -112,6 +112,52 @@ export function childPath(parent: string, name: string): string {
   return `${parent.replace(/[/\\]+$/, '')}/${name}`
 }
 
+/** One sub-directory offered by the bulk "new session in each sub-folder" flow. */
+export interface SubDirectoryCandidate {
+  /** Basename inside the listed directory. */
+  readonly name: string
+  /** Absolute path of the child directory. */
+  readonly path: string
+}
+
+/**
+ * The Workspace actions behind the tree's two "new session" gestures. Both are
+ * optional compositions: a Client without the Workspace services keeps the
+ * tree and simply offers no menu.
+ */
+export interface FilesOpenCapability {
+  /** Whether the Workspace services the gestures need are composed right now. */
+  readonly available: () => boolean
+  /** Whether Workspaces carry a group label the bulk flow can set. */
+  readonly supportsGroups: () => boolean
+  /**
+   * Adopt one directory as a Workspace (idempotent by path) and open a Session in it.
+   * @param path - absolute directory.
+   */
+  readonly openDirectory: (path: string) => Promise<void>
+  /**
+   * Adopt each directory as its own Workspace and open a Session in the first one.
+   * @param paths - absolute directories.
+   * @param group - label applied to each Workspace that has none yet; empty for none.
+   * @returns how many Workspaces are ready.
+   */
+  readonly openSubDirectories: (paths: readonly string[], group: string) => Promise<number>
+  /**
+   * The label this Session's Workspace already carries: its group, else its title.
+   * @param sessionId - the Session whose owning Workspace supplies the label.
+   */
+  readonly groupFor: (sessionId: SessionId) => string
+}
+
+/** The capability of a Client composed without the Workspace services. */
+export const NO_OPEN_CAPABILITY: FilesOpenCapability = {
+  available: () => false,
+  supportsGroups: () => false,
+  openDirectory: () => Promise.reject(new Error('the Workspace services are not composed')),
+  openSubDirectories: () => Promise.reject(new Error('the Workspace services are not composed')),
+  groupFor: () => '',
+}
+
 /** The tree's injected business face, as the body receives it. */
 export interface FilesInjected {
   /** Refresh the open directory tree. @param tabId - owning tab. */
@@ -141,17 +187,46 @@ export interface FilesInjected {
    * @param signal - the tab record's lifetime.
    */
   readonly toggle: (tabId: TabId, parentPath: string, path: string, expanded: readonly string[], signal: AbortSignal) => void
+  /** Whether the directory menu ("new session here" and "in each sub-folder") is offered. */
+  readonly canOpenSessions: () => boolean
+  /** Whether the bulk dialog shows its group-label field. */
+  readonly canGroup: () => boolean
+  /**
+   * Adopt one directory as a Workspace and open a Session in it; failures are logged.
+   * @param path - absolute directory inside the tree's root.
+   */
+  readonly openDirectory: (path: string) => void
+  /**
+   * List the immediate sub-directories of one directory, for the bulk flow.
+   * @param path - absolute directory inside the tree's root.
+   * @returns directories only, dot-directories excluded, in display order.
+   */
+  readonly listDirectories: (path: string) => Promise<readonly SubDirectoryCandidate[]>
+  /**
+   * Adopt each selected sub-directory as its own Workspace, opening a Session only in the first.
+   * @param paths - absolute directories.
+   * @param group - label for Workspaces that have none yet; empty for none.
+   * @returns how many Workspaces are ready.
+   */
+  readonly openSubDirectories: (paths: readonly string[], group: string) => Promise<number>
+  /** The bulk dialog's prefilled group label: this Session's Workspace group, else its title. */
+  readonly inheritedGroup: () => string
 }
+
+/** Natural, case-insensitive order for the bulk dialog's candidates. */
+const candidateOrder = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
 /**
  * Bind the tree's face to one directory listing.
  * @param list - the bound `workspaceFiles.list` call.
  * @param watch - target-scoped directory observation.
+ * @param capability - the Workspace actions behind the "new session" gestures.
  * @returns the Slot `inject` factory: session and bound actions in, face out.
  */
 export function filesFace(
   list: ListWorkspaceDirectory,
   watch: WatchWorkspaceDirectory,
+  capability: FilesOpenCapability = NO_OPEN_CAPABILITY,
 ): (sessionId: SessionId, actions: BoundActions<ReturnType<typeof createFilesStore>>) => FilesInjected {
   return (
     sessionId: SessionId,
@@ -216,6 +291,23 @@ export function filesFace(
         else parent?.expand(path, next)
         actions.toggled(tabId, path)
       },
+      canOpenSessions: () => capability.available(),
+      canGroup: () => capability.supportsGroups(),
+      openDirectory: (path) => {
+        void capability.openDirectory(path).catch((reason: unknown) => {
+          console.warn('new session here failed:', reason)
+        })
+      },
+      listDirectories: async (path) => {
+        const result = await list(sessionId, path, new AbortController().signal)
+        if (!result.ok) throw new Error(result.error.message)
+        return result.value.entries
+          .filter(entry => entry.type === 'directory' && !entry.name.startsWith('.'))
+          .map(entry => ({ name: entry.name, path: childPath(path, entry.name) }))
+          .sort((left, right) => candidateOrder.compare(left.name, right.name))
+      },
+      openSubDirectories: (paths, group) => capability.openSubDirectories(paths, group),
+      inheritedGroup: () => capability.groupFor(sessionId),
     }
   }
 }

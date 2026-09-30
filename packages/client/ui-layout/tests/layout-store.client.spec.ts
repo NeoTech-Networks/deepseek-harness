@@ -17,6 +17,8 @@ describe('createLayoutStore', () => {
         viewportWidth: 1920,
         narrowExpanded: false,
         rightbar: null,
+        rightbarBySession: {},
+        rightbarSession: null,
         rightbarShown: false,
         rightbarTrack: false,
         rightbarFullscreen: false,
@@ -152,6 +154,24 @@ describe('right panel', () => {
     actions.closeRightbar()
     actions.openRightbar(true, false)
     expect(store.getSnapshot().layoutInfo.rightbar).toBe(450)
+  })
+
+  it('keeps the dragged width per reporting session (fork)', () => {
+    const { store, actions } = createLayoutStore().create()
+    actions.setViewportWidth(1000)
+    actions.openRightbar(true, false, 'one')
+    expect(store.getSnapshot().layoutInfo.rightbar).toBe(450)
+    actions.setRightbar(600)
+    actions.openRightbar(true, false, 'two')
+    // A session's first opening takes the default, not the other session's drag.
+    expect(store.getSnapshot().layoutInfo.rightbar).toBe(450)
+    actions.setRightbar(320)
+    actions.openRightbar(true, false, 'one')
+    expect(store.getSnapshot().layoutInfo.rightbar).toBe(600)
+    actions.closeRightbar()
+    actions.openRightbar(true, false, 'two')
+    expect(store.getSnapshot().layoutInfo.rightbar).toBe(320)
+    expect(store.getSnapshot().layoutInfo.rightbarBySession).toEqual({ one: 600, two: 320 })
   })
 
   it('keeps track and fullscreen reports independent and clears both on close', () => {

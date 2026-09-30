@@ -33,11 +33,12 @@ Choose plan mode when the agent should explore and design before executing and y
 
 ### Minimal configuration
 
-The only required configuration is the guidance text the agent follows while planning; anything else you add fails at load.
+The only required configuration is the guidance text the agent follows while planning; anything else you add fails at load. Set `defaultActive: true` to pin plan mode active on every newly created session.
 
 ```yaml
 - name: '@deepseek-ai/dsh-plan-mode'
   config:
+    defaultActive: true
     section: |
       You are in plan mode. Explore and design before presenting the complete
       plan through exit_plan_mode.
@@ -46,6 +47,7 @@ The only required configuration is the guidance text the agent follows while pla
 | Field | Default | Meaning |
 |---|---|---|
 | `section` | required | Guidance rendered as the `plan:policy` prompt section while plan mode is active |
+| `defaultActive` | `false` | Pin plan mode active for every newly created session whose log has no `plan/mode` event; forks and resumes keep their logged state, and subagents are never pinned |
 
 The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-plan-mode) is the exhaustive source for every accepted field and its JSDoc.
 
@@ -58,7 +60,7 @@ You can attach images and generic files to a `/plan` message, and they are inclu
 
 ### The reviewed exit
 
-When the agent has a finished plan, it calls `exit_plan_mode` with the plan written as markdown and starting with a heading. You review that exact plan and choose `Approve` to leave plan mode, or `Keep planning` to send the agent back with feedback.
+When the agent has a finished plan, it calls `exit_plan_mode` with the plan written as markdown and carrying a `#` title (a short lead-in above that title is accepted). You review that exact plan and choose `Approve` to leave plan mode, or `Keep planning` to send the agent back with feedback.
 
 Choosing `Keep planning` (optionally with free-text feedback) sends the agent back to revise the plan; closing the review to type a message instead tells the agent to wait for your next message. If no interactive review is available, `exit_plan_mode` cannot run and you can still leave plan mode with `/plan off`.
 
@@ -184,7 +186,7 @@ These limits describe when plan mode does not behave as you might expect or need
 
 - **Guidance, not enforcement** — plan mode restrains through text only; deployments that need enforced restrictions configure sandbox mode and approval policy independently.
 - **Pending selections are process-local** — a selection made after the turn's final accepted pre-step is lost if the process exits before another accepted in-turn pre-step; the UI must reapply it.
-- **No creation-time plan option** — forked agents inherit logged plan state, while newly spawned agents begin inactive.
+- **Creation-time default is opt-in.** `defaultActive: true` pins plan mode active on a fresh session (never a subagent); forked and resumed agents still inherit their logged plan state, and `/plan off` still overrides it.
 - **Live children cannot open the review** — a child owned by another live agent fails the `exit_plan_mode` call and is told to include the unresolved decision in its final result; durable fork lineage alone does not prevent a session resumed as a runtime root from opening the review.
 - **One specialized review renderer** — only the Web UI has a `plan-review` presentation; another interaction provider presents the same request through its generic option flow.
 

@@ -186,6 +186,7 @@ describe('ask_user_question tool', () => {
     expect(parameters.properties.questions.items.properties).toMatchObject({
       id: { type: 'string' },
       question: { type: 'string' },
+      detail: { type: 'string' },
       header: { type: 'string' },
       options: { type: 'array' },
       multi_select: { type: 'boolean' },
@@ -272,6 +273,42 @@ describe('ask_user_question tool', () => {
       isError: false,
       content: [{ type: 'text', text: '{"answers":[{"id":"pkg","selected":[],"custom":"bun"}]}' }],
     })
+  })
+
+  it('teaches the short-paragraph rule and carries detail through unchanged', async () => {
+    const ctx = await setup()
+    const schema = ctx.tools.schemas().find(tool => tool.name === 'ask_user_question')
+    const description = (schema as { description?: string } | undefined)?.description ?? ''
+    expect(description).toContain('at most two sentences')
+    expect(description).toContain('detail')
+
+    const seen: AskUserQuestionRequest[] = []
+    registerQuestionAnswerer(ctx, {
+      async ask(request) {
+        seen.push(request)
+        return { answers: [{ id: 'mode', selected: ['Fast'] }] }
+      },
+    })
+    await ctx.tools.execute({
+      signal: testToolSignal,
+      callId: ToolCallId('ask-detail'),
+      name: 'ask_user_question',
+      arguments: {
+        questions: [{
+          id: 'mode',
+          question: 'Which mode?\n\nPick one.',
+          detail: '## Tradeoffs\n\n- Fast is cheaper.\n- Careful is slower.',
+          options: [{ label: 'Fast' }],
+        }],
+      },
+    })
+    expect(seen).toMatchObject([{
+      questions: [{
+        id: 'mode',
+        question: 'Which mode?\n\nPick one.',
+        detail: '## Tradeoffs\n\n- Fast is cheaper.\n- Careful is slower.',
+      }],
+    }])
   })
 
   it('asks the registered user-questions provider and projects structured answers to text', async () => {

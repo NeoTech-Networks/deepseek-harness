@@ -123,6 +123,29 @@ function AnswerField(props: AnswerFieldProps) {
 }
 
 /**
+ * The question's eyebrow and title, shared by the two seats it can occupy:
+ * the pinned strip while minimized, and the expanded scrollport, where it
+ * rides with the detail and the options so one scrollbar spans the whole
+ * question. Only one seat renders at a time, so the heading id stays unique.
+ *
+ * @param props - the heading id, the optional eyebrow, the question text, and an extra class.
+ * @returns The heading block.
+ */
+function QuestionHeading({ id, eyebrow, question, className }: {
+  id: string
+  eyebrow: string | undefined
+  question: string
+  className?: string | undefined
+}) {
+  return (
+    <div className={clsx(css.headingBlock, className)}>
+      {eyebrow !== undefined && <div className={css.eyebrow}>{eyebrow}</div>}
+      <h2 className={css.title} id={id}>{question}</h2>
+    </div>
+  )
+}
+
+/**
  * Composer takeover router. Generic-question drafts live in this entry's
  * Session-scoped Slot store, keyed by the pending carrier, so a strict Session
  * entry remount restores the same request without exposing it to another one.
@@ -429,58 +452,65 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
     submitDrafts(nextDrafts)
   }
 
+  const headingId = `question-${pending.key}-${String(index)}`
+  const headerActions = (
+    <div className={css.headerActions}>
+      {countdown !== undefined && card.waitState !== 'waiting' && card.waitState !== 'editing' && card.waitState !== 'continued' && (
+        <span className={css.waitStatus}>
+          {t(countdown.running ? 'wait.countdown' : 'wait.paused', {
+            seconds: Math.ceil(countdown.remainingMs / 1000),
+          })}
+        </span>
+      )}
+      {countdown !== undefined && card.waitState !== 'waiting' && card.waitState !== 'editing' && card.waitState !== 'continued' && (
+        <Button variant="outline" className={css.waitButton} onClick={takeTime}>
+          {t('wait.takeTime')}
+        </Button>
+      )}
+      {card.state === 'continued' && <span className={css.waitStatus}>{t('wait.continued')}</span>}
+      {/* A held or frozen countdown says so; a request that never carried
+          one waits silently, as the blocking question always has. */}
+      {countdown !== undefined && (card.waitState === 'waiting' || card.waitState === 'editing') && (
+        <span className={css.waitStatus}>{t('wait.held')}</span>
+      )}
+      {review !== undefined && <span className={css.waitStatus}>{t('review.status')}</span>}
+      <button
+        type="button" className={css.iconButton}
+        aria-label={t(minimized ? 'nav.maximize' : 'nav.minimize')}
+        title={t(minimized ? 'nav.maximize' : 'nav.minimize')}
+        aria-expanded={!minimized}
+        disabled={busy !== null}
+        onClick={() => { setMinimized(current => !current) }}
+      >
+        {minimized ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
+      </button>
+      <button
+        type="button" className={css.iconButton}
+        aria-label={t(pending.dismissal === 'hide' ? 'nav.close' : 'nav.cancel')}
+        title={t(pending.dismissal === 'hide' ? 'nav.close' : 'nav.cancel')}
+        disabled={busy !== null} onClick={dismissFlow}
+      >
+        <IconCloseOutlineRegular />
+      </button>
+    </div>
+  )
+
   return (
     <div className={css.frame} data-question-key={pending.key}>
       <section
         className={clsx(css.card, minimized && css.cardMinimized)}
-        aria-labelledby={`question-${pending.key}-${String(index)}`}
+        aria-labelledby={headingId}
       >
-        <header className={css.header}>
-          <div className={css.headingBlock}>
-            {question.header !== undefined && <div className={css.eyebrow}>{question.header}</div>}
-            <h2 className={css.title} id={`question-${pending.key}-${String(index)}`}>
-              {question.question}
-            </h2>
-          </div>
-          <div className={css.headerActions}>
-            {countdown !== undefined && card.waitState !== 'waiting' && card.waitState !== 'editing' && card.waitState !== 'continued' && (
-              <span className={css.waitStatus}>
-                {t(countdown.running ? 'wait.countdown' : 'wait.paused', {
-                  seconds: Math.ceil(countdown.remainingMs / 1000),
-                })}
-              </span>
-            )}
-            {countdown !== undefined && card.waitState !== 'waiting' && card.waitState !== 'editing' && card.waitState !== 'continued' && (
-              <Button variant="outline" className={css.waitButton} onClick={takeTime}>
-                {t('wait.takeTime')}
-              </Button>
-            )}
-            {card.state === 'continued' && <span className={css.waitStatus}>{t('wait.continued')}</span>}
-            {/* A held or frozen countdown says so; a request that never carried
-                one waits silently, as the blocking question always has. */}
-            {countdown !== undefined && (card.waitState === 'waiting' || card.waitState === 'editing') && (
-              <span className={css.waitStatus}>{t('wait.held')}</span>
-            )}
-            {review !== undefined && <span className={css.waitStatus}>{t('review.status')}</span>}
-            <button
-              type="button" className={css.iconButton}
-              aria-label={t(minimized ? 'nav.maximize' : 'nav.minimize')}
-              title={t(minimized ? 'nav.maximize' : 'nav.minimize')}
-              aria-expanded={!minimized}
-              disabled={busy !== null}
-              onClick={() => { setMinimized(current => !current) }}
-            >
-              {minimized ? <IconChevronUpOutlineRegular /> : <IconChevronDownOutlineRegular />}
-            </button>
-            <button
-              type="button" className={css.iconButton}
-              aria-label={t(pending.dismissal === 'hide' ? 'nav.close' : 'nav.cancel')}
-              title={t(pending.dismissal === 'hide' ? 'nav.close' : 'nav.cancel')}
-              disabled={busy !== null} onClick={dismissFlow}
-            >
-              <IconCloseOutlineRegular />
-            </button>
-          </div>
+        <header className={clsx(css.header, !minimized && css.headerExpanded)}>
+          {/* Minimized, the strip is the whole card, so the heading stays in
+              the pinned header. Expanded, the heading rides the scrollport
+              below and this row floats over the card's top-right corner. */}
+          {minimized && (
+            <QuestionHeading
+              id={headingId} eyebrow={question.header} question={question.question}
+            />
+          )}
+          {headerActions}
         </header>
 
         {!minimized && (
@@ -492,6 +522,10 @@ function QuestionFlow({ pending, t, useStore, useQuestionCard, actions }: Questi
               onFocusCapture={focusAnswerSurface}
               onBlurCapture={blurAnswerSurface}
             >
+              <QuestionHeading
+                id={headingId} eyebrow={question.header} question={question.question}
+                className={css.headingInBody}
+              />
               {question.detail !== undefined && (
                 <div className={css.detail}><MarkdownText text={question.detail} labels={markdownLabels} /></div>
               )}

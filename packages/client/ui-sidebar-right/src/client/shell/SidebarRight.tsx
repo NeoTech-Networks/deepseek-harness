@@ -73,9 +73,12 @@ export interface SidebarRightInjected {
    *
    * The frame sizes the track and places the resize handle; this only tells it
    * the composition of the facts this package owns, and is called whenever that
-   * composition changes.
+   * composition changes. The session id keys the frame's saved width, so two
+   * sessions with different panel modes do not inherit each other's track.
+   * @param presentation - whether the panel is shown, tracks the track width, or is fullscreen.
+   * @param sessionId - the session whose seat is reporting.
    */
-  readonly syncPresentation: (presentation: SidebarRightPresentation) => void
+  readonly syncPresentation: (presentation: SidebarRightPresentation, sessionId: SessionId) => void
   /**
    * Record this seat's room rule for `ctx.sidebarRight`'s splits, replacing its previous one.
    *
@@ -101,7 +104,15 @@ export interface SidebarRightInjected {
   readonly closeTab: (tabId: TabId) => void
   /** Split through the same controller as keyboard commands. */
   readonly splitPane: (paneId: PaneId) => void
-  /** Toggle the dock panel using its current display mode. */
+  /**
+   * Toggle the dock panel using its current display mode.
+   *
+   * This is the command path: programmatic callers and the keyboard shortcut,
+   * reached through the controller. The panel's chrome button does NOT use it.
+   * That command resolves its pane from live DOM focus and does nothing at all
+   * when the resolution comes back empty, which is not an acceptable failure
+   * mode for a control the operator has just clicked.
+   */
   readonly toggleFullscreen: () => void
   readonly hooks: {
     readonly shortcuts: HostObservable<readonly ShortcutCatalogEntry[]>
@@ -132,7 +143,12 @@ interface PanelProps {
   readonly openTab: SidebarRightInjected['openTab']
   readonly closeTab: SidebarRightInjected['closeTab']
   readonly splitPane: SidebarRightInjected['splitPane']
-  readonly toggleFullscreen: SidebarRightInjected['toggleFullscreen']
+  /**
+   * The chrome's display-mode switch, already bound to this seat's session and
+   * presentation. It never re-derives a pane from live DOM focus, so the click
+   * can never be dropped on the floor.
+   */
+  readonly onToggleMode: () => void
   readonly shortcuts: readonly ShortcutCatalogEntry[]
   readonly useTabTypes: RightbarSeatProps['useTabTypes']
   readonly useTabNavigation: RightbarSeatProps['useTabNavigation']
@@ -260,7 +276,7 @@ function ExitFullscreenGlyph(): ReactNode {
 }
 
 /** The panel's two controls, placed by the kit at the top-right pane's strip end. */
-function PanelChrome({ sessionId, fullscreen, actions, t, shortcuts, toggleFullscreen }: Pick<PanelProps, 'sessionId' | 'actions' | 't' | 'fullscreen' | 'shortcuts' | 'toggleFullscreen'>): ReactNode {
+function PanelChrome({ sessionId, fullscreen, actions, t, shortcuts, onToggleMode }: Pick<PanelProps, 'sessionId' | 'actions' | 't' | 'fullscreen' | 'shortcuts' | 'onToggleMode'>): ReactNode {
   const next: DockMode = fullscreen ? 'push' : 'fullscreen'
   const modeLabel = fullscreen ? t('chrome.exitFullscreen') : t('chrome.toFullscreen')
   const mode = shortcuts.find(entry => entry.id === 'pane.fullscreen.toggle')
@@ -274,7 +290,7 @@ function PanelChrome({ sessionId, fullscreen, actions, t, shortcuts, toggleFulls
           aria-label={modeLabel}
           aria-keyshortcuts={mode?.aria}
           data-sidebar-right-mode={next}
-          onClick={toggleFullscreen}
+          onClick={onToggleMode}
         >
           {fullscreen ? <ExitFullscreenGlyph /> : <FullscreenGlyph />}
         </button>
@@ -335,7 +351,7 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
             renderSlot('sidebar.right.tab.menu.item', { tab, dismiss })}
           chrome={<PanelChrome
             sessionId={sessionId} fullscreen={fullscreen} actions={actions} t={t}
-            shortcuts={panel.shortcuts} toggleFullscreen={panel.toggleFullscreen}
+            shortcuts={panel.shortcuts} onToggleMode={panel.onToggleMode}
           />}
           onRoom={reportRoom}
         />
@@ -353,7 +369,7 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
  */
 export function RightbarSeat({
   sessionId, width, viewportWidth, canShow, useStore, actions, t, renderSlot, syncPresentation, measureRoom, reportAutoFullscreen,
-  openTab, closeTab, useTabTypes, useTabNavigation, occurrence, retainTab, active, useShortcuts, splitPane, toggleFullscreen,
+  openTab, closeTab, useTabTypes, useTabNavigation, occurrence, retainTab, active, useShortcuts, splitPane,
 }: RightbarSeatProps): ReactNode {
   // One store instance per session, so this map holds this session's surface.
   const shortcuts = useShortcuts(entries => entries)
@@ -397,7 +413,7 @@ export function RightbarSeat({
           && animation.playState !== 'finished' && animation.playState !== 'idle')
         : []
       if (entering.length === 0) {
-        syncPresentation({ shown, track, fullscreen })
+        syncPresentation({ shown, track, fullscreen }, sessionId)
         return
       }
       // Cancellation can replace the transition or remove it for reduced motion.
@@ -409,8 +425,8 @@ export function RightbarSeat({
   // Leaving is part of that report: a seat that unmounts with its session must
   // hand the track back rather than leave one sized for a surface nobody draws.
   useLayoutEffect(() => active
-    ? () => { syncPresentation({ shown: false, track: false, fullscreen: false }) }
-    : undefined, [syncPresentation, active])
+    ? () => { syncPresentation({ shown: false, track: false, fullscreen: false }, sessionId) }
+    : undefined, [syncPresentation, active, sessionId])
 
   // The Tab domain is not synced here: the controller adopted this session's
   // store as the runtime minted it and reconciles on the store's own commits,
@@ -419,7 +435,16 @@ export function RightbarSeat({
   if (surface === undefined) return null
   const panel: PanelProps = {
     sessionId, actions, t, renderSlot, surface, openTab, closeTab, useTabTypes, useTabNavigation, useStore, occurrence,
-    fullscreen, autoFullscreen, reportRoom, active, retainTab, shortcuts, splitPane, toggleFullscreen,
+    fullscreen, autoFullscreen, reportRoom, active, retainTab, shortcuts, splitPane,
+    // The chrome's display-mode switch, built from this seat's own state. The
+    // rule is the controller's own: a narrow viewport's automatic fullscreen
+    // exits by collapsing the panel, and the recorded mode follows. It does not
+    // use the injected command, whose pane resolution reads live DOM focus and
+    // can come back empty, leaving the clicked control doing nothing at all.
+    onToggleMode: () => {
+      if (fullscreen && autoFullscreen) actions.setExpanded(sessionId, false)
+      actions.setMode(sessionId, fullscreen ? 'push' : 'fullscreen')
+    },
   }
   return <SidebarPanel {...panel} width={width} panelRef={panelRef} />
 }

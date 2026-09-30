@@ -39,11 +39,11 @@ kind: "package-reference"
 
 ### 对模型而言的变化
 
-挂载策略后，`write` 可以创建新文件，但拒绝覆盖会话未读取过的现有文件；`edit` 要求先读取目标；自读取以来发生变化（包括缺失）的文件以 `FS_STALE_VERSION` 失败。缺失也会被记录：读取缺失文件会把它标记为确认缺失，因此随后的 `write` 可以通过防护创建流程重新创建它。会话恢复后不携带任何已观察状态，因此必须重新读取文件，防护变更才能再次成功。
+挂载策略后，`write` 可以创建新文件，但拒绝覆盖会话未读取过的现有文件；`edit` 对从未读取过的文件无条件执行，并以其精确且唯一的 `old_string` 作为锚点（NeoTech 分支 `EDIT_SELF_OBSERVE`，2026-09-23；上游会拒绝）；自读取以来发生变化（包括缺失）的文件以 `FS_STALE_VERSION` 失败。缺失也会被记录：读取缺失文件会把它标记为确认缺失，因此随后的 `write` 可以通过防护创建流程重新创建它。会话恢复后不携带任何已观察状态，因此必须重新读取文件，防护变更才能再次成功。
 
 ### 失败与恢复
 
-没有先前观测的编辑以代码 `FS_NOT_OBSERVED` 和策略原因 `edit requires reading "<path>" first` 失败；编辑被观测为缺失的目标以 `FS_NOT_FOUND` 失败。工具把策略和提供方的未读失败统一为 `cannot modify "<path>": file has not been read — read the file, then retry`，同时保留错误码和原始原因。在外部删除的文件上遵循该恢复指令会记录缺失，因此下一次防护写入可以重新创建它，而不会覆盖并发创建者。
+没有智能体会话的调用方所做的编辑以代码 `FS_NOT_OBSERVED` 和策略原因 `edit requires reading "<path>" first` 失败；编辑被观测为缺失的目标以 `FS_NOT_FOUND` 失败。工具把策略和提供方的未读失败统一为 `cannot modify "<path>": file has not been read — read the file, then retry`，同时保留错误码和原始原因。在外部删除的文件上遵循该恢复指令会记录缺失，因此下一次防护写入可以重新创建它，而不会覆盖并发创建者。
 
 -----
 
@@ -71,7 +71,7 @@ kind: "package-reference"
 
 ### 决策流程
 
-`fs/write-intent` 把未见或确认缺失解析为 `{ kind: 'createIfAbsent' }`，把已观测存在解析为 `{ kind: 'replaceIfVersion', version: vObserved }`。`fs/edit-intent` 以 `FS_NOT_OBSERVED` 拒绝未见目标，以 `FS_NOT_FOUND` 拒绝确认缺失的目标，否则提供观察到的版本作为比较并交换的基础。`fs/observed` 为该所有者与目标记录 `{ kind: 'present', version }` 或 `{ kind: 'absent' }`——同步、只有副作用的 `WeakMap.set`，因为成功的变更已经提交。
+`fs/write-intent` 把未见或确认缺失解析为 `{ kind: 'createIfAbsent' }`，把已观测存在解析为 `{ kind: 'replaceIfVersion', version: vObserved }`。`fs/edit-intent` 以 `FS_NOT_OBSERVED` 拒绝没有会话的调用方，把会话的未见目标解析为 `undefined`（以 `old_string` 为锚点的无条件原子编辑），以 `FS_NOT_FOUND` 拒绝确认缺失的目标，否则提供观察到的版本作为比较并交换的基础。`fs/observed` 为该所有者与目标记录 `{ kind: 'present', version }` 或 `{ kind: 'absent' }`——同步、只有副作用的 `WeakMap.set`，因为成功的变更已经提交。
 
 ### 单 slot、先到者胜
 

@@ -30,6 +30,9 @@ describe('LayoutController', () => {
     expect(panels.openRightbar).toHaveBeenNthCalledWith(2, true, true)
     expect(panels.openRightbar).toHaveBeenNthCalledWith(3, false, true)
     expect(panels.closeRightbar).toHaveBeenCalledTimes(1)
+    // A reporting session (fork) rides through to key the saved width.
+    service.openRightbar(true, false, 'session-a')
+    expect(panels.openRightbar).toHaveBeenLastCalledWith(true, false, 'session-a')
     // The drag width stays the frame's own business, never the caller's.
     expect(panels.setRightbar).not.toHaveBeenCalled()
   })

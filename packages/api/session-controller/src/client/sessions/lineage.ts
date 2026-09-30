@@ -28,6 +28,10 @@ export interface SessionListEntry {
   /** Coarse durable origin for navigation filtering; not a continuation capability. */
   origin?: 'subagent'
   cwd?: string
+  /** Front-door URL of the dashboard this Session's workspace is associated with; absent when there is no association. */
+  dashboardUrl?: string
+  /** Name of the Claude Design project behind that dashboard; absent when there is no association. */
+  designProject?: string
   /** Current host-computed projection values for list consumers. */
   projectionValues?: Readonly<Partial<SessionProjectionMap>>
   /** Lineage indent depth: root = 0; the UI just multiplies by the indent width. */

@@ -50,6 +50,8 @@ export interface TeamMemberSnapshot {
   readonly description: string
   readonly provider: string
   readonly context: 'fresh' | 'fork'
+  /** LLM model id the Lead selected for this teammate; absent when it inherits the Lead route. */
+  readonly model?: string
   readonly phase: TeamMemberPhase
   readonly error?: string
 }
@@ -169,7 +171,19 @@ export interface SpawnTeammateRequest {
   readonly prompt: ContentBlock[]
   readonly context: 'fresh' | 'fork'
   readonly provider: string
+  /** Optional LLM route for the teammate; omitted to inherit the Lead's route. */
+  readonly route?: TeammateRoute
   readonly signal: AbortSignal
+}
+
+/** Explicit LLM route for one teammate, already validated by the caller. */
+export interface TeammateRoute {
+  /** LLM provider id, for example `anthropic` or `deepseek-official`. */
+  readonly llmProvider: string
+  /** Provider-owned model id. */
+  readonly model: string
+  /** Adapter-owned reasoning effort; omitted to use the model's default. */
+  readonly reasoningEffort?: string
 }
 
 /** Result after one teammate reaches a durable active or failed edge. */

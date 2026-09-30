@@ -13,6 +13,7 @@ it.each(['test', 'production'] as const)('selects the %s policy and authenticati
   expect(policy).toEqual({ origin, allowedPageOrigins: [origin],
     ...(deployment === 'test' ? { allowedAuthOrigins: ['https://login.example.com'] } : {}),
     authentication: deployment === 'test' ? 'feishu-test' : 'anonymous' })
+  if (policy === undefined) throw new Error('policy expected')
   expect(resolveDesktopPolicyConfig(policy)).toMatchObject(policy)
 })
 
@@ -52,4 +53,11 @@ it.each([{ unsigned: true }, { prepareOnly: true }, {}])('fails before signing/p
     expect(() => { validateDesktopPackageEnvironment({ DSH_DESKTOP_APP_ID: 'com.example.test' }, { platform, arch: 'x64' }, options) })
       .toThrow('DSH_DESKTOP_MANDATORY_UPDATE_TEST_ORIGIN')
   }
+})
+
+it('opts out of the mandatory-update policy only on the explicit off value', () => {
+  expect(resolveDesktopPolicyEnvironment({ DSH_DESKTOP_MANDATORY_UPDATE_CONFIG: 'off' })).toBeUndefined()
+  expect(resolveDesktopPolicyEnvironment({ DSH_DESKTOP_MANDATORY_UPDATE_CONFIG: ' off ', DSH_DESKTOP_AUTO_UPDATE_ENV: 'production' })).toBeUndefined()
+  expect(resolveDesktopPolicyConfig(resolveDesktopPolicyEnvironment({ DSH_DESKTOP_MANDATORY_UPDATE_CONFIG: 'off' }))).toBeUndefined()
+  expect(() => resolveDesktopPolicyEnvironment({ DSH_DESKTOP_MANDATORY_UPDATE_CONFIG: 'Off' })).toThrow()
 })

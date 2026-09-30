@@ -1,11 +1,14 @@
 /** Cold-safe Session list and search projection. */
 
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-agent-preset-registry'
 import type { ImageAttachmentLimits } from '@deepseek-ai/dsh-attachment'
 import type { Session, SessionEvent, SessionHeader, SessionId } from '@deepseek-ai/dsh-session'
 import type { ProjectionSnapshot } from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-session-projection-cache'
+import type {} from '@deepseek-ai/dsh-session-title'
 import { SessionQueryError, type SessionSearchCursor } from '@deepseek-ai/dsh-session-query'
 import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 import { z } from 'zod'
@@ -13,6 +16,9 @@ import {
   SESSION_SEARCH_RESULT_LIMIT,
   SESSION_SEARCH_SNIPPET_MAX_CODE_POINTS,
 } from './types.ts'
+import {
+  loadWorkspaceLinks, resolveWorkspaceLinks, type WorkspaceLinks,
+} from './workspace-links.ts'
 import type {
   SessionListMetadata, SessionProjectionHints, SessionProjectionValues, SessionSearchItem,
   SessionSearchValue, SessionSummary,
@@ -21,6 +27,57 @@ import type {
 const SEARCH_PROVIDER_CALL_LIMIT = 100
 const SESSION_SEARCH_QUERY_MAX_CHARS = 500
 const MESSAGE_TYPES = new Set(['user/message', 'assistant/message'])
+
+/**
+ * Read the already-materialized dashboard links of one attached Session.
+ *
+ * The `workspaceLinks` unit is the same client-visible value the Session footer
+ * renders live, so the list row and the footer cannot disagree. The read is the
+ * NON-folding one on purpose: the list path must never materialize a unit's
+ * cells, because folding history here would also move `updatedAt` and `blank`
+ * for a resumed Session. A missing cell is not a failure, and the read is
+ * guarded so a profile without the registry falls back rather than breaking the
+ * list.
+ *
+ * @param ctx - Host context carrying the projection service.
+ * @param session - attached Session to read.
+ * @returns the resolved links, or `undefined` while the cell is unmaterialized.
+ */
+function cachedWorkspaceLinks(ctx: Context, session: Session): WorkspaceLinks | undefined {
+  try {
+    return ctx.sessionProjections.cachedSnapshot(session, ['workspaceLinks'])?.values.workspaceLinks
+  } catch (error) {
+    ctx.logger.warn(
+      `api-session.list: workspace links for "${session.id}" failed; using the workspace alone: ${String(error)}`,
+    )
+    return undefined
+  }
+}
+
+/**
+ * Resolve the dashboard and design project one Session is associated with.
+ *
+ * An attached Session that has already folded its messages answers from the
+ * `workspaceLinks` projection: the workspace directory decides first and
+ * unchanged, then the NEWEST message that names a dashboard. Everything else,
+ * including every cold row, falls back to the workspace directory alone, which
+ * is what this row carried before the message signal existed. The maps are
+ * re-read when either file changes, so a regenerated map needs no restart.
+ *
+ * @param ctx - Host context carrying the projection service.
+ * @param header - the Session's immutable header.
+ * @param session - the attached Session, when one exists.
+ * @returns the association, or an empty object when neither signal names one.
+ */
+function workspaceLinksField(
+  ctx: Context,
+  header: SessionHeader,
+  session: Session | undefined,
+): WorkspaceLinks {
+  const cached = session === undefined ? undefined : cachedWorkspaceLinks(ctx, session)
+  if (cached !== undefined) return cached
+  return resolveWorkspaceLinks(header.cwd, loadWorkspaceLinks(join(homedir(), '.dsh')).byDirectory)
+}
 
 const sessionListMetadataSchema: z.ZodType<SessionListMetadata> = z.object({
   blank: z.boolean(),
@@ -114,6 +171,7 @@ export class ApiSessionList {
       running: this.ctx.agents.get(session.id)?.status === 'running',
       blank: metadata?.blank ?? session.seq === 0,
       ...listFields(session.header),
+      ...workspaceLinksField(this.ctx, session.header, session),
       ...(projections === undefined ? {} : { projections }),
     }
   }
@@ -154,6 +212,11 @@ export class ApiSessionList {
       // A large, metadata-less, or inaccessible cache miss remains unknown and visible.
       blank: metadata?.blank ?? false,
       ...listFields(header),
+      // A cold Session's log is never opened on this path, so the workspace is
+      // the only signal it carries. The footer renders under the open Session's
+      // composer, which is live, and resolves from that Session's own messages
+      // through the `workspaceLinks` projection.
+      ...workspaceLinksField(this.ctx, header, undefined),
       ...(projections === undefined ? {} : { projections }),
     }
   }

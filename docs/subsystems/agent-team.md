@@ -16,6 +16,8 @@ interface TeamMemberSnapshot {
   readonly description: string
   readonly provider: string
   readonly context: 'fresh' | 'fork'
+  /** LLM model id the Lead selected for this teammate; absent when it inherits the Lead route. */
+  readonly model?: string
   readonly phase: TeamMemberPhase
   readonly error?: string
 }

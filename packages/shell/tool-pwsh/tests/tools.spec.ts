@@ -349,6 +349,11 @@ describe('registration', () => {
     const schema = ctx.tools.schemas().find(s => s.name === 'pwsh')
     expect(schema).toBeDefined()
     expect(schema?.description).toContain('PowerShell command')
+    // The two shapes that used to fail every time: a param-led command (the
+    // executor now wraps it) and a double-quoted pattern containing `$`.
+    expect(schema?.description).toContain('`param(...)` declaration is wrapped in a script block')
+    expect(schema?.description).toContain('SINGLE-quoted')
+    expect(schema?.description).toContain('Variable reference is not valid')
     expect(schema?.parameters.properties).toMatchObject({
       command: { type: 'string' },
       description: { type: 'string' },

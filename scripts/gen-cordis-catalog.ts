@@ -91,6 +91,7 @@ export const SERVICE_PAGE: Record<string, string> = {
   fs: 'filesystem.md',
   goals: 'goal.md',
   schedule: 'schedule.md',
+  sessionStatus: 'session-status.md',
   inspector: 'extensions.md',
   webServer: 'web-server.md',
   invariants: 'invariants.md',
@@ -142,6 +143,9 @@ export const SERVICE_PAGE: Record<string, string> = {
   workspaceChanges: 'deliverables.md',
   terminalController: 'workspace.md',
   directoryPickerController: 'workspace.md',
+  accountUsage: 'account-usage.md',
+  pinnedFiles: 'sidebar-right.md',
+  visionRouting: 'vision.md',
 }
 
 /**
@@ -282,6 +286,9 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   SessionLogReporter: 'otel.md',
   OTelEventRecord: 'otel.md',
   OTelEventScalar: 'otel.md',
+  PinnedFileText: 'sidebar-right.md',
+  PinnedListing: 'sidebar-right.md',
+  PinnedState: 'sidebar-right.md',
   ProductTelemetryRecord: 'product-telemetry.md',
   ProductTelemetryScalar: 'product-telemetry.md',
   WorkspaceChangesSummary: 'deliverables.md',
@@ -839,6 +846,17 @@ export const FOUNDATION_TYPE_NAMES: ReadonlySet<string> = new Set([
 /** Project types deliberately documented outside the subsystems catalog. */
 export const TYPE_LINK_EXEMPTIONS: Readonly<Record<string, string>> = {
   ProductEvent: 'Desktop event fields are owned by packages/client/product-analytics/README.md and src/events.ts',
+  AccountUsageSnapshot: 'Host account usage endpoint contract is owned by packages/llm/account-usage/README.md',
+  SessionStatusValue: 'declared status value is owned by packages/session-status/session-status/README.md',
+  SessionStatusConfig: 'status vocabulary config is owned by packages/session-status/session-status/README.md',
+  SessionStatusIconId: 'status glyph id is owned by packages/session-status/session-status/README.md',
+  SessionStatusTone: 'status tone is owned by packages/session-status/session-status/README.md',
+  SessionStatusVocabularyEntry: 'status vocabulary entry is owned by packages/session-status/session-status/README.md',
+  SessionStatusUnknownError: 'status domain error is owned by packages/session-status/session-status/README.md',
+  SessionSetStatusRequest: 'status request is owned by packages/api/session-controller/README.md',
+  SessionSetStatusValue: 'status result is owned by packages/api/session-controller/README.md',
+  SessionListStatusesValue: 'status vocabulary result is owned by packages/api/session-controller/README.md',
+  WorkspaceSetGroupRequest: 'workspace group request is owned by packages/api/workspace-controller/README.md',
   ConnectionFetchHandler: 'shared Fetch dispatch is owned by packages/client/connection/src/rpc.ts',
   ConnectionRequestRejection: 'transport rejection status is owned by packages/client/connection/src/rpc.ts',
   ConnectionTrustRequest: 'transport authentication input is owned by packages/client/connection/src/rpc.ts',

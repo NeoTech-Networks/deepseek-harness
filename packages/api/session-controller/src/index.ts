@@ -25,6 +25,7 @@ import { SessionFileReferences } from './file-references.ts'
 import { ApiSessionList } from './list.ts'
 import { buildModelCatalog, hasProviderApiKey } from './catalog.ts'
 import { installModelSelectionProjection } from './model-selection-projection.ts'
+import { installWorkspaceLinksProjection } from './workspace-links-projection.ts'
 import { SessionSkillCatalog } from './skill-catalog.ts'
 import { SessionMediaReferences } from './media-references.ts'
 import { ArchivedSessionGate } from './archived-session-gate.ts'
@@ -52,6 +53,9 @@ import type {
   SessionPromptValue,
   SessionRenameRequest,
   SessionRenameValue,
+  SessionListStatusesValue,
+  SessionSetStatusRequest,
+  SessionSetStatusValue,
   SessionSearchRequest,
   SessionSearchValue,
   SessionSelectModelRequest,
@@ -135,6 +139,7 @@ export class SessionController extends TypertRemoteService {
   constructor(ctx: Context, config: Config, internals: SessionControllerInternals = {}) {
     super(ctx, 'sessionController', { namespace: 'session' })
     installModelSelectionProjection(ctx)
+    installWorkspaceLinksProjection(ctx)
     this.agents = new ApiSessionAgentController(ctx)
     this.commands = new SessionCommandController(ctx, this.agents, process.cwd())
     ctx.effect(() => ctx.fileUploads.registerAgentResolver(async (sessionId) => {
@@ -402,6 +407,25 @@ export class SessionController extends TypertRemoteService {
   @Remote('rename')
   rename(request: SessionRenameRequest): Promise<SessionRenameValue> {
     return this.commands.rename(request)
+  }
+
+  /**
+   * Set or clear one declared session status after explicitly resuming it.
+   * @param request - Session identity and the vocabulary id, or null to clear.
+   * @returns the resolved status and the durable event sequence.
+   */
+  @Remote('setStatus')
+  setStatus(request: SessionSetStatusRequest): Promise<SessionSetStatusValue> {
+    return this.commands.setStatus(request)
+  }
+
+  /**
+   * Read the deployment's declared status vocabulary, for the row menu.
+   * @returns the vocabulary in declaration order.
+   */
+  @Remote('listStatuses')
+  listStatuses(): SessionListStatusesValue {
+    return this.commands.listStatuses()
   }
 
   /**

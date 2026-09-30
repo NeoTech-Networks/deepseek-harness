@@ -43,6 +43,8 @@ function mountShell({ collapsed = false, width = 300, shortcuts = [] }: {
   const startSession = vi.fn()
   const toggleSidebar = vi.fn()
   let regionOwner: SidebarSectionOwnerProps | undefined
+  let allSessionsOwner: SidebarSectionOwnerProps | undefined
+  const seen: string[] = []
   let settingsOwner: SidebarSettingsOwnerProps | undefined
   let footerActionOwner: SidebarFooterActionOwnerProps | undefined
   const brandMark = <span data-testid="custom-brand-mark">M</span>
@@ -59,9 +61,14 @@ function mountShell({ collapsed = false, width = 300, shortcuts = [] }: {
         key: string,
         owner: SidebarFooterActionOwnerProps | SidebarSectionOwnerProps | SidebarSettingsOwnerProps,
       ) => {
+        seen.push(key)
         if (key === 'sidebar.brand.mark') return brandMark
         if (key === 'sidebar.brand.name') return brandName
         if (key === 'sidebar.toggle.badge') return null
+        if (key === 'sidebar.allSessions') {
+          allSessionsOwner = owner as SidebarSectionOwnerProps
+          return <div data-testid="all-sessions-seat" data-wide={owner.wide} />
+        }
         if (key === 'sidebar.settings') {
           settingsOwner = owner
           return <div data-testid="settings-seat" data-wide={owner.wide} />
@@ -83,6 +90,11 @@ function mountShell({ collapsed = false, width = 300, shortcuts = [] }: {
       if (regionOwner === undefined) throw new Error('region owner not rendered')
       return regionOwner
     },
+    allSessionsOwner: () => {
+      if (allSessionsOwner === undefined) throw new Error('all sessions owner not rendered')
+      return allSessionsOwner
+    },
+    seen,
     settingsOwner: () => {
       if (settingsOwner === undefined) throw new Error('settings owner not rendered')
       return settingsOwner
@@ -121,6 +133,17 @@ describe('SidebarRoot shell', () => {
     fireEvent.focus(button)
     expect(Array.from(screen.getByRole('tooltip').querySelectorAll('kbd'), key => key.textContent)).toEqual(['Ctrl', 'N'])
   })
+
+  it('renders the All Sessions seat above the workspace region with the same owner share (fork)', () => {
+    const b = mountShell()
+    const seen = b.seen
+    expect(seen.indexOf('sidebar.allSessions')).toBeGreaterThanOrEqual(0)
+    expect(seen.indexOf('sidebar.allSessions')).toBeLessThan(seen.indexOf('sidebar.workspaces'))
+    expect(screen.getByTestId('all-sessions-seat').dataset.wide).toBe('true')
+    b.allSessionsOwner().expandSidebar()
+    expect(b.toggleSidebar).not.toHaveBeenCalled()
+  })
+
   it('routes New Session (capsule + wordmark) and the column toggle', () => {
     const b = mountShell()
     expect(screen.getByTestId('custom-brand-mark')).toBeTruthy()

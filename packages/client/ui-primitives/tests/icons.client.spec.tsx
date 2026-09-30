@@ -17,8 +17,9 @@ const icons = Object.fromEntries(
 const iconNames = Object.keys(icons)
 
 describe('product icon set', () => {
-  it('exports regular and medium variants for all 94 public glyphs', () => {
-    expect(iconNames.length).toBe(188)
+  it('exports regular and medium variants for all 102 public glyphs', () => {
+    // 94 upstream glyphs plus the fork's eight session stage marks.
+    expect(iconNames.length).toBe(204)
     expect(iconNames.some(name => /\d+$/.test(name))).toBe(false)
     const regular = iconNames.filter(name => name.endsWith('Regular')).map(name => name.slice(0, -'Regular'.length))
     const medium = iconNames.filter(name => name.endsWith('Medium')).map(name => name.slice(0, -'Medium'.length))
@@ -27,7 +28,18 @@ describe('product icon set', () => {
       'IconMicrophoneOutlineRegular',
       'IconPlanOutlineRegular', 'IconCompactOutlineRegular', 'IconShieldOutlineRegular', 'IconDeliverDocRegular',
       'IconWarningTriangleOutlineRegular', 'IconCompareSplitOutlineRegular', 'IconCloseCircleFillRegular',
+      'IconStageWorkingOutlineRegular', 'IconStageDeployingOutlineRegular',
     ]))
+  })
+
+  it('draws the stage marks without motion or inline style, naming their animatable parts (fork)', () => {
+    const { container } = render(<primitives.IconStageWorkingOutlineRegular />)
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('width')).toBe('14')
+    expect(svg.getAttribute('stroke-width')).toBe('2.2')
+    expect(container.querySelector('[data-part="arc"]')).toBeTruthy()
+    expect(container.querySelector('[style]')).toBeNull()
+    expect(container.querySelector('animate, animateTransform')).toBeNull()
   })
 
   it('draws the circled close as one currentColor knockout path in both weights', () => {
