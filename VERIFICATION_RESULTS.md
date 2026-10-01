@@ -1,5 +1,45 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-09-30 - DSH 0.2.0-rc.2 replay, build, package, install
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Merge base is exactly the previous tag | `dsh-v0.2.0-rc.1` | `4878cdabd8` on both sides | VERIFIED |
+| Replay conflicts | resolve by rule | 23 conflicted of the 390 stack-touched files | VERIFIED |
+| Blob completeness, fork-only files | all identical bar the intended | **330 of 332** identical; exceptions `auto-open.ts` (deleted) and `ui-plan/index.ts` (reverted), both intended | VERIFIED |
+| Blob-check sanity control | loop can see a difference | `ui-plan/src/client/PlanCard.tsx` reported as differing before the run | VERIFIED |
+| `pnpm install` in the worktree (CI=true) | exit 0 | exit 0, log store 1393 packages | VERIFIED |
+| `pnpm run build` | exit 0 | exit 0, 8m26s first run and 3m35s incremental after the regeneration | VERIFIED |
+| Full gate sweep | compare against the 10-of-29 baseline | **29 of 32 pass**; 3 fail, all accounted for | VERIFIED |
+| `verify-client-ui-i18n` | exit 0 after the rename | exit 0, 958 Client UI source files | VERIFIED |
+| `verify-persistence-changes` | exit 0 after the re-parent | 63 roots match 11 history records | VERIFIED |
+| `verify-translation-pairing` | exit 0 after re-recording | 1178 pairs, all consistent | VERIFIED |
+| `verify-type-equiv` | 1:1 with manifest | 476 blocks, 476 paired derivatives | VERIFIED |
+| `verify-cordis-config` is upstream's | prove by blob | fixture `apps/cli/tests/profiles/acp/cordis.yml` byte-identical to `dsh-v0.2.0-rc.2` | VERIFIED |
+| `verify-client-domain-graph` is upstream's | prove by blob | 39 of 40 offenders byte-identical to the tag; the 40th differs with no import line touched | VERIFIED |
+| Packaging, first attempt | exit 0 | FAILED: `runtime:lockfile` `pnpm exited with 2147483651` despite the file-redirect remedy | VERIFIED (corrected the remedy) |
+| Packaging, real-console retry | exit 0 | exit 0, `runtime:lockfile` through `windows-package` all success | VERIFIED |
+| Packaged smoke test | pass | passed (DOCX, XLSX, PPTX to PDF, skill CLI) | VERIFIED |
+| Features in the PACKAGED asar | 35 of 35 | 35 of 35 | VERIFIED |
+| Artifact identity | record size and hash | 288,350,678 bytes, sha256 `2F4AC466...05E4` | VERIFIED |
+| Artifact copied out of the build tree | present | `C:\Projects\exports\2026-09-30-dsh-020-rc2\` | VERIFIED |
+| SessionStart hook chain | under budget | 12 hooks, 9.6 s serial; slowest `work_recall_card.py` 4.45 s at its 4.0 s budget, and the bridge fans out in parallel | VERIFIED |
+| Installed version | 0.2.0-rc.2, one uninstall row | `DisplayVersion 0.2.0-rc.2`, exactly one row `7808434f-...` | VERIFIED |
+| Installed asar equals the built one | byte-identical | 127,016,675 bytes, sha256 `6EACBC93...DE8B` on both | VERIFIED |
+| Features in the RUNNING code | 35 of 35 | 35 of 35 | VERIFIED |
+| Plan-review supersede in the running code | upstream's, ours gone | `openWhenSeated` 0, `sidebarMounted` 3, `onToggleMode` 4 | VERIFIED |
+| App is up | port answers, new processes | port 19387 answers, 7 processes started 04:55:49 to 05:01:03 | VERIFIED |
+| Settings retained | identical to pre-install | home patch 20,093 and profile patch 5,541 bytes, both unchanged | VERIFIED |
+| Hooks fire | all exit 0 | **443 of 443** `hook/result` events exit 0; this session PreToolUse 222, PostToolUse 221, UserPromptSubmit 3, Stop 1 | VERIFIED |
+| SessionStart fires | bridge record exists | `emitted-context/session-c112bdab-....json` written 05:00:47 for this session | VERIFIED |
+| MCP servers mount | a real call answers | `memory_search` on claude-memory-bridge returned 3 hits | VERIFIED |
+| Existing session logs load | readable | 1,161 session files on disk, newest 6 all read cleanly | VERIFIED |
+| AGENTS.md hardlink | two names, one file | two names, identical hashes | VERIFIED |
+| The DeepSeek route survived pi-ai 0.87.1 | route resolves | this session runs on `deepseek-flash` | VERIFIED |
+| Mode picker SEEN on screen | visible selection | file read only (`selectedDefault: standard-hooks`) | UNVERIFIED |
+| Model menu SEEN in the UI | visible | not inspected visually | UNVERIFIED |
+| Plan review auto-opens on screen | visible | not seen; needs a real plan finishing while another session is on screen | UNVERIFIED |
+
 ## 2026-09-28 - DSH 0.2.0-rc.1 replay, build, install
 
 | Check | Expected | Result | Status |
