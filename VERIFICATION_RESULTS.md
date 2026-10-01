@@ -1,5 +1,20 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-01 - Session footer "Skills Used" line
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Host fold spec | all pass | `skills-used-projection.host.spec.ts` 8/8 | VERIFIED |
+| Client footer spec | all pass, old footer cases untouched | `skeleton.client.spec.tsx` 36/36 | VERIFIED |
+| Typecheck, lint, catalogs, i18n | exit 0 | host + client tsc 0; oxlint 0 errors; verify-cordis-catalog, verify-client-catalog, verify-client-ui-i18n pass | VERIFIED |
+| Build | exit 0 | `pnpm run build` 0, 353 client artifacts | VERIFIED |
+| Package + smoke | exit 0 | run `2026-10-01T19-15-09.777Z-5WuXRp` exit 0, runtime:smoke and smoke-packaged-runtime pass | VERIFIED |
+| Markers in packaged asar | 37 of 37 | `dsh_local_features_check.py --asar` all 37 present | VERIFIED |
+| Installed asar == built | identical | sha256 `06614FF2A27E...13C5` both | VERIFIED |
+| One uninstall row, app up | 1 row, port 19387 | `7808434f-...` 0.2.0-rc.2; 19387 answers; processes from 17:33:21 | VERIFIED |
+| Projection folding live | non-empty for a Session that typed a skill | cache row `["dashboard-design-sync","save-state"]` | VERIFIED |
+| Populated row on screen | `Skills Used:` visible | not yet captured; the open Session used none, so correctly no footer (`app-window-after-install.png`) | UNVERIFIED |
+
 ## 2026-09-30 - DSH 0.2.0-rc.2 replay, build, package, install
 
 | Check | Expected | Result | Status |
