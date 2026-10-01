@@ -205,3 +205,20 @@ the rules require. And the shared-checkout guard creates its worktree inside the
 `dsh_config_vault.py`'s `git add -A` would have committed a second copy of the whole vault;
 `dsh-config` now ignores `.claude/worktrees/`.
 # CURRENT_STATE (capped newest-first log)
+
+<!-- claude-memory-actor:begin
+  Auto-managed by the claude-memory save-state hook.
+  Anything between :begin and :end is overwritten on every save-state.
+  Edits outside this block are preserved.
+  Last write: actor=claude-code:steve session=3a3e4aeb-19b5-45c7-b035-fdbe96d54690 at=2026-10-01T20:58:48.076542+00:00
+-->
+## Last save-state (2026-10-01T20:58:48.076542+00:00)
+
+- Trigger: `handoff`
+- Actor: `claude-code:steve`
+- Session id: `3a3e4aeb-19b5-45c7-b035-fdbe96d54690`
+- Repos touched: deepseek-harness (source: transcript scan)
+- Plan: (none)
+- Transcript: C:\Claude\integrations\dsh-hook-bridge\transcripts\368508ef-5123-44fb-be8b-1d1f403af471.jsonl
+
+<!-- claude-memory-actor:end -->
