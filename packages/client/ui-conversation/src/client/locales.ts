@@ -383,6 +383,7 @@ export const zh = {
   'terminal.session': '终端 {sessionId}',
   'footer.dashboard': '仪表盘：',
   'footer.designProject': '设计项目：',
+  'footer.skillsUsed': '使用的技能：',
 } satisfies Record<string, string>
 
 /** The conversation namespace key union. */
@@ -766,4 +767,5 @@ export const en = {
   'terminal.session': 'Terminal {sessionId}',
   'footer.dashboard': 'Dashboard:',
   'footer.designProject': 'Design Project:',
+  'footer.skillsUsed': 'Skills Used:',
 } satisfies Record<ConversationKey, string>

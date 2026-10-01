@@ -544,9 +544,11 @@ button.crumb:hover {
   visibility: hidden;
 }
 
-/* Session footer: the workspace's dashboard address and the design project
-   behind it, shown under the message box for an open session only. Both rows
-   render for every session; a row with no association is its label alone. */
+/* Session footer: the workspace's dashboard address, the design project behind
+   it, and the skills and commands the operator typed in this session, shown
+   under the message box for an open session only. The two link rows render
+   together whenever either resolves, a row with no association being its label
+   alone; the invocation row renders only when the session has used something. */
 .sessionFooter {
   display: flex;
   flex-direction: column;

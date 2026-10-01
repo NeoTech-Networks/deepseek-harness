@@ -42,6 +42,11 @@ export function ConversationContent(props: ConversationContentProps) {
   const projected = useProjection('workspaceLinks')
   const dashboardUrl = projected?.dashboardUrl ?? summaryDashboardUrl
   const designProject = projected?.designProject ?? summaryDesignProject
+  // The third line: the skills and commands the operator typed in this Session,
+  // folded host-side from the Session's own log. There is no list-row fallback
+  // for it, because a row the Session list carries has no use for the answer.
+  const skillsUsed = useProjection('skillsUsed')
+  const skills = skillsUsed?.skills ?? []
   const workspaces = useWorkspaces(s => s)
   // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
@@ -171,11 +176,15 @@ export function ConversationContent(props: ConversationContentProps) {
 
   // The footer earns its space only when it names something. A workspace that
   // belongs to no dashboard is not a finding, so nothing renders rather than
-  // two bare labels; when one half resolves, both rows stay, as before. Only
-  // the main occurrence carries it: an embedded Conversation is not the
-  // operator's open Session.
+  // bare labels. The two link rows stay a PAIR: when either resolves, both
+  // render, as before. The invocation row stands alone, so a Session that used
+  // a skill but belongs to no dashboard still gets its line. Only the main
+  // occurrence carries it: an embedded Conversation is not the operator's open
+  // Session.
   const hasWorkspaceLinks = dashboardUrl !== undefined || designProject !== undefined
-  const showSessionFooter = !hero && props.variant === 'main' && hasWorkspaceLinks
+  const hasSkillsUsed = skills.length > 0
+  const showSessionFooter = !hero && props.variant === 'main'
+    && (hasWorkspaceLinks || hasSkillsUsed)
 
   const composerBar = (
     <div className={clsx(css.composerStack, hero && css.composerHero)}>
@@ -185,25 +194,35 @@ export function ConversationContent(props: ConversationContentProps) {
       {inputBar}
       {showSessionFooter && (
         <div className={css.sessionFooter} data-session-footer="">
-          <div className={css.sessionFooterLine} data-session-footer-line="dashboard">
-            <span className={css.sessionFooterLabel}>{t('footer.dashboard')}</span>
-            {dashboardUrl !== undefined && (
-              <a
-                className={css.sessionFooterValue}
-                href={dashboardUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {dashboardUrl}
-              </a>
-            )}
-          </div>
-          <div className={css.sessionFooterLine} data-session-footer-line="design-project">
-            <span className={css.sessionFooterLabel}>{t('footer.designProject')}</span>
-            {designProject !== undefined && (
-              <span className={css.sessionFooterValue}>{designProject}</span>
-            )}
-          </div>
+          {hasWorkspaceLinks && (
+            <>
+              <div className={css.sessionFooterLine} data-session-footer-line="dashboard">
+                <span className={css.sessionFooterLabel}>{t('footer.dashboard')}</span>
+                {dashboardUrl !== undefined && (
+                  <a
+                    className={css.sessionFooterValue}
+                    href={dashboardUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {dashboardUrl}
+                  </a>
+                )}
+              </div>
+              <div className={css.sessionFooterLine} data-session-footer-line="design-project">
+                <span className={css.sessionFooterLabel}>{t('footer.designProject')}</span>
+                {designProject !== undefined && (
+                  <span className={css.sessionFooterValue}>{designProject}</span>
+                )}
+              </div>
+            </>
+          )}
+          {hasSkillsUsed && (
+            <div className={css.sessionFooterLine} data-session-footer-line="skills-used">
+              <span className={css.sessionFooterLabel}>{t('footer.skillsUsed')}</span>
+              <span className={css.sessionFooterValue}>{skills.join(', ')}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

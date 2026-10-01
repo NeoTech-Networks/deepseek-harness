@@ -22,7 +22,8 @@
     "src/archived-session-gate.ts",
     "src/skill-catalog.ts",
     "src/workspace-links.ts",
-    "src/workspace-links-projection.ts"
+    "src/workspace-links-projection.ts",
+    "src/skills-used-projection.ts"
   ],
   "references": [
     { "path": "../../../vendor/cordis" },

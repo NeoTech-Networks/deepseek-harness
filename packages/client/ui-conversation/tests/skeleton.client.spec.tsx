@@ -146,6 +146,8 @@ function mount(
     designProject?: string
     /** The live `workspaceLinks` projection value, when the host has published one. */
     projectionLinks?: { dashboardUrl?: string; designProject?: string }
+    /** The live `skillsUsed` projection value, when the host has published one. */
+    projectionSkills?: { skills: readonly string[] }
   } = {},
 ) {
   const sessionId = 'sessionId' in options ? options.sessionId : SID
@@ -374,7 +376,9 @@ function mount(
     useSessionRetainInfo: () => undefined,
     useResource,
     useWorkspaces: bindSnapshotSelector(workspaces),
-    useProjection: (key: string) => key === 'workspaceLinks' ? options.projectionLinks : undefined,
+    useProjection: (key: string) => key === 'workspaceLinks'
+      ? options.projectionLinks
+      : key === 'skillsUsed' ? options.projectionSkills : undefined,
     useInput,
     inputActions,
   }
@@ -855,6 +859,7 @@ describe('Session footer workspace lines', () => {
   // below, because the label text itself is the contract.
   const dashboardLabel = zh['footer.dashboard']
   const designLabel = zh['footer.designProject']
+  const skillsLabel = zh['footer.skillsUsed']
 
   it('renders the dashboard address and the design project under the composer', () => {
     const b = mount(sessionSnapshotOf(), undefined, undefined, {
@@ -919,9 +924,54 @@ describe('Session footer workspace lines', () => {
     expect(b.view.container.querySelector('[data-session-footer]')).toBeNull()
   })
 
-  it('names both rows exactly as the English seat asks, colon included', () => {
+  it('lists the skills and commands the operator typed, comma and space apart', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      dashboardUrl: 'https://ops.theseoitguy.net/youtube-creator',
+      designProject: 'YouTube',
+      projectionSkills: { skills: ['dashboard', 'design-button-audit'] },
+    })
+    const footer = b.view.container.querySelector('[data-session-footer]')
+    const skills = footer?.querySelector('[data-session-footer-line="skills-used"]')
+    expect(skills?.textContent).toBe(`${skillsLabel}dashboard, design-button-audit`)
+    // The two link rows are untouched by the third line's arrival.
+    expect(footer?.querySelector('[data-session-footer-line="dashboard"]')?.textContent)
+      .toBe(`${dashboardLabel}https://ops.theseoitguy.net/youtube-creator`)
+    expect(footer?.querySelector('[data-session-footer-line="design-project"]')?.textContent)
+      .toBe(`${designLabel}YouTube`)
+  })
+
+  it('shows the invocation row alone when the workspace maps to no dashboard', () => {
+    // The whole point of the row: it works in every Session, not only the ones
+    // a dashboard or a design project resolves for.
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      projectionSkills: { skills: ['plan'] },
+    })
+    const footer = b.view.container.querySelector('[data-session-footer]')
+    expect(footer).not.toBeNull()
+    expect(footer?.querySelector('[data-session-footer-line="skills-used"]')?.textContent)
+      .toBe(`${skillsLabel}plan`)
+    expect(footer?.querySelector('[data-session-footer-line="dashboard"]')).toBeNull()
+    expect(footer?.querySelector('[data-session-footer-line="design-project"]')).toBeNull()
+    expect(b.view.container.textContent).not.toContain(dashboardLabel)
+    expect(b.view.container.textContent).not.toContain(designLabel)
+  })
+
+  it('returns to showing the link pair alone once the projection says nothing was used', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      dashboardUrl: 'https://ops.theseoitguy.net/youtube-creator',
+      designProject: 'YouTube',
+      projectionSkills: { skills: [] },
+    })
+    expect(b.view.container.querySelector('[data-session-footer-line="dashboard"]')).not.toBeNull()
+    expect(b.view.container.querySelector('[data-session-footer-line="skills-used"]')).toBeNull()
+    expect(b.view.container.textContent).not.toContain(skillsLabel)
+  })
+
+  it('names all three rows exactly as the English seat asks, colon included', () => {
     expect(en['footer.dashboard']).toBe('Dashboard:')
     expect(en['footer.designProject']).toBe('Design Project:')
+    expect(en['footer.skillsUsed']).toBe('Skills Used:')
     expect(zh['footer.designProject']).toBe('设计项目：')
+    expect(zh['footer.skillsUsed']).toBe('使用的技能：')
   })
 })

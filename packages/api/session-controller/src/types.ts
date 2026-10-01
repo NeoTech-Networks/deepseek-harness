@@ -23,6 +23,8 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
     modelSelection: ModelSelectionProjectionState
     /** Map-free candidates folded from the dashboard a Session's messages name. */
     workspaceLinks: WorkspaceLinksProjectionState
+    /** Operator-typed skill and command names folded from the Session's own log. */
+    skillsUsed: SkillsUsed
   }
   interface SessionProjectionMap {
     /** Persisted facts used to summarize a Session without activating it. */
@@ -33,6 +35,8 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
     modelSelection: ModelSelectionProjection
     /** Dashboard and Design project the Session footer names, resolved against the live maps. */
     workspaceLinks: WorkspaceLinks
+    /** Skills and commands the Session footer's third line names, in first-use order. */
+    skillsUsed: SkillsUsed
   }
 }
 
@@ -60,6 +64,18 @@ export interface WorkspaceLinks {
   readonly dashboardUrl?: string
   /** Name of the Claude Design project behind that dashboard. */
   readonly designProject?: string
+}
+
+/**
+ * The skills and commands the operator typed in this Session, first use first.
+ *
+ * Both the folded state and the client-visible wire value: the fold's output is
+ * already the finished answer, so the view is the state itself and an unchanged
+ * answer keeps its reference.
+ */
+export interface SkillsUsed {
+  /** Distinct names, first use first; empty until the operator invokes one. */
+  readonly skills: readonly string[]
 }
 
 /**
