@@ -384,6 +384,7 @@ export const zh = {
   'footer.dashboard': '仪表盘：',
   'footer.designProject': '设计项目：',
   'footer.skillsUsed': '使用的技能：',
+  'footer.purpose': '目的：',
 } satisfies Record<string, string>
 
 /** The conversation namespace key union. */
@@ -768,4 +769,5 @@ export const en = {
   'footer.dashboard': 'Dashboard:',
   'footer.designProject': 'Design Project:',
   'footer.skillsUsed': 'Skills Used:',
+  'footer.purpose': 'Purpose:',
 } satisfies Record<ConversationKey, string>

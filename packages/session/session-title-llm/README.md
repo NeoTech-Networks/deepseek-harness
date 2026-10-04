@@ -108,6 +108,20 @@ The auxiliary request consumes tokens according to selected input size and `maxO
 
 No main-request invalidation. Auxiliary cache reuse is provider-specific; the fixed instruction is reusable while the JSON message array changes with each revision.
 
+### Auxiliary session purpose request
+
+#### What the model sees
+
+Once per root session, after its first agent-loop request is dispatched, the purpose model receives a fixed system instruction to write one plain-English sentence of at most 30 words saying what the session is doing. Its one user message is a JSON object holding the first human prompt (context-reminder blocks removed, a long prompt kept as its head and tail) and the skill and command names the operator invoked so far. The answer is stored as the log-only `session/purpose` event for the session footer.
+
+#### Token effect
+
+One extra call per session, capped at 160 output tokens with thinking disabled, separate from the main request. A failed call is retried on a later request, at most three times per process.
+
+#### KV Cache effect
+
+No main-request invalidation. The fixed instruction is reusable across sessions; the JSON input differs per session.
+
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>

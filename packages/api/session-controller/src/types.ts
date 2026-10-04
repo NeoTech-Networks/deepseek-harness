@@ -25,6 +25,8 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
     workspaceLinks: WorkspaceLinksProjectionState
     /** Operator-typed skill and command names folded from the Session's own log. */
     skillsUsed: SkillsUsed
+    /** The Session's one-sentence purpose, folded from its `session/purpose` event. */
+    sessionPurpose: SessionPurpose
   }
   interface SessionProjectionMap {
     /** Persisted facts used to summarize a Session without activating it. */
@@ -37,6 +39,8 @@ declare module '@deepseek-ai/dsh-session-projection/types' {
     workspaceLinks: WorkspaceLinks
     /** Skills and commands the Session footer's third line names, in first-use order. */
     skillsUsed: SkillsUsed
+    /** The Session footer's fourth line: what the Session is for, or null before it is written. */
+    sessionPurpose: SessionPurpose
   }
 }
 
@@ -76,6 +80,12 @@ export interface WorkspaceLinks {
 export interface SkillsUsed {
   /** Distinct names, first use first; empty until the operator invokes one. */
   readonly skills: readonly string[]
+}
+
+/** The one-sentence purpose written at Session start; state and wire value alike. */
+export interface SessionPurpose {
+  /** The sentence, or null until the Session's `session/purpose` event lands. */
+  readonly purpose: string | null
 }
 
 /**

@@ -47,6 +47,10 @@ export function ConversationContent(props: ConversationContentProps) {
   // for it, because a row the Session list carries has no use for the answer.
   const skillsUsed = useProjection('skillsUsed')
   const skills = skillsUsed?.skills ?? []
+  // The fourth line: one sentence saying what the Session is for, written once
+  // host-side at the Session's start and folded from its `session/purpose` event.
+  const sessionPurpose = useProjection('sessionPurpose')
+  const purpose = sessionPurpose?.purpose ?? null
   const workspaces = useWorkspaces(s => s)
   // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
@@ -183,8 +187,9 @@ export function ConversationContent(props: ConversationContentProps) {
   // Session.
   const hasWorkspaceLinks = dashboardUrl !== undefined || designProject !== undefined
   const hasSkillsUsed = skills.length > 0
+  const hasPurpose = purpose !== null
   const showSessionFooter = !hero && props.variant === 'main'
-    && (hasWorkspaceLinks || hasSkillsUsed)
+    && (hasWorkspaceLinks || hasSkillsUsed || hasPurpose)
 
   const composerBar = (
     <div className={clsx(css.composerStack, hero && css.composerHero)}>
@@ -221,6 +226,12 @@ export function ConversationContent(props: ConversationContentProps) {
             <div className={css.sessionFooterLine} data-session-footer-line="skills-used">
               <span className={css.sessionFooterLabel}>{t('footer.skillsUsed')}</span>
               <span className={css.sessionFooterValue}>{skills.join(', ')}</span>
+            </div>
+          )}
+          {hasPurpose && (
+            <div className={css.sessionFooterLine} data-session-footer-line="purpose">
+              <span className={css.sessionFooterLabel}>{t('footer.purpose')}</span>
+              <span className={css.sessionFooterValue}>{purpose}</span>
             </div>
           )}
         </div>

@@ -47,6 +47,22 @@ export interface SessionTitleEventData {
   readonly source: SessionTitleSource
 }
 
+/**
+ * Payload of the log-only `session/purpose` event: one plain-English sentence
+ * saying what the session is for, written once near the session's start.
+ * Display-only; it never enters the model surface or the title.
+ */
+export interface SessionPurposeEventData {
+  /** One normalized, non-empty sentence. */
+  readonly purpose: string
+  /** Seq of the first human `user/message` the sentence was written from. */
+  readonly sourceSeq: SessionSeq
+  /** Skill and command names the operator invoked before generation, first use first. */
+  readonly skills: readonly string[]
+  /** Route that wrote the sentence. */
+  readonly model: SessionTitleModelIdentity
+}
+
 /** Latest folded title plus the title event's durable envelope facts. */
 export interface SessionTitleSnapshot extends SessionTitleEventData {
   /** Seq of the latest `session/title` event. */

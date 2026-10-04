@@ -3,6 +3,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
+  registerSessionPurposeGenerator,
   registerSessionTitleLlmProvider,
   SessionTitleLlmConfigFields,
 } from '@deepseek-ai/dsh-session-title-llm'
@@ -37,4 +38,5 @@ export function apply(ctx: Context, config: Config): void {
     if (first === undefined) throw new Error('first-prompt title provider requires one human message')
     return [first]
   })
+  registerSessionPurposeGenerator(ctx, config)
 }

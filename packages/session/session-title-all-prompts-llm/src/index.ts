@@ -3,6 +3,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import {
+  registerSessionPurposeGenerator,
   registerSessionTitleLlmProvider,
   SessionTitleLlmConfigFields,
 } from '@deepseek-ai/dsh-session-title-llm'
@@ -33,4 +34,5 @@ export const Config: z<Config> = z.object({
  */
 export function apply(ctx: Context, config: Config): void {
   registerSessionTitleLlmProvider(ctx, config, name, 'all-prompts', messages => messages)
+  registerSessionPurposeGenerator(ctx, config)
 }

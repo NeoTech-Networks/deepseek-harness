@@ -27,6 +27,7 @@ import { buildModelCatalog, hasProviderApiKey } from './catalog.ts'
 import { installModelSelectionProjection } from './model-selection-projection.ts'
 import { installWorkspaceLinksProjection } from './workspace-links-projection.ts'
 import { installSkillsUsedProjection } from './skills-used-projection.ts'
+import { installSessionPurposeProjection } from './session-purpose-projection.ts'
 import { SessionSkillCatalog } from './skill-catalog.ts'
 import { SessionMediaReferences } from './media-references.ts'
 import { ArchivedSessionGate } from './archived-session-gate.ts'
@@ -142,6 +143,7 @@ export class SessionController extends TypertRemoteService {
     installModelSelectionProjection(ctx)
     installWorkspaceLinksProjection(ctx)
     installSkillsUsedProjection(ctx)
+    installSessionPurposeProjection(ctx)
     this.agents = new ApiSessionAgentController(ctx)
     this.commands = new SessionCommandController(ctx, this.agents, process.cwd())
     ctx.effect(() => ctx.fileUploads.registerAgentResolver(async (sessionId) => {

@@ -11947,6 +11947,111 @@
       }
     },
     {
+      "key": "event:session/purpose",
+      "kind": "event",
+      "event": "session/purpose",
+      "surface": false,
+      "digest": "46cfdb8083cf88f5b76acf1aedb5aaed74dc8b9c4063e006f00403b42c23bb9c",
+      "schema": {
+        "root": 0,
+        "nodes": [
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "data",
+                "type": 1,
+                "optional": false
+              },
+              {
+                "name": "ignorable",
+                "type": 6,
+                "optional": true
+              },
+              {
+                "name": "seq",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "time",
+                "type": 5,
+                "optional": false
+              },
+              {
+                "name": "type",
+                "type": 7,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "model",
+                "type": 2,
+                "optional": false
+              },
+              {
+                "name": "purpose",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "skills",
+                "type": 4,
+                "optional": false
+              },
+              {
+                "name": "sourceSeq",
+                "type": 5,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "object",
+            "properties": [
+              {
+                "name": "model",
+                "type": 3,
+                "optional": false
+              },
+              {
+                "name": "provider",
+                "type": 3,
+                "optional": false
+              }
+            ],
+            "indices": []
+          },
+          {
+            "kind": "primitive",
+            "type": "string"
+          },
+          {
+            "kind": "array",
+            "element": 3
+          },
+          {
+            "kind": "primitive",
+            "type": "number"
+          },
+          {
+            "kind": "literal",
+            "value": true
+          },
+          {
+            "kind": "literal",
+            "value": "session/purpose"
+          }
+        ]
+      }
+    },
+    {
       "key": "event:session/status",
       "kind": "event",
       "event": "session/status",
@@ -23347,7 +23452,7 @@
         "packages/session/session-title-llm/src/index.ts#SessionTitleLlmRequestEventData"
       ],
       "sources": [
-        "packages/session/session-title-llm/src/index.ts:34"
+        "packages/session/session-title-llm/src/index.ts:37"
       ]
     },
     {
@@ -23565,6 +23670,11 @@
       ]
     },
     {
+      "digest": "46cfdb8083cf88f5b76acf1aedb5aaed74dc8b9c4063e006f00403b42c23bb9c",
+      "names": [],
+      "sources": []
+    },
+    {
       "digest": "477614bca595a9e7adb5a1870be446b9a8684f3ba8950259d6289f2d3b74f028",
       "names": [],
       "sources": [
@@ -23689,7 +23799,7 @@
         "packages/workflow/workflow/src/types.ts#WorkflowRunId"
       ],
       "sources": [
-        "packages/api/session-controller/src/types.ts:468",
+        "packages/api/session-controller/src/types.ts:494",
         "packages/attachment/attachment/src/brand.ts:6",
         "packages/compaction/compaction/src/brand.ts:4",
         "packages/core/session/src/types.ts:20",
@@ -23706,7 +23816,7 @@
         "packages/llm/llm/src/brand.ts:43",
         "packages/llm/llm/src/brand.ts:67",
         "packages/schedule/schedule/src/types.ts:14",
-        "packages/session/session-title/src/index.ts:42",
+        "packages/session/session-title/src/index.ts:44",
         "packages/session/session-title/src/types.ts:17",
         "packages/webhook/webhook/src/brand.ts:12",
         "packages/webhook/webhook/src/brand.ts:6",
@@ -24152,7 +24262,7 @@
       "digest": "6a4f72e2e179e17b922f2a9392c0e1c8f8c707f32494372454850a3eb184a6e7",
       "names": [],
       "sources": [
-        "packages/api/session-controller/src/types.ts:473"
+        "packages/api/session-controller/src/types.ts:499"
       ]
     },
     {
@@ -24307,6 +24417,11 @@
       "sources": [
         "packages/llm/llm/src/assistant-stream.ts:28"
       ]
+    },
+    {
+      "digest": "72b01ca18fa9ef0c712546bcc1348c4cb511952eccaea3ecd005ecd096316ec8",
+      "names": [],
+      "sources": []
     },
     {
       "digest": "72ec79127a9c0d0241b1106a74cc2b24c81ce467170f1c3c93f7b71a9496d227",
@@ -24515,6 +24630,15 @@
       "digest": "8338ee303e2bd448e9e6144069942f63e3cfd5868962bddc9347d7009e8919d6",
       "names": [],
       "sources": []
+    },
+    {
+      "digest": "8365d172f66551a6ddc55fa939f8038f9f59eccee071d29cfd48dd382384b75f",
+      "names": [
+        "packages/session/session-title/src/types.ts#SessionPurposeEventData"
+      ],
+      "sources": [
+        "packages/session/session-title/src/types.ts:55"
+      ]
     },
     {
       "digest": "83d6916021eede8f2d83a1872716caa1efdec39a3681890996c55147187fdd12",
@@ -25989,7 +26113,7 @@
         "packages/api/session-controller/src/types.ts#ModelSelection"
       ],
       "sources": [
-        "packages/api/session-controller/src/types.ts:145"
+        "packages/api/session-controller/src/types.ts:171"
       ]
     },
     {

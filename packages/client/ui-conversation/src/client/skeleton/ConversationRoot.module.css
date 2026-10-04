@@ -548,7 +548,8 @@ button.crumb:hover {
    it, and the skills and commands the operator typed in this session, shown
    under the message box for an open session only. The two link rows render
    together whenever either resolves, a row with no association being its label
-   alone; the invocation row renders only when the session has used something. */
+   alone; the invocation row renders only when the session has used something,
+   and the fourth row, the one-sentence purpose, only once it has been written. */
 .sessionFooter {
   display: flex;
   flex-direction: column;

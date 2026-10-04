@@ -23,7 +23,8 @@
     "src/skill-catalog.ts",
     "src/workspace-links.ts",
     "src/workspace-links-projection.ts",
-    "src/skills-used-projection.ts"
+    "src/skills-used-projection.ts",
+    "src/session-purpose-projection.ts"
   ],
   "references": [
     { "path": "../../../vendor/cordis" },

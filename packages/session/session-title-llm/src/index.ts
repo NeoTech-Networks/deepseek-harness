@@ -14,7 +14,10 @@ declare module '@deepseek-ai/dsh-llm' {
   }
 }
 
-import type { FinishReason, GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
+import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
+import { finishError } from './finish.ts'
+import { installSessionPurposeGenerator } from './purpose.ts'
+export { normalizeSessionPurpose, SESSION_PURPOSE_MAX_ATTEMPTS } from './purpose.ts'
 import { deadline, MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
 import type { SessionSeq } from '@deepseek-ai/dsh-session'
@@ -177,6 +180,16 @@ export function registerSessionTitleLlmProvider(
   })
 }
 
+/**
+ * Register the one-sentence session purpose generator beside a title provider.
+ * It shares the title plugin's deadline and optional explicit route.
+ * @param ctx - context exposing the LLM and Session services.
+ * @param config - untrusted required deployment policy, validated here.
+ */
+export function registerSessionPurposeGenerator(ctx: Context, config: SessionTitleLlmConfig): void {
+  installSessionPurposeGenerator(ctx, resolveSessionTitleLlmConfig(config))
+}
+
 /** Resolve the explicit pair or the exact route captured from `request/header`. */
 function resolveRoute(
   config: ResolvedSessionTitleLlmConfig,
@@ -204,26 +217,6 @@ function systemPrompt(config: ResolvedSessionTitleLlmConfig): string {
 /** Frame exact messages as JSON so user text cannot break structural delimiters. */
 function frameMessages(messages: readonly SessionTitleUserMessage[]): string {
   return `Generate the session title from this JSON array of human messages:\n${JSON.stringify(messages)}`
-}
-
-/** Translate terminal finish reasons into an auxiliary-call failure. */
-function finishError(finish: FinishReason): Error | undefined {
-  switch (finish.kind) {
-    case 'stop':
-      return undefined
-    case 'error':
-    case 'aborted': {
-      const error = new Error(finish.failure.message) as Error & { code?: string }
-      error.code = finish.failure.code
-      return error
-    }
-    case 'max-tokens':
-      return new Error('session-title-llm: title output reached maxOutputTokens')
-    case 'tool-calls':
-      return new Error('session-title-llm: title model unexpectedly requested a tool')
-    default:
-      return new Error(`session-title-llm: unsupported finish reason "${String((finish as { kind?: unknown }).kind)}"`)
-  }
 }
 
 /**

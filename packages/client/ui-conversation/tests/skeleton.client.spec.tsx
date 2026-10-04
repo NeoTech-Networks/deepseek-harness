@@ -148,6 +148,8 @@ function mount(
     projectionLinks?: { dashboardUrl?: string; designProject?: string }
     /** The live `skillsUsed` projection value, when the host has published one. */
     projectionSkills?: { skills: readonly string[] }
+    /** The live `sessionPurpose` projection value, when the host has published one. */
+    projectionPurpose?: { purpose: string | null }
   } = {},
 ) {
   const sessionId = 'sessionId' in options ? options.sessionId : SID
@@ -378,7 +380,8 @@ function mount(
     useWorkspaces: bindSnapshotSelector(workspaces),
     useProjection: (key: string) => key === 'workspaceLinks'
       ? options.projectionLinks
-      : key === 'skillsUsed' ? options.projectionSkills : undefined,
+      : key === 'skillsUsed' ? options.projectionSkills
+        : key === 'sessionPurpose' ? options.projectionPurpose : undefined,
     useInput,
     inputActions,
   }
@@ -973,5 +976,43 @@ describe('Session footer workspace lines', () => {
     expect(en['footer.skillsUsed']).toBe('Skills Used:')
     expect(zh['footer.designProject']).toBe('设计项目：')
     expect(zh['footer.skillsUsed']).toBe('使用的技能：')
+  })
+
+  it('adds the purpose sentence as the fourth row, under the skills', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      dashboardUrl: 'https://ops.theseoitguy.net/youtube-creator',
+      designProject: 'YouTube',
+      projectionSkills: { skills: ['dashboard'] },
+      projectionPurpose: { purpose: 'Adds a Purpose line to the session footer.' },
+    })
+    const lines = [...(b.view.container.querySelectorAll('[data-session-footer-line]'))]
+      .map(line => line.getAttribute('data-session-footer-line'))
+    expect(lines).toEqual(['dashboard', 'design-project', 'skills-used', 'purpose'])
+    expect(b.view.container.querySelector('[data-session-footer-line="purpose"]')?.textContent)
+      .toBe(`${zh['footer.purpose']}Adds a Purpose line to the session footer.`)
+  })
+
+  it('shows the purpose row alone in a Session with nothing else to say', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      projectionPurpose: { purpose: 'Fixes the sidebar sort.' },
+    })
+    const footer = b.view.container.querySelector('[data-session-footer]')
+    expect(footer).not.toBeNull()
+    expect(footer?.querySelectorAll('[data-session-footer-line]')).toHaveLength(1)
+    expect(footer?.querySelector('[data-session-footer-line="purpose"]')?.textContent)
+      .toBe(`${zh['footer.purpose']}Fixes the sidebar sort.`)
+  })
+
+  it('renders no footer while the purpose is still null and nothing else resolves', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      projectionSkills: { skills: [] },
+      projectionPurpose: { purpose: null },
+    })
+    expect(b.view.container.querySelector('[data-session-footer]')).toBeNull()
+  })
+
+  it('labels the purpose row in both seats', () => {
+    expect(en['footer.purpose']).toBe('Purpose:')
+    expect(zh['footer.purpose']).toBe('目的：')
   })
 })

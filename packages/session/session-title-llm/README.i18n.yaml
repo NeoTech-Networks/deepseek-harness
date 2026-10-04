@@ -56,6 +56,18 @@
 /deepseek-ai-dsh-session-title-llm/model-experience/auxiliary-title-request/kv-cache-effect:
   en: 5d3b5b7c8d8b4b67
   zh: 1b231d96bf6ca545
+/deepseek-ai-dsh-session-title-llm/model-experience/auxiliary-session-purpose-request:
+  en: 4cdba52434282188
+  zh: b46c22fec007b02a
+/deepseek-ai-dsh-session-title-llm/model-experience/auxiliary-session-purpose-request/what-the-model-sees:
+  en: 3c3369383130bf5a
+  zh: cee00c6f234ccb7d
+/deepseek-ai-dsh-session-title-llm/model-experience/auxiliary-session-purpose-request/token-effect:
+  en: 7c22c49cd2fa97a7
+  zh: b289f0238e616f09
+/deepseek-ai-dsh-session-title-llm/model-experience/auxiliary-session-purpose-request/kv-cache-effect:
+  en: 9d0e945e727c9a6f
+  zh: b49deb536d3e6148
 /deepseek-ai-dsh-session-title-llm/known-limitations-and-deferred-work:
   en: 8510fb2c4ed03011
   zh: 29fb15ec84dccf56

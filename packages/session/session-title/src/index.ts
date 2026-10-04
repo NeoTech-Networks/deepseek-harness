@@ -20,6 +20,7 @@ import type {} from '@deepseek-ai/dsh-session-projection'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-agent'
 export type {
+  SessionPurposeEventData,
   SessionTitleEventData,
   SessionTitleModelIdentity,
   SessionTitleSnapshot,
@@ -29,6 +30,7 @@ export type {
 } from './types.ts'
 import { fallbackSessionTitle, normalizeSessionTitle } from './normalize.ts'
 import type {
+  SessionPurposeEventData,
   SessionTitleEventData,
   SessionTitleModelIdentity,
   SessionTitleSnapshot,
@@ -75,6 +77,11 @@ declare module '@deepseek-ai/dsh-session/types' {
      * surface or derived history.
      */
     'session/title': SessionTitleEventData
+    /**
+     * One-sentence session purpose, written once from the first human prompt.
+     * Log-only and display-only: it never enters the model surface or the title.
+     */
+    'session/purpose': SessionPurposeEventData
   }
 }
 
