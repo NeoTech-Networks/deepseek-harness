@@ -1,5 +1,19 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+
+## 2026-10-04 - Session footer Purpose line
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Generator spec | pass | 8/8 (`purpose.spec.ts`) | VERIFIED |
+| Title specs unchanged | pass | title-llm 12/12, both plugin suites green | VERIFIED |
+| Projection + footer specs | pass | 4/4, skeleton 40/40 | VERIFIED |
+| Typecheck, lint, catalogs, README gates | exit 0 | all 0 | VERIFIED |
+| Build, package | exit 0 | build 0; package 0 on retry | VERIFIED |
+| Installed asar == built | identical sha256 | `3DDD8EEC...F3A6` both | VERIFIED |
+| Features in running app | 39 of 39 | 39 of 39 | VERIFIED |
+| Event really written | a `session/purpose` line | seq 967 in session-4b658795 log, quoted in CURRENT_STATE | VERIFIED |
+| Line seen on screen | visible | window was on a new-session screen; headless GUI 401 | UNVERIFIED |
 ## 2026-10-04 - DSH quickstart audit and documentation fix
 
 | Check | Expected | Result | Status |
