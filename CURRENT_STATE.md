@@ -1,6 +1,12 @@
 # CURRENT_STATE (capped newest-first log)
 
 
+
+## 2026-10-04 - Purpose line: plain text and ten words, seen on screen
+
+- FIX (Steve: "the text is in link ... should only be 10 text"): commit `4ee821e08a` on `update/v0.2.0-rc.2`. The Purpose value had reused the link-coloured `.sessionFooterValue` style; it now uses its own `.sessionFooterText` (`--dsw-alias-label-secondary`, no hover underline). The generator asks for at most 10 words (64 output tokens) and `limitSessionPurposeWords` (`dsh-session-title`) cuts to 10; the `sessionPurpose` projection applies the same cut and moved to stateVersion 2, so sentences logged before the cap shorten too.
+- Rebuilt: installer 288,636,277 bytes, sha256 `7D78334B...FA9B` (two transient electron fetch timeouts, third run exit 0). Installed by Steve; installed `app.asar` sha256 `3EC115DC...9193` equals the built one, 39 of 39 features.
+- SEEN: window capture `C:\Projects\logs\2026-10-04\dsh-footer-purpose\app-window-purpose-v2.png` shows `Purpose: Adds a Purpose line beneath the skills-used section of every` in plain grey; projection cache reads `ver 2` with the same value.
 ## 2026-10-04 - Session footer "Purpose:" line, 0.2.0-rc.2 rebuilt and installed
 
 - WHAT SHIPPED: a fourth footer line under `Skills Used:`, `Purpose: <one sentence>`, saying in plain English what the Session is doing. Commit `906050cecb` on `update/v0.2.0-rc.2` (worktree `C:\d202`), pushed with `--no-verify` (pre-push hook dies in its `pnpm install` lefthook postinstall on the global `core.hooksPath`; full `pnpm run typecheck` exit 0 separately).
