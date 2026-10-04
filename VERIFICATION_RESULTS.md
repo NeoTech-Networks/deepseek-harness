@@ -1,6 +1,16 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
 
+
+## 2026-10-04 - Purpose line plain-text and ten-word fix
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Specs | pass | title-llm, session-title, projection 5/5, skeleton all green | VERIFIED |
+| Typecheck, lint, catalogs, pairing, build | exit 0 | all 0 | VERIFIED |
+| Installed asar == built | identical sha256 | `3EC115DC...9193` both | VERIFIED |
+| Stored value cut to ten words | 10 words | projection cache ver 2: "Adds a Purpose line beneath the skills-used section of every" | VERIFIED |
+| Line on screen, plain text | grey, not link coloured | window capture app-window-purpose-v2.png | VERIFIED |
 ## 2026-10-04 - Session footer Purpose line
 
 | Check | Expected | Result | Status |
