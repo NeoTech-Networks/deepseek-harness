@@ -1,7 +1,5 @@
 # CURRENT_STATE (capped newest-first log)
 
-
-
 ## 2026-10-04 - Purpose line: plain text and ten words, seen on screen
 
 - FIX (Steve: "the text is in link ... should only be 10 text"): commit `4ee821e08a` on `update/v0.2.0-rc.2`. The Purpose value had reused the link-coloured `.sessionFooterValue` style; it now uses its own `.sessionFooterText` (`--dsw-alias-label-secondary`, no hover underline). The generator asks for at most 10 words (64 output tokens) and `limitSessionPurposeWords` (`dsh-session-title`) cuts to 10; the `sessionPurpose` projection applies the same cut and moved to stateVersion 2, so sentences logged before the cap shorten too.
@@ -98,16 +96,6 @@
 - Transcript: C:\Claude\integrations\dsh-hook-bridge\transcripts\b3bd8afa-375a-44bf-b891-c544da7b1671.jsonl
 
 <!-- claude-memory-actor:end -->
-
-## 2026-09-24 - DSH 0.1.7-rc.2 installed
-
-- WHAT SHIPPED: a same-architecture stack REPLAY onto upstream `dsh-v0.1.7-rc.2` (released 2026-09-24T14:10Z, merge `477b4f4205`; rc.1 to rc.2 is 346 commits, 3429 files). The 49 non-merge commits of `dsh-v0.1.7-rc.1..update/v0.1.7-rc.1` were cherry-picked one by one (14 conflicted; the 3 port merges skipped and their plain-union resolutions re-applied by hand); subject lists 49 to 49, no difference. Added on top: `7986ba8138` (9 fork-only packages bumped to 0.1.7-rc.2), `61e0d2d679` (shortcut, quit and group-row fixes), `7d2c7d589e` (catalogs regenerated, translation pairs re-recorded), `9befa83826` (the Lead picks a model for each teammate, cherry-picked from `1cdca77e6d` on `feat/team-teammate-model`). Build worktree `C:\d172`, branch `update/v0.1.7-rc.2`, HEAD `9befa83826`, pushed with tag `dsh-v0.1.7-rc.2` and read back.
-- BEHAVIOUR-CHANGING RESOLUTIONS: the DeepSeek `retryPolicy` (STREAM_CLOSED retry, maxRetries 3) now sits on the `@deepseek-ai/dsh-llm-deepseek-api-key` entry (id `llm-deepseek`) after upstream split the plugin, and `streamFirstPayloadTimeoutMs` rides the shared `deepSeekConfigFields`; Ctrl+Shift+A is upstream's own `session.archive` shortcut and the fork's latch, refuse-aloud and archive-failed notice wrap it (fork listener removed, it would archive twice); the fork's always-ask quit prompt is kept and upstream's task-aware warning follows it when work runs; stage marks render in upstream's `sidebar.session.row.leading` slot; the `ask_user_question` description follows upstream's dropped sentence; every fork `*.i18n.yaml` record re-recorded in rc.2's per-heading format (upstream `e7def469e1`), 1154 pairs consistent.
-- GATES: host and client typecheck 0; 1717 tests in 52 files (conflict-touched packages) and 119 (agent-team) pass; doc-sync 40 passed, 2 failed, both baseline (doc-site symlink EPERM, and commit hashes in `PORT-0.1.7-FEATURE-MAP.md`). rc.2's `standard.patch.yml` is byte-identical to rc.1's, so the operator's mode needed no re-derive.
-- PACKAGING: first run killed by Claude Code for low system memory (4.7 GB free of 31.4); the retry failed `prepare:runtime` "fetch failed" and was fixed by seeding `apps\desktop\.desktop-build\downloads` from `C:\d17`. Packaged smoke passed (DOCX, XLSX, PPTX to PDF). Installer `deepseek-harness-0.1.7-rc.2-win-x64-unsigned.exe`, 287,442,652 bytes, sha256 `B72681920DBF70B6AD434D49873C56DA0748D2BE4D7D2AF1416DE406BDD8AF5C`. The first rc.2 build read 34 of 35 features (the teammate-model marker landed mid-update); the rebuild with `9befa83826` reads 35 of 35. SessionStart hook chain 4.38 s wall, all exit 0.
-- INSTALLED 2026-09-24 from a Claude Code session at the operator's explicit request (parent chain pwsh, claude.exe, VS Code; not inside the app). `-WhatIf` clean. First real run: installer exit code 2, script refused, rc.1 left intact. Second run immediately after: all 19 vault files `same`, "every one of your settings survived", `HARDLINK OK`, `SETUP COMPLETE. Running 0.1.7-rc.2`.
-- VERIFIED: one uninstall row `7808434f-469e-5eba-848e-edf64d3b94ce`, `DisplayVersion 0.1.7-rc.2`; 5 processes started 18:53:14; port 19387 answers; `dsh_local_features_check.py` 35 of 35 against the installed `app.asar`; `selectedDefault: standard-hooks` present; new session `session-211cdbee` (18:57) answered, UserPromptSubmit exit 0 (1058 ms) and Stop exit 0 (3522 ms), 10 MCP servers exposed. NOT YET PROVEN: PreToolUse and PostToolUse and a real MCP call on rc.2; the mode picker not seen on screen (since upstream `a44534e274` it shows only with Developer tools on). OPEN_ISSUES 44.
-- UNCHANGED: `dsh_update_check.py` still reads the removed seed file (OPEN_ISSUES 42). Playbook refreshed (playbooks `main` `da8b7762aa`); the `ds-harness-update` skill gained ledger rows 37 to 43 in `C:\Claude` (not committed there, loader copy synced).
 
 <!-- claude-memory-actor:begin
   Auto-managed by the claude-memory save-state hook.
