@@ -1003,6 +1003,18 @@ describe('Session footer workspace lines', () => {
       .toBe(`${zh['footer.purpose']}Fixes the sidebar sort.`)
   })
 
+  it('draws the purpose as plain text, never in the link style', () => {
+    const b = mount(sessionSnapshotOf(), undefined, undefined, {
+      projectionSkills: { skills: ['dashboard'] },
+      projectionPurpose: { purpose: 'Fixes the sidebar sort.' },
+    })
+    const purposeValue = b.view.container.querySelector('[data-session-footer-line="purpose"]')?.lastElementChild
+    const skillsValue = b.view.container.querySelector('[data-session-footer-line="skills-used"]')?.lastElementChild
+    expect(purposeValue?.tagName).toBe('SPAN')
+    expect(purposeValue?.querySelector('a')).toBeNull()
+    expect(purposeValue?.className).not.toBe(skillsValue?.className)
+  })
+
   it('renders no footer while the purpose is still null and nothing else resolves', () => {
     const b = mount(sessionSnapshotOf(), undefined, undefined, {
       projectionSkills: { skills: [] },

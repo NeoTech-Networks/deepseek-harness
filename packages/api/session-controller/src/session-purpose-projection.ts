@@ -12,8 +12,8 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
-// Side-effect type import: the `session/purpose` session-event merge this unit reads by name.
-import type {} from '@deepseek-ai/dsh-session-title'
+// Also carries the `session/purpose` session-event merge this unit reads by name.
+import { limitSessionPurposeWords } from '@deepseek-ai/dsh-session-title'
 import { z } from 'zod'
 import type { SessionPurpose } from './types.ts'
 
@@ -29,7 +29,9 @@ const stateSchema: z.ZodType<SessionPurpose> = z.object({
  */
 function applySessionPurposeProjection(state: SessionPurpose, event: SessionEvent): SessionPurpose {
   if (event.type !== 'session/purpose') return state
-  const purpose = event.data.purpose
+  // Bounded here as well as at write time, so a sentence logged before the
+  // 10-word cap still reads as a short line.
+  const purpose = limitSessionPurposeWords(event.data.purpose)
   if (purpose === '' || purpose === state.purpose) return state
   return { purpose }
 }
@@ -41,7 +43,7 @@ export const sessionPurposeProjection = {
   init: () => ({ purpose: null }),
   apply: applySessionPurposeProjection,
   wire: { viewSchema: stateSchema, view: (state: SessionPurpose) => state },
-  stateVersion: 1,
+  stateVersion: 2,
 } satisfies ProjectionDefinition<'sessionPurpose', SessionPurpose>
 
 /**

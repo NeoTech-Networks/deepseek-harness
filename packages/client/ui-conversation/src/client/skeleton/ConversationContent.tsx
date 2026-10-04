@@ -231,7 +231,7 @@ export function ConversationContent(props: ConversationContentProps) {
           {hasPurpose && (
             <div className={css.sessionFooterLine} data-session-footer-line="purpose">
               <span className={css.sessionFooterLabel}>{t('footer.purpose')}</span>
-              <span className={css.sessionFooterValue}>{purpose}</span>
+              <span className={css.sessionFooterText}>{purpose}</span>
             </div>
           )}
         </div>

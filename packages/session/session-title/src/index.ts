@@ -52,7 +52,7 @@ export function SessionTitleProviderId(id: string): SessionTitleProviderId {
   return id as SessionTitleProviderId
 }
 
-export { fallbackSessionTitle, normalizeSessionTitle, truncateTitleUtf8 } from './normalize.ts'
+export { fallbackSessionTitle, limitSessionPurposeWords, normalizeSessionTitle, SESSION_PURPOSE_MAX_WORDS, truncateTitleUtf8 } from './normalize.ts'
 
 /** Required deterministic fallback and accepted-title limits. */
 export interface Config {

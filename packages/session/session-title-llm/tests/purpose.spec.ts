@@ -99,7 +99,7 @@ describe('session purpose generator', () => {
       skills: [],
       model: { provider: 'route', model: 'main-model' },
     })
-    expect(adapter.auxiliary[0]).toMatchObject({ provider: 'route', model: 'main-model', maxTokens: 160, purpose: 'session-title' })
+    expect(adapter.auxiliary[0]).toMatchObject({ provider: 'route', model: 'main-model', maxTokens: 64, purpose: 'session-title' })
   })
 
   it('forwards operator skill invocations and command runs', async () => {
@@ -203,8 +203,9 @@ describe('normalizeSessionPurpose', () => {
     expect(normalizeSessionPurpose('Purpose: "Fixes the footer \u2014 fast."')).toBe('Fixes the footer, fast.')
     expect(normalizeSessionPurpose('Adds A\u2013B\nsupport')).toBe('Adds A, B support')
     expect(normalizeSessionPurpose('   ')).toBe('')
-    const long = normalizeSessionPurpose(`Adds ${'word '.repeat(200)}`)
-    expect(Buffer.byteLength(long, 'utf8')).toBeLessThanOrEqual(300)
-    expect(long.endsWith('...')).toBe(true)
+    expect(normalizeSessionPurpose('Adds one two three four five six seven eight nine ten eleven twelve'))
+      .toBe('Adds one two three four five six seven eight nine')
+    expect(normalizeSessionPurpose('Fixes the footer, then the sidebar, then the title bar too'))
+      .toBe('Fixes the footer, then the sidebar, then the title bar')
   })
 })

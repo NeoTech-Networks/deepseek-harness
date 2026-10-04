@@ -20,7 +20,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { BlockAssembler, createUserMessage, isAgentLoopRequest } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, Message } from '@deepseek-ai/dsh-llm'
 import type { Session, SessionEvent, SessionSeq } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-session-title'
+import { limitSessionPurposeWords } from '@deepseek-ai/dsh-session-title'
 import type { SessionTitleModelIdentity } from '@deepseek-ai/dsh-session-title'
 import { deadline } from '@deepseek-ai/dsh-timeout'
 import { deepFreeze } from '@deepseek-ai/dsh-util-values'
@@ -36,7 +36,7 @@ export interface SessionPurposeCallConfig {
 /** Failed generation attempts allowed per Session per process lifetime. */
 export const SESSION_PURPOSE_MAX_ATTEMPTS = 3
 /** Output-token cap for one sentence. */
-const MAX_OUTPUT_TOKENS = 160
+const MAX_OUTPUT_TOKENS = 64
 /** Byte cap on the stored sentence. */
 const MAX_PURPOSE_BYTES = 300
 /** Prompt bytes kept before truncation applies. */
@@ -50,7 +50,7 @@ const MAX_SKILLS = 16
 
 const SYSTEM_PROMPT = [
   'You write the one-line purpose shown under an AI coding-assistant session.',
-  'From the supplied JSON (the operator\'s first request and any skills or commands they invoked), write exactly one plain-English sentence of at most 30 words saying what this session is doing.',
+  'From the supplied JSON (the operator\'s first request and any skills or commands they invoked), write one plain-English phrase of at most 10 words saying what this session is doing.',
   'Start with a present-tense verb, for example "Adds", "Fixes", "Audits". Name the concrete task and the system it touches. If a skill or command is named, say what it is being used for.',
   'Ignore auto-loaded orientation, reminders, work-history, rules and policy text; describe only what the operator asked for.',
   'Return only the sentence: no quotes, no prefix, no Markdown, no code, no dashes.',
@@ -75,7 +75,7 @@ export function normalizeSessionPurpose(text: string): string {
     .trim()
   value = value.replace(/^purpose\s*:\s*/i, '')
   value = value.replace(/^["'`\u201c\u2018]+|["'`\u201d\u2019]+$/g, '').trim()
-  value = value.replace(/\s+,/g, ',').replace(/,\s*,/g, ',')
+  value = limitSessionPurposeWords(value.replace(/\s+,/g, ',').replace(/,\s*,/g, ','))
   if (Buffer.byteLength(value, 'utf8') <= MAX_PURPOSE_BYTES) return value
   let cut = value
   while (Buffer.byteLength(cut, 'utf8') > MAX_PURPOSE_BYTES - 3) {

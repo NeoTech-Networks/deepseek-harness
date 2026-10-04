@@ -52,4 +52,9 @@ describe('the session purpose fold', () => {
     expect(sessionPurposeProjection.stateSchema.safeParse(fold([])).success).toBe(true)
     expect(sessionPurposeProjection.wire.view(state)).toBe(state)
   })
+
+  it('cuts a sentence logged before the cap to ten words', () => {
+    const state = fold([purposeEvent(1, 'Adds a Purpose line beneath the skills-used section of every session footer, filled at session start.')])
+    expect(state.purpose).toBe('Adds a Purpose line beneath the skills-used section of every')
+  })
 })

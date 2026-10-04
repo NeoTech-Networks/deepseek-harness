@@ -72,3 +72,19 @@ export function fallbackSessionTitle(input: string, maxWords: number, maxBytes: 
   const words = cleanTitleText(input).split(' ').filter(Boolean).slice(0, maxWords)
   return truncateTitleUtf8(words.join(' '), maxBytes).trimEnd()
 }
+
+/** Words shown on the Session footer's Purpose line. */
+export const SESSION_PURPOSE_MAX_WORDS = 10
+
+/**
+ * Bound a session purpose to its display length: at most
+ * {@link SESSION_PURPOSE_MAX_WORDS} whitespace-delimited words, with any
+ * dangling punctuation from the cut removed.
+ * @param input - one already-cleaned purpose sentence.
+ * @returns the bounded sentence; unchanged when already short enough.
+ */
+export function limitSessionPurposeWords(input: string): string {
+  const words = input.split(/\s+/).filter(Boolean)
+  if (words.length <= SESSION_PURPOSE_MAX_WORDS) return words.join(' ')
+  return words.slice(0, SESSION_PURPOSE_MAX_WORDS).join(' ').replace(/[\s,;:\-]+$/, '')
+}

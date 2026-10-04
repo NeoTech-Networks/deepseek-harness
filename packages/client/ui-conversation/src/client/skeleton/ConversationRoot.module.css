@@ -586,3 +586,9 @@ button.crumb:hover {
 .sessionFooterValue:hover {
   text-decoration: underline;
 }
+
+/* The purpose sentence is prose, not a destination: plain body text, no link
+   colour and no hover underline. */
+.sessionFooterText {
+  color: var(--dsw-alias-label-secondary);
+}
