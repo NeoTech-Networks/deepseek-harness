@@ -1,5 +1,23 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-04 - DSH quickstart audit and documentation fix
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Which release the live page is | identify the snapshot | live text matches the `dsh-v0.2.0-rc.1` and `dsh-v0.2.0-rc.2` docs word for word; `public-deployments.md` 404 live | VERIFIED |
+| First-use workspace behaviour | an empty install auto-creates and selects | `navigation.ts` empty-registry branch plus `apps/web/tests/default-workspace.e2e.ts` assertions, at both tags | VERIFIED |
+| Ship date of that behaviour | before the published snapshot | commit `4d2e420ef8`, 2026-09-20, present in `dsh-v0.1.7-rc.2` and later | VERIFIED |
+| UI strings used in the new text | exist in the shipped locales | `workspace.defaultName` "Default workspace", `menu.addWorkspace` "Add workspace…", `hero.chooseWorkspace`, `onboardingTitle`/`onboardingLater` | VERIFIED |
+| Translation pair | in sync after the edit | `verify-translation-pairing` 860 pairs consistent, record re-recorded with `--write` | VERIFIED |
+| Markdown gates | exit 0 | `verify-md-wrap` 1732 files; `verify-md-links` 1708 files; `verify-doc-budgets` 8 docs; `verify-concrete-terms` clean | VERIFIED |
+| Documentation build | exit 0 | `docs:build` 41.8 s; `verify-doc-site-fragments` 4980 fragments | VERIFIED |
+| Rendered pages | new text visible, no console errors | headless `browser_verify` PASS on `/en/guide/quickstart.html` and `/guide/quickstart.html`; screenshots in `C:\Projects\logs\browser-verify-20261003-212618\` and `-212630\` | VERIFIED |
+| Aggregate `doc-sync` with `CI=true` | run the CI-equivalent set | 41 of 42 gates pass; the one failure is a Windows `EPERM` on `symlink` inside `scripts/project-doc-site.spec.ts`, unrelated to the diff | VERIFIED |
+| Branch on origin | ref present at the same commit | `7e9001c272f4210ee9adb94a3ef7012e6bf59c0a` at `refs/heads/docs/quickstart-first-use-workspace` | VERIFIED |
+| Nothing else changed | only the three doc files | `git diff --name-only upstream/master` names exactly them; `git status` clean; `website/.dist` and `website/.generated` stay untracked | VERIFIED |
+| Live page unchanged by us | still the old wording | live `.md` re-fetched this session, unchanged | VERIFIED |
+| The upstream post | posted | nothing posted; the draft is waiting on Steve | UNVERIFIED |
+
 ## 2026-10-01 - Session footer "Skills Used" line
 
 | Check | Expected | Result | Status |
