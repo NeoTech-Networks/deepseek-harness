@@ -327,6 +327,28 @@ export const InputBar = memo(function InputBar({
   // Plugins…", so Alt+P popped that window open. Ctrl+Shift is delivered
   // normally on both keydown and keyup, so we bind keydown and leave the menu
   // bar alone.
+  // One submit path for the operator commands, shared by the keyboard chord and
+  // the Save button beside the context meter, so both refuse aloud, share the
+  // single-flight latch, and replace the draft the same way.
+  // Returns true when the command was actually submitted.
+  const runOperatorCommand = useCallback((target: 'save' | 'deploy'): boolean => {
+    // Refusing in silence is indistinguishable from a broken shortcut, so an
+    // absent machine (no current Session), a locked composer, and a
+    // mid-admission one all say so rather than swallowing the press.
+    if (inputActions === undefined || locked || machineBusy) {
+      showToast(t('input.shortcutUnavailable'))
+      return false
+    }
+    // The latch is armed only on the path that actually submits: a refusal is
+    // not a send, and arming it there would swallow the next real press.
+    const now = Date.now()
+    if (now < chordLatchUntil) return false
+    chordLatchUntil = now + CHORD_LATCH_MS
+    inputActions.setDraft(target === 'save' ? SAVE_STATE_SHORTCUT : DEPLOY_SHORTCUT)
+    inputActions.submit()
+    return true
+  }, [inputActions, locked, machineBusy, showToast, t])
+
   useEffect(() => {
     // Registered even while no Session is current. The bar renders the same DOM
     // inert in that state, and a chord that is simply not listened for there is
@@ -339,25 +361,11 @@ export const InputBar = memo(function InputBar({
       if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return
       const target = chordLetter(event)
       if (target === null) return
-      // Refusing in silence is indistinguishable from a broken shortcut, so an
-      // absent machine (no current Session), a locked composer, and a
-      // mid-admission one all say so rather than swallowing the press.
-      if (inputActions === undefined || locked || machineBusy) {
-        showToast(t('input.shortcutUnavailable'))
-        return
-      }
-      // The latch is armed only on the path that actually submits: a refusal is
-      // not a send, and arming it there would swallow the next real press.
-      const now = Date.now()
-      if (now < chordLatchUntil) return
-      chordLatchUntil = now + CHORD_LATCH_MS
-      event.preventDefault()
-      inputActions.setDraft(target === 'save' ? SAVE_STATE_SHORTCUT : DEPLOY_SHORTCUT)
-      inputActions.submit()
+      if (runOperatorCommand(target)) event.preventDefault()
     }
     window.addEventListener('keydown', onShortcut)
     return () => { window.removeEventListener('keydown', onShortcut) }
-  }, [inputActions, locked, machineBusy, showToast, t])
+  }, [runOperatorCommand])
 
   // The chord moved off Alt in 0.1.5-rc.2 and nothing told the operator, so his
   // old keys produced no event at all: on Windows Electron never delivers the
@@ -626,6 +634,27 @@ export const InputBar = memo(function InputBar({
           ? renderSlot('conversation.composer.dock', {})
           : null}
         {activity ? null : <ContextMeter useProjection={useProjection} t={t} />}
+        {/* Session actions beside the meter: Save submits /save-state through
+            the chord's own path; the trailing slot carries business-owned
+            actions (ui-workspace's Archive). Rendered even before the meter has
+            a reading so they are always reachable. */}
+        {variant === 'composer' && !activity && input !== undefined && sessionId !== undefined && (
+          <span className={css.meterActions} data-composer-meter-actions>
+            <Tooltip label={t('input.saveState')} side="top" delayMs={500} disabled={locked}>
+              <button
+                type="button"
+                className={css.meterAction}
+                aria-label={t('input.saveState')}
+                disabled={locked}
+                onMouseDown={keepFocus}
+                onClick={() => { runOperatorCommand('save') }}
+              >
+                {t('input.save')}
+              </button>
+            </Tooltip>
+            {renderSlot('conversation.composer.meter.trailing', {})}
+          </span>
+        )}
       </div>
     </div>
   )

@@ -99,6 +99,7 @@ interface BenchOptions {
   activityEntry?: (owner: InputActivityOwnerProps) => React.ReactNode
   contextPressure?: ContextPressureProjection
   footer?: React.ReactNode
+  meterTrailing?: React.ReactNode
   attachments?: readonly ComposerAttachment[]
   /** Upload states served for file-kind drafts (absent = every file is ready). */
   fileUploads?: DraftFileUploads
@@ -166,6 +167,7 @@ function bench(over?: BenchOptions) {
     if (key === 'conversation.input.left') return over?.leftItems ?? null
     if (key === 'conversation.input.right') return over?.rightItems ?? null
     if (key === 'conversation.composer.dock') return over?.footer ?? null
+    if (key === 'conversation.composer.meter.trailing') return over?.meterTrailing ?? null
     if (key === 'conversation.input.plan') return over?.planEntry ?? null
     if (key === 'conversation.input.permission') return over?.permissionEntry ?? null
     if (key === 'conversation.input.model') return over?.modelEntry ?? null
@@ -733,8 +735,41 @@ describe('operator shortcuts', () => {
     }))
     expect(view.queryByRole('alert')).toBeNull()
   })
-})
+  // The Save button beside the context meter takes the chord's own path: the
+  // same command, the same refusal toast, and the same single-flight latch.
+  const saveButton = (view: ReturnType<typeof render>): HTMLButtonElement | null =>
+    view.container.querySelector<HTMLButtonElement>('[data-composer-meter-actions] button[aria-label^="保存状态"]')
 
+  it('renders Save and the trailing seat beside the context meter', () => {
+    const { view } = bench({ meterTrailing: <i data-testid="archive" /> })
+    const actions = view.container.querySelector('[data-composer-meter-actions]')!
+    expect(saveButton(view)?.textContent).toBe('保存')
+    expect(actions.querySelector('[data-testid="archive"]')).not.toBeNull()
+  })
+
+  it('Save fills the composer with the save-state command and submits it', () => {
+    const { sink, view } = bench({ draft: 'half typed' })
+    fireEvent.click(saveButton(view)!)
+    expect(sink).toHaveBeenCalledWith('/save-state', [], 'queue', expect.any(AbortSignal))
+  })
+
+  it('Save submits once for a double click, sharing the chord latch', () => {
+    const { sink, view } = bench({})
+    fireEvent.click(saveButton(view)!)
+    fireEvent(window, chord('KeyS'))
+    fireEvent.click(saveButton(view)!)
+    expect(sink).toHaveBeenCalledTimes(1)
+  })
+
+  it('Save is disabled on a blocked composer and the seat is absent in the hero', () => {
+    const blocked = bench({ blocked: { reason: 'model' } })
+    expect(saveButton(blocked.view)?.disabled).toBe(true)
+    const hero = bench({ variant: 'hero' })
+    expect(hero.view.container.querySelector('[data-composer-meter-actions]')).toBeNull()
+    const absent = bench({ noMachine: true })
+    expect(saveButton(absent.view)?.disabled).toBe(true)
+  })
+})
 describe('Enter semantics', () => {
   it('advertises the empty-draft whole-queue steering gesture when it is available', () => {
     const { placeholder } = bench({ running: true, queue: [row('q-1')], steerQueue: vi.fn() })
@@ -1830,7 +1865,7 @@ describe('command launcher chrome and control seats', () => {
       'conversation.input.overlay', 'conversation.input.attachments',
       'conversation.input.permission', 'conversation.input.plan', 'conversation.input.left',
       'conversation.input.right', 'conversation.input.model', 'conversation.input.activity',
-      'conversation.composer.dock',
+      'conversation.composer.dock', 'conversation.composer.meter.trailing',
     ])
     expect(view.queryByLabelText('Plan mode')).toBeNull()
     expect(view.queryByLabelText('Model')).toBeNull()
