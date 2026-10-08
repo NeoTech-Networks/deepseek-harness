@@ -36,7 +36,8 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 // Type-only: pulls the Session root standard-hook merge.
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import {
-  type AllSessionsInjected, type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
+  type AllSessionsInjected, type ArchiveSessionInjected, type ComposerArchiveInjected, type ForkSessionInjected,
+  menuOpenStateFactory, type PinSessionInjected,
   type SessionArchiveConfirmInjected, type SessionArchiveConfirmRequest,
   type RenameSessionInjected, type RowToast, type RowToastInjected, type RowToastState, type SessionRenameDialogInjected,
 
@@ -49,6 +50,7 @@ import { createAllSessionsStore, createWorkspaceViewStore } from './stores.ts'
 import { AllSessionsSection } from './rows/AllSessions.tsx'
 import { WorkspaceBrowser } from './rows/WorkspaceBrowser.tsx'
 import { ArchiveSessionMenuItem, ArchiveSessionRowButton, SessionArchiveConfirmDialog } from './session-actions/ArchiveSession.tsx'
+import { ComposerArchiveButton } from './session-actions/ComposerArchive.tsx'
 import { derive } from './session-actions/derived.ts'
 import { ForkSessionMenuItem } from './session-actions/ForkSession.tsx'
 import { PinSessionMenuItem, PinSessionRowButton } from './session-actions/PinSession.tsx'
@@ -223,7 +225,9 @@ export function apply(ctx: Context): void {
   // stop-and-archive confirmation. The fork adds what the row menu would have
   // made obvious: a not-yet-started or already-archived Session is refused
   // aloud, a double press archives once, and any other failure is announced.
-  installWorkspaceShortcuts(ctx, uiWorkspace, shortcutControls, (sessionId) => {
+  // The composer's Archive button (beside the context meter) takes this same
+  // guarded path, so the chord and the button can never drift apart.
+  const archiveFromOperator = (sessionId: SessionId): void => {
     const current = sessions.list.getSnapshot().byId[sessionId]
     if (current === undefined || current.blank || archivedSet.getSnapshot().has(sessionId)) {
       notify({ kind: 'nothingToArchive' })
@@ -233,6 +237,11 @@ export function apply(ctx: Context): void {
     if (now < archiveChordLatchUntil) return
     archiveChordLatchUntil = now + ARCHIVE_CHORD_LATCH_MS
     archiveWithNotice(sessionId, true)
+  }
+  installWorkspaceShortcuts(ctx, uiWorkspace, shortcutControls, archiveFromOperator)
+  const composerArchiveInjected = (): ComposerArchiveInjected => ({
+    hooks: { archived: archivedSet },
+    archiveSession: archiveFromOperator,
   })
   const archiveConfirmInjected = (): SessionArchiveConfirmInjected => ({
     hooks: { archiveRequest },
@@ -389,6 +398,13 @@ export function apply(ctx: Context): void {
       locale: NS,
     },
     AllSessionsSection,
+  ))
+  // The fork's composer Archive button, beside the context meter and Save.
+  ctx.slots.inject('conversation.composer.meter.trailing', () => ctx.slots.register(
+    {
+      name: 'conversation.composer.meter.trailing', id: 'archive', order: 100, locale: NS, inject: composerArchiveInjected,
+    },
+    ComposerArchiveButton,
   ))
   ctx.slots.inject('conversation.hero.workspace', () => ctx.slots.register(
     {

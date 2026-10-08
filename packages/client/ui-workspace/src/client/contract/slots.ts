@@ -371,6 +371,27 @@ export interface ArchiveSessionInjected {
 }
 
 /**
+ * The composer's Archive button (fork), an entry of ui-conversation's
+ * `conversation.composer.meter.trailing` beside the context meter. It takes
+ * the archive chord's guarded path: a blank or already-archived Session is
+ * refused aloud, a double press archives once, and other failures announce.
+ */
+export interface ComposerArchiveInjected {
+  hooks: {
+    /** Archived Session ids. */
+    archived: HostObservable<ReadonlySet<SessionId>>
+  }
+  /** Archive the Session through the operator-guarded path. */
+  archiveSession: (sessionId: SessionId) => void
+}
+
+/** Props of the composer Archive button: the Session owner share, locale seat, and its injected share. */
+export type ComposerArchiveProps =
+  PropsRuntime<'conversation.composer.meter.trailing'>
+  & PropsLocale<'workspace'>
+  & InjectFace<ComposerArchiveInjected>
+
+/**
  * A stop-and-archive confirmation the archive action asked for: the Host
  * refused the plain archive because this work still runs.
  */

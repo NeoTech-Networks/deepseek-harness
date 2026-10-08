@@ -13,6 +13,7 @@ import { RemoteError, TestRemote } from '@deepseek-ai/dsh-client-test-runtime'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { apply, inject } from '@deepseek-ai/dsh-client-ui-workspace/client'
 import type { WorkspaceBrowserInjected, WorkspacePickerInjected } from '@deepseek-ai/dsh-client-ui-workspace/client'
+import type { ComposerArchiveInjected } from '../src/client/contract/slots.ts'
 import {
   type ArchiveSessionInjected, type ForkSessionInjected, menuOpenStateFactory, type PinSessionInjected,
   type RenameSessionInjected, type RowToastInjected, type SessionArchiveConfirmInjected, type SessionRenameDialogInjected,
@@ -155,15 +156,17 @@ async function bench() {
 }
 
 type HoleName = 'sidebar.workspaces' | 'conversation.hero.workspace' | 'conversation.empty.workspace' | 'shell.overlay'
+  | typeof METER_TRAILING
 
 const MENU_ITEM = 'sidebar.workspaces.session.menu.item'
 const ROW_ACTION = 'sidebar.workspaces.session.row.action'
-type RowListName = typeof MENU_ITEM | typeof ROW_ACTION | 'shell.overlay'
+const METER_TRAILING = 'conversation.composer.meter.trailing'
+type RowListName = typeof MENU_ITEM | typeof ROW_ACTION | 'shell.overlay' | typeof METER_TRAILING
 
 /** Declare any subset of the holes with a single root registration ('root' is a single slot); the overlay is a list. */
 function declare(slots: SlotRegistry, ...names: HoleName[]): () => void {
   const children = Object.fromEntries(names.map(name => [
-    name, { kind: name === 'shell.overlay' ? 'list' : 'single', scope: 'root' },
+    name, { kind: name === 'shell.overlay' || name === METER_TRAILING ? 'list' : 'single', scope: 'root' },
   ]))
   return slots.register({ name: 'root', children } as never, () => null)
 }
@@ -709,5 +712,24 @@ describe('ui-workspace archive shortcut (fork)', () => {
     } finally {
       warn.mockRestore()
     }
+  })
+  // The composer's Archive button beside the context meter takes the chord's
+  // own guarded path, so the two can never drift apart.
+  it('registers the composer Archive button on the chord path', async () => {
+    const b = await bench()
+    clock(4)
+    b.setSessions(sessionState([summary('one', 1), { ...summary('blank', 2), blank: true }]))
+    declare(b.slots, 'sidebar.workspaces', 'shell.overlay', METER_TRAILING)
+    await b.ctx.plugin({ inject: [...inject], apply }).await()
+    const archiveSession = vi.spyOn(b.ctx.uiWorkspace, 'archiveSession').mockResolvedValue(undefined)
+    const toast = faceOf(entry(b.slots, 'shell.overlay', 'workspace.row-toast')) as RowToastInjected
+    const button = faceOf(entry(b.slots, METER_TRAILING, 'archive')) as ComposerArchiveInjected
+    button.archiveSession('blank' as SessionId)
+    expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'nothingToArchive' })
+    button.archiveSession('one' as SessionId)
+    button.archiveSession('one' as SessionId)
+    expect(archiveSession).toHaveBeenCalledOnce()
+    expect(archiveSession).toHaveBeenCalledWith('one')
+    await vi.waitFor(() => { expect(toast.hooks.toast.getSnapshot()).toMatchObject({ kind: 'archived', sessionId: 'one' }) })
   })
 })
