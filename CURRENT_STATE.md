@@ -1,5 +1,12 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-10-08 - Composer Save, Archive and Production buttons beside the context meter
+
+- WHAT SHIPPED: three text buttons right of the context percentage under the message box: `Save` (submits `/save-state`), `Archive` (archives that Session), `Production` (submits `deploy to production`). Commits on `update/v0.2.0-rc.2` (worktree `C:\d202`, also `feat/composer-save-archive`), pushed: `ad1f06c6ef`, `c2936cf9d7`, `7b8902e258`.
+- HOW: new slot `conversation.composer.meter.trailing` (list, session) rendered after `ContextMeter` in `InputBar.tsx`. Save and Production call `runOperatorCommand`, the factored Ctrl+Shift+S/P path (same refusal toast, same module-scope latch). Archive is `ComposerArchiveButton` from ui-workspace, registered into that slot, calling `archiveFromOperator`, the same guarded function the Ctrl+Shift+A chord now uses (nothingToArchive refusal, latch, undo notice, stop-and-archive confirmation). Slot catalog regenerated.
+- INSTALLED by Steve twice (Save/Archive build 06:35, Production build 07:40); installed `app.asar` 07:40:02; `dsh_local_features_check.py` reads 42 of 42 (new rows `composer-save-archive`, `composer-archive-button`, `composer-production-button` in `C:\Claude\bin\dsh_local_features.json`, uncommitted in that shared checkout).
+- NOT SEEN on screen: headless browser_verify of the GUI hit 401 (OPEN_ISSUES 12).
+
 ## 2026-10-04 - Purpose line: plain text and ten words, seen on screen
 
 - FIX (Steve: "the text is in link ... should only be 10 text"): commit `4ee821e08a` on `update/v0.2.0-rc.2`. The Purpose value had reused the link-coloured `.sessionFooterValue` style; it now uses its own `.sessionFooterText` (`--dsw-alias-label-secondary`, no hover underline). The generator asks for at most 10 words (64 output tokens) and `limitSessionPurposeWords` (`dsh-session-title`) cuts to 10; the `sessionPurpose` projection applies the same cut and moved to stateVersion 2, so sentences logged before the cap shorten too.

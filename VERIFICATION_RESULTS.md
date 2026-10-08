@@ -1,5 +1,17 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-08 - Composer Save, Archive and Production buttons
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| ui-conversation specs | pass | 573/573, input-bar 117/117 after Production | VERIFIED |
+| ui-workspace apply spec | pass | 21/21 incl. composer Archive case | VERIFIED |
+| ui-workspace all-sessions spec | pass | 4 fail, identical with changes stashed (pre-existing) | UNVERIFIED |
+| Typecheck, oxlint, verify-client-catalog | exit 0 | all 0 | VERIFIED |
+| Packaged asar features | all present | 42/42 | VERIFIED |
+| Installed app features | all present | 42/42, app.asar 2026-10-08 07:40:02 | VERIFIED |
+| Buttons on screen | visible | headless GUI capture 401, blank | UNVERIFIED |
+
 
 
 ## 2026-10-04 - Purpose line plain-text and ten-word fix
