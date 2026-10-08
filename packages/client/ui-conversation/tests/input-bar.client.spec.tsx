@@ -761,9 +761,22 @@ describe('operator shortcuts', () => {
     expect(sink).toHaveBeenCalledTimes(1)
   })
 
+  it('Production sends the promote phrase after Archive, sharing the latch', () => {
+    const { sink, view } = bench({ meterTrailing: <i data-testid="archive" /> })
+    const actions = view.container.querySelector('[data-composer-meter-actions]')!
+    const deploy = actions.querySelector<HTMLButtonElement>('[data-composer-deploy]')!
+    expect(deploy.textContent).toBe('生产')
+    expect(actions.lastElementChild?.contains(deploy) ?? false).toBe(true)
+    fireEvent.click(deploy)
+    fireEvent.click(deploy)
+    expect(sink).toHaveBeenCalledTimes(1)
+    expect(sink).toHaveBeenCalledWith('deploy to production', [], 'queue', expect.any(AbortSignal))
+  })
+
   it('Save is disabled on a blocked composer and the seat is absent in the hero', () => {
     const blocked = bench({ blocked: { reason: 'model' } })
     expect(saveButton(blocked.view)?.disabled).toBe(true)
+    expect(blocked.view.container.querySelector<HTMLButtonElement>('[data-composer-deploy]')?.disabled).toBe(true)
     const hero = bench({ variant: 'hero' })
     expect(hero.view.container.querySelector('[data-composer-meter-actions]')).toBeNull()
     const absent = bench({ noMachine: true })

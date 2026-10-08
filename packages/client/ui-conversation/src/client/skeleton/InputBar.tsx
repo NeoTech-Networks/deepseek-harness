@@ -653,6 +653,19 @@ export const InputBar = memo(function InputBar({
               </button>
             </Tooltip>
             {renderSlot('conversation.composer.meter.trailing', {})}
+            <Tooltip label={t('input.deployProduction')} side="top" delayMs={500} disabled={locked}>
+              <button
+                type="button"
+                className={css.meterAction}
+                aria-label={t('input.deployProduction')}
+                data-composer-deploy
+                disabled={locked}
+                onMouseDown={keepFocus}
+                onClick={() => { runOperatorCommand('deploy') }}
+              >
+                {t('input.production')}
+              </button>
+            </Tooltip>
           </span>
         )}
       </div>
