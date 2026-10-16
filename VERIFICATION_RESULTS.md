@@ -1,5 +1,26 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-16 - Workspace picker groups, installed 0.2.0-rc.2 build
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Version installed | 0.2.0-rc.2, one uninstall row | `DisplayVersion 0.2.0-rc.2`, exactly 1 DeepSeek Harness row | VERIFIED |
+| Running code is the built code | installed asar equals packaged | both `B3664A7D...FA47`, 124,015,031 bytes | VERIFIED |
+| The feature is in the running code | `workspace-picker-groups` present | "all 43 local features are present in the running build", exit 0 | VERIFIED |
+| App serving | port 19387 answers | answers 401 (serving, wants its own token); 5 processes started 18:38 | VERIFIED |
+| Settings survived install | vault verify clean | 20 files all same, before and after; AGENTS.md hardlink intact | VERIFIED |
+| Hooks fire after install | exit 0 per point | PreToolUse 315, PostToolUse 315, UserPromptSubmit 14, Stop 3, all exit 0, zero non-zero | VERIFIED for those four points |
+| SessionStart | exit 0 | never recorded as `hook/result` in any of 551 logs; context card injected for a promptless post-install session | NOT APPLICABLE as written, see OPEN_ISSUES 16 |
+| Dropdown shows headings on screen | headings + order seen | `picker-open-crop.png` transcribes `ABC` / `Clients` / `General` headings with folders under each | VERIFIED for the top three headings |
+| Lower headings photographed | all headings seen | list is taller than the screen; `NeoTech` and below not read | UNVERIFIED, OPEN_ISSUES 14 |
+| Delete drops it from the dropdown | live observation | Phase 3 spec only, not seen live | UNVERIFIED |
+
+Evidence folder: `C:\Projects\logs\2026-10-16-dsh-020-rc2-picker\` (`VERIFICATION.md`
+carries the full write-up and the case-sensitivity caveat: the vision reader
+called the order "not alphabetical" by applying ASCII case rules, while the
+picker uses the sidebar's `Intl.Collator` with `sensitivity: 'base'`, so
+`new-leads` before `Rolland Work Orders` is correct).
+
 ## 2026-10-08 - Composer Save, Archive and Production buttons
 
 | Check | Expected | Result | Status |

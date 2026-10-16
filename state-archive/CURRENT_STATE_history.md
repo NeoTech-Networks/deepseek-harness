@@ -2,6 +2,26 @@
 
 Auto-archived by state_file_cap.py when CURRENT_STATE.md exceeded 32 KB. Newest-first. On-demand only; not read at session start.
 
+## 2026-09-26 - plan review auto-open fix (fix/plan-review-autoopen)
+
+- **Bug:** a pending plan review only opened in the right sidebar when it arrived while its session was on screen. Arriving elsewhere, then switching back, left it closed.
+- **Cause:** `PlanReviewOpen` gated the automatic open on a render-time reading of `ctx.sidebarRight.mounted`. A session switch releases the old seat and binds the new one in separate effects, so the open ran against no binding, threw `no session surface is mounted`, was never marked opened and never retried.
+- **Fix (commit 3e4531fe32, pushed):** new `packages/client/ui-plan/src/client/auto-open.ts` (`openWhenSeated`) reads the seat live, requires it to belong to the review's session or a subagent's parent, and retries on each seat change until one open succeeds. `PlanReviewOpen` uses the injected `autoOpen`; the `sidebarMounted` hook was removed. README en/zh updated and pairing re-recorded.
+- **Build:** packaged unsigned 0.1.7-rc.2 installer from this worktree; installed by Steve 2026-09-26 ~19:05 local. Installed `resources\app.asar` SHA-256 6C8EF3EC... equals the built one.
+- Base: `update/v0.1.7-rc.2` (97b72f1180). Upstream `deepseek-ai` has no equivalent fix as of 2026-09-26.
+
+
+## Last save-state (2026-09-26T23:12:39.006756+00:00)
+
+- Trigger: `save_state`
+- Actor: `claude-code:steve`
+- Session id: `dd209731-50ab-486a-b7ec-41d1dd2e1928`
+- Repos touched: deepseek-harness (source: transcript scan)
+- Plan: (none)
+- Transcript: C:\Claude\integrations\dsh-hook-bridge\transcripts\b3bd8afa-375a-44bf-b891-c544da7b1671.jsonl
+
+<!-- claude-memory-actor:end -->
+
 ## 2026-09-24 - DSH 0.1.7-rc.2 installed
 
 - WHAT SHIPPED: a same-architecture stack REPLAY onto upstream `dsh-v0.1.7-rc.2` (released 2026-09-24T14:10Z, merge `477b4f4205`; rc.1 to rc.2 is 346 commits, 3429 files). The 49 non-merge commits of `dsh-v0.1.7-rc.1..update/v0.1.7-rc.1` were cherry-picked one by one (14 conflicted; the 3 port merges skipped and their plain-union resolutions re-applied by hand); subject lists 49 to 49, no difference. Added on top: `7986ba8138` (9 fork-only packages bumped to 0.1.7-rc.2), `61e0d2d679` (shortcut, quit and group-row fixes), `7d2c7d589e` (catalogs regenerated, translation pairs re-recorded), `9befa83826` (the Lead picks a model for each teammate, cherry-picked from `1cdca77e6d` on `feat/team-teammate-model`). Build worktree `C:\d172`, branch `update/v0.1.7-rc.2`, HEAD `9befa83826`, pushed with tag `dsh-v0.1.7-rc.2` and read back.

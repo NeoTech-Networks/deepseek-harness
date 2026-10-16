@@ -1,5 +1,16 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-10-16 - New Session workspace picker mirrors the sidebar grouping
+
+- WHAT SHIPPED: the blank-session "Choose workspace" dropdown now lists Workspaces under the same named headings as the left pane, A to Z inside each heading, with the ungrouped folders last in their Host order. Commit `bb3fb9b8f0` on `update/v0.2.0-rc.2` (worktree `C:\d202`), pushed with `CI=true` set for the push (without it the pre-push hook's `pnpm install` dies before the typecheck body: ledger 43 and 75).
+- HOW: `packages/client/ui-workspace/src/client/tree.ts` gains `workspaceNameOf` (the blank-title-falls-back-to-the-path rule) and `sectionizeWorkspaces`, a generic sectioner; `byWorkspaceName` and `sectionize` now delegate to those primitives, so the sidebar's own ordering is unchanged and the two surfaces cannot drift apart. `WorkspacePicker.tsx` builds its entries from `sectionizeWorkspaces`, emitting one non-interactive `MenuLabel` heading per named section. The menu primitive already skips labels in its keyboard walk, and a heading id carries the `picker.section:` prefix so it can never equal a `selectedId`, which leaves the trailing selection check untouched.
+- TESTS: `packages/client/ui-workspace` 430 passed, 4 failed. The 4 are the pre-existing `all-sessions.client.spec.tsx` failures (OPEN_ISSUES 13), and this commit does not touch that spec.
+- PACKAGED: the first attempt died at `prepare:runtime` on a transient github.com connect timeout (ledger 45), the retry exited 0. Installer 288,633,766 bytes, sha256 `1A0C5D2F...7D73`. Feature registry 42 -> 43 rows (`workspace-picker-groups`, marker `picker.section:`); the packaged `app.asar` reads 43 of 43 before the hand-over.
+- INSTALLED 2026-10-16 18:38 by this session at the operator's instruction (the installer force-closes the app; a Claude Code session is not inside it, ledger 48). Installed `app.asar` sha256 `B3664A7D...FA47` EQUALS the packaged one, and `dsh_local_features_check.py` against the running asar reads "all 43 local features are present".
+- SEEN on screen: `C:\Projects\logs\2026-10-16-dsh-020-rc2-picker\picker-open-crop.png` (captured with PrintWindow, DPI aware, window never raised) read back through the vision route transcribes the headings `ABC`, `Clients`, `General` with their folders beneath. The full read-back, the checks that passed, the SessionStart logging gap and the case-sensitivity caveat on the reader's "not alphabetical" verdict are in `VERIFICATION.md` in that same folder.
+- NOT SEEN: the lower headings were not photographed, and delete-a-folder-while-open is proven by the Phase 3 spec only.
+- WRITTEN BACK: playbook `DeepSeek Harness\05-neotech-fork.md` (feature list corrected from a stale 35 to the registry's 43, plus ledger 78 on the packaging evidence file), pushed to `playbooks` main as `c42b5ac`.
+
 ## 2026-10-08 - Composer Save, Archive and Production buttons beside the context meter
 
 - WHAT SHIPPED: three text buttons right of the context percentage under the message box: `Save` (submits `/save-state`), `Archive` (archives that Session), `Production` (submits `deploy to production`). Commits on `update/v0.2.0-rc.2` (worktree `C:\d202`, also `feat/composer-save-archive`), pushed: `ad1f06c6ef`, `c2936cf9d7`, `7b8902e258`.
@@ -81,26 +92,6 @@
 - Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
 - Plan: (none)
 - Transcript: C:\Users\SteveDempsey\.claude\projects\C--Projects-general-DS-harness\ab143138-bff1-43e0-ab69-db2a9f22ea0a.jsonl
-
-<!-- claude-memory-actor:end -->
-
-## 2026-09-26 - plan review auto-open fix (fix/plan-review-autoopen)
-
-- **Bug:** a pending plan review only opened in the right sidebar when it arrived while its session was on screen. Arriving elsewhere, then switching back, left it closed.
-- **Cause:** `PlanReviewOpen` gated the automatic open on a render-time reading of `ctx.sidebarRight.mounted`. A session switch releases the old seat and binds the new one in separate effects, so the open ran against no binding, threw `no session surface is mounted`, was never marked opened and never retried.
-- **Fix (commit 3e4531fe32, pushed):** new `packages/client/ui-plan/src/client/auto-open.ts` (`openWhenSeated`) reads the seat live, requires it to belong to the review's session or a subagent's parent, and retries on each seat change until one open succeeds. `PlanReviewOpen` uses the injected `autoOpen`; the `sidebarMounted` hook was removed. README en/zh updated and pairing re-recorded.
-- **Build:** packaged unsigned 0.1.7-rc.2 installer from this worktree; installed by Steve 2026-09-26 ~19:05 local. Installed `resources\app.asar` SHA-256 6C8EF3EC... equals the built one.
-- Base: `update/v0.1.7-rc.2` (97b72f1180). Upstream `deepseek-ai` has no equivalent fix as of 2026-09-26.
-
-
-## Last save-state (2026-09-26T23:12:39.006756+00:00)
-
-- Trigger: `save_state`
-- Actor: `claude-code:steve`
-- Session id: `dd209731-50ab-486a-b7ec-41d1dd2e1928`
-- Repos touched: deepseek-harness (source: transcript scan)
-- Plan: (none)
-- Transcript: C:\Claude\integrations\dsh-hook-bridge\transcripts\b3bd8afa-375a-44bf-b891-c544da7b1671.jsonl
 
 <!-- claude-memory-actor:end -->
 
