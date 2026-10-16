@@ -19,9 +19,16 @@ import type {
 import { workspaceDisplayTitle } from '@deepseek-ai/dsh-api-workspace-controller/default-workspace'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
 import type { DirectoryFlowOwnerProps, WorkspacePickerProps } from './contract/slots.ts'
+import { sectionizeWorkspaces } from './tree.ts'
 import css from './WorkspacePicker.module.css'
 
 const ADD_WORKSPACE = '::add-workspace'
+/**
+ * Menu-entry id prefix for a section heading. The prefix is what keeps a
+ * heading id from ever colliding with a Workspace id, and it doubles as this
+ * feature's build marker (the local feature ledger greps for the literal).
+ */
+const PICKER_SECTION_KEY_PREFIX = 'picker.section:'
 
 /** Core flow props: the owner supplies popover control and pick semantics. */
 export interface WorkspacePickFlowProps {
@@ -109,13 +116,23 @@ export function WorkspacePickFlow({
   // With workspaces listed, the add action pins below the scroll region
   // (divider + always visible); otherwise it IS the menu.
   const pinAdd = !addOnly && workspaces.length > 0
+  // The list mirrors the left pane: a named group is a non-interactive heading
+  // (Tab and the arrow-key walk collect enabled buttons only, so headings are
+  // skipped) with its folders A-Z beneath it, then the folders carrying no
+  // group in Host order and with no heading of their own. Ordering is the
+  // sidebar's own rule, shared through tree.ts, so the two cannot drift.
   const items: MenuEntry[] = pinAdd
-    ? workspaces.map(workspace => ({
-      id: workspace.workspaceId,
-      label: workspaceDisplayTitle(workspace.title, t('workspace.defaultName')),
-      icon: <IconFolderCloseRegular size={16} />,
-      disabled: flowBusy,
-    }))
+    ? sectionizeWorkspaces(workspaces).flatMap((section): MenuEntry[] => [
+      ...section.label === undefined
+        ? []
+        : [{ type: 'label' as const, id: PICKER_SECTION_KEY_PREFIX + section.key, text: section.label }],
+      ...section.rows.map(workspace => ({
+        id: workspace.workspaceId,
+        label: workspaceDisplayTitle(workspace.title, t('workspace.defaultName')),
+        icon: <IconFolderCloseRegular size={16} />,
+        disabled: flowBusy,
+      })),
+    ])
     : addEntries
   // Nothing listed and nothing to add with (a composition that mounts this
   // package without any directory-picker): an empty popover would claim a

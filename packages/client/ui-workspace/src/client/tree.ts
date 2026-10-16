@@ -605,6 +605,29 @@ export const LOOSE_SECTION_KEY = '\u0000loose'
 const NAME_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 
 /**
+ * The one name rule every Workspace-ordering surface reads: the name a row
+ * shows, falling back to the folder path when the title is blank (a Workspace
+ * whose title was cleared is still findable by where it lives).
+ * @param title - stored Workspace title.
+ * @param path - canonical host directory path.
+ * @returns the name to sort and compare the row by.
+ */
+export function workspaceNameOf(title: string, path: string): string {
+  return title.trim() === '' ? path : title
+}
+
+/**
+ * Order two Workspace display names, A-Z. Exposed so sibling surfaces share
+ * the sidebar's collator instead of each carrying its own.
+ * @param left - one display name.
+ * @param right - the other display name.
+ * @returns the collator's ordering of the two names.
+ */
+function byDisplayName(left: string, right: string): number {
+  return NAME_COLLATOR.compare(left, right)
+}
+
+/**
  * Order Workspace rows by the name the row shows. A cleared title falls back
  * to the path; equal names keep their Host order because Array.sort is stable.
  * @param left - one Workspace row.
@@ -612,8 +635,10 @@ const NAME_COLLATOR = new Intl.Collator(undefined, { numeric: true, sensitivity:
  * @returns the collator's ordering of the two displayed names.
  */
 export function byWorkspaceName(left: GroupNode, right: GroupNode): number {
-  const nameOf = (node: GroupNode): string => node.label.trim() === '' ? node.cwd ?? '' : node.label
-  return NAME_COLLATOR.compare(nameOf(left), nameOf(right))
+  return byDisplayName(
+    workspaceNameOf(left.label, left.cwd ?? ''),
+    workspaceNameOf(right.label, right.cwd ?? ''),
+  )
 }
 
 /**
@@ -638,7 +663,7 @@ export function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
     }
   }
   const sections: GroupSectionNode[] = [...named.keys()]
-    .sort((a, b) => NAME_COLLATOR.compare(a, b))
+    .sort(byDisplayName)
     .map((label) => {
       const workspaces = [...(named.get(label) ?? [])].sort(byWorkspaceName)
       return { key: label, label, containsCurrent: workspaces.some(node => node.containsCurrent), workspaces }
@@ -654,6 +679,60 @@ export function sectionize(nodes: readonly GroupNode[]): GroupSectionNode[] {
       key: LOOSE_SECTION_KEY, label: undefined,
       containsCurrent: loose.some(node => node.containsCurrent), workspaces: loose,
     })
+  }
+  return sections
+}
+
+/** One section of a flat Workspace list: an optional heading over its rows. */
+export interface WorkspaceSectionNode<T> {
+  /** Stable section key: the group label, or a reserved key for the unlabelled section. */
+  key: string
+  /** Heading text; undefined renders the section's rows without a heading. */
+  label: string | undefined
+  /** Rows in render order. */
+  rows: readonly T[]
+}
+
+/**
+ * Section a flat Workspace list the way the sidebar sections its tree: named
+ * groups first (headings and members both A-Z, so a folder added on disk slots
+ * into place), then the Workspaces without a group in their incoming Host
+ * order (drag reorder stays live there). The collator and the blank-title
+ * fallback are the sidebar's own, so the two surfaces cannot drift apart.
+ *
+ * The group label is normalized exactly as the tree build does it
+ * (`group.trim()`, blank meaning ungrouped), and rows sort by the raw stored
+ * title rather than any localized display title, so a row lands where the
+ * sidebar puts it. Equal names keep their incoming order (Array.sort is
+ * stable).
+ * @param rows - Workspace rows in Host order.
+ * @returns sections in render order.
+ */
+export function sectionizeWorkspaces<T extends { title: string; path: string; group?: string | undefined }>(
+  rows: readonly T[],
+): WorkspaceSectionNode<T>[] {
+  const named = new Map<string, T[]>()
+  const ungrouped: T[] = []
+  for (const row of rows) {
+    const group = row.group?.trim() ?? ''
+    if (group === '') {
+      ungrouped.push(row)
+      continue
+    }
+    const bucket = named.get(group)
+    if (bucket === undefined) named.set(group, [row])
+    else bucket.push(row)
+  }
+  const sections: WorkspaceSectionNode<T>[] = [...named.keys()]
+    .sort(byDisplayName)
+    .map(label => ({
+      key: label,
+      label,
+      rows: [...(named.get(label) ?? [])].sort((a, b) =>
+        byDisplayName(workspaceNameOf(a.title, a.path), workspaceNameOf(b.title, b.path))),
+    }))
+  if (ungrouped.length > 0) {
+    sections.push({ key: UNGROUPED_SECTION_KEY, label: undefined, rows: ungrouped })
   }
   return sections
 }

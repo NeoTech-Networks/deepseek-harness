@@ -25,10 +25,11 @@ afterEach(cleanup)
 const t: WorkspacePickerProps['t'] = makeTranslate(zh, commonZh)
 
 const wid = (id: string) => id as WorkspaceId
-function workspace(id: string, title = id): WorkspaceView {
+function workspace(id: string, title = id, group?: string): WorkspaceView {
   return {
     workspaceId: wid(id), path: `/projects/${id}`, title, sessionIds: [],
     createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+    ...group === undefined ? {} : { group },
   }
 }
 function hook<T>(snapshot: T) {
@@ -84,10 +85,42 @@ function occupancySource(initial = true) {
   }
 }
 
+/** Live Workspace feed bound like the renderer would: set() drives the hook like a real Host push. */
+function workspaceSource(initial: readonly WorkspaceView[]) {
+  let snapshot = workspaceState(initial)
+  const listeners = new Set<() => void>()
+  const useWorkspaces = bindSnapshotSelector({
+    getSnapshot: () => snapshot,
+    subscribe: (listener: () => void) => {
+      listeners.add(listener)
+      return () => { listeners.delete(listener) }
+    },
+  })
+  return {
+    useWorkspaces,
+    set: (next: readonly WorkspaceView[]) => {
+      snapshot = workspaceState(next)
+      for (const listener of [...listeners]) listener()
+    },
+  }
+}
+
+/**
+ * Menu rows in render order: section headings and selectable rows only. The
+ * menu's own list and footer wrappers are also `role="presentation"`, so the
+ * filter keeps leaf headings and drops those two.
+ */
+function menuRows(): string[] {
+  return [...screen.getByRole('menu').querySelectorAll('button[role="menuitem"], div[role="presentation"]')]
+    .filter(node => node.tagName === 'BUTTON' || node.children.length === 0)
+    .map(node => node.textContent ?? '')
+}
+
 function mount(
   items: readonly WorkspaceView[] = [workspace('alpha', 'Alpha')],
   createWorkspace = vi.fn(),
   occupancy = occupancySource(),
+  liveUseWorkspaces?: <S>(selector: (state: WorkspaceSnapshot) => S) => S,
 ) {
   const onPick = vi.fn()
   const onClose = vi.fn()
@@ -101,7 +134,7 @@ function mount(
       useSessionStatus={hook(noPendingInteraction)}
       useSessionRetainInfo={() => undefined}
       usePanelInfo={usePanelInfo} useResource={useResource}
-      useWorkspaces={hook(workspaceState(nextItems))}
+      useWorkspaces={liveUseWorkspaces ?? hook(workspaceState(nextItems))}
       onPick={onPick}
       onClose={onClose}
       createWorkspace={createWorkspace}
@@ -214,6 +247,60 @@ describe('WorkspacePicker', () => {
     act(() => { b.probe.owner!.onError('no chooser installed') })
     fireEvent.click(screen.getByRole('button', { name: '取消' }))
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('sections the list under its group headings, A-Z inside each', () => {
+    mount([
+      workspace('z10', 'Site 10', 'SIG'),
+      workspace('m', 'Mid'),
+      workspace('z9', 'Site 9', 'SIG'),
+      workspace('b', 'Bev', 'ABC'),
+    ])
+    // Headings and folders both read A-Z, so a folder added on disk slots
+    // into place rather than landing wherever it was created.
+    expect(menuRows()).toEqual(['ABC', 'Bev', 'SIG', 'Site 9', 'Site 10', 'Mid', '添加工作区…'])
+  })
+
+  it('shows ungrouped folders last, unheaded and in their incoming order', () => {
+    mount([workspace('m', 'Mid'), workspace('a', 'Alpha', 'ABC'), workspace('b', 'Beta')])
+    // Mid before Beta is the incoming order, not A-Z: drag reorder stays live
+    // in the unheaded bucket, exactly as the left pane renders it.
+    expect(menuRows()).toEqual(['ABC', 'Alpha', 'Mid', 'Beta', '添加工作区…'])
+  })
+
+  it('drops a deleted folder from the open dropdown without closing it', () => {
+    const source = workspaceSource([workspace('alpha', 'Alpha', 'ABC'), workspace('beta', 'Beta', 'ABC')])
+    mount([], vi.fn(), occupancySource(), source.useWorkspaces)
+    expect(menuRows()).toEqual(['ABC', 'Alpha', 'Beta', '添加工作区…'])
+    // The left pane deletes a folder: the same live Host feed drops it and the
+    // open menu redraws in place, with no reopen and no stale row left behind.
+    act(() => { source.set([workspace('beta', 'Beta', 'ABC')]) })
+    expect(screen.getByRole('menu')).toBeTruthy()
+    expect(screen.queryByRole('menuitem', { name: 'Alpha' })).toBeNull()
+    expect(menuRows()).toEqual(['ABC', 'Beta', '添加工作区…'])
+  })
+
+  it('keeps the add row pinned below the list and the check on the selected row', () => {
+    const { renderSlot } = flowProbe()
+    render(
+      <WorkspacePicker
+        open anchorRef={anchor()} useSessions={hook(sessions)}
+        useWorkspaces={hook(workspaceState([
+          workspace('alpha', 'Alpha', 'ABC'), workspace('beta', 'Beta', 'ABC'),
+        ]))}
+        useSessionStatus={hook(noPendingInteraction)}
+        useSessionRetainInfo={() => undefined}
+        usePanelInfo={usePanelInfo} useResource={useResource}
+        selectedId={wid('beta')}
+        onPick={vi.fn()} onClose={vi.fn()} createWorkspace={vi.fn()}
+        useDirectoryFlow={occupancySource().useDirectoryFlow} renderSlot={renderSlot} t={t}
+      />,
+    )
+    expect(menuRows()).toEqual(['ABC', 'Alpha', 'Beta', '添加工作区…'])
+    // The selection marker is a trailing check after the label, so the
+    // selected row ends in an svg and an unselected one ends in its label.
+    expect(screen.getByRole('menuitem', { name: 'Beta' }).lastElementChild?.tagName.toLowerCase()).toBe('svg')
+    expect(screen.getByRole('menuitem', { name: 'Alpha' }).lastElementChild?.tagName.toLowerCase()).toBe('span')
   })
 
   it('waits to show its menu until an optional anchor is available', () => {

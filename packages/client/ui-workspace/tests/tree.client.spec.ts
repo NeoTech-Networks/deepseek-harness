@@ -10,6 +10,7 @@ import {
   type ArchivedFilter,
   deriveFlat, deriveGroups, deriveSearchResults, orderByRecency, owningGroupKey, owningParentFolder,
   derivePhase, pinCurrentBlank, reconcileManualOrder, sectionize, sectionShowsWorkspaces, sessionMemberIds, visibleSessionIds,
+  sectionizeWorkspaces, workspaceNameOf,
   workspaceLabel, LOOSE_SECTION_KEY, UNGROUPED_KEY, UNGROUPED_SECTION_KEY,
 } from '../src/client/tree.ts'
 import { createWorkspaceViewStore } from '../src/client/stores.ts'
@@ -943,6 +944,55 @@ describe('named Workspace group sections (fork)', () => {
       const [group] = deriveGroups(state, ws, rowState({ archived: ['gone'], archivedFilter }), noAttention, view())
       expect(group?.unarchivedCount, archivedFilter).toBe(2)
     }
+  })
+
+  it('sections a flat Workspace list the way the tree sections its rows', () => {
+    const rows = [
+      { title: 'Site 10', path: '/p/z10', group: 'SIG' },
+      { title: 'Mid', path: '/p/m' },
+      { title: 'Site 9', path: '/p/z9', group: '  SIG  ' },
+      { title: 'Bev', path: '/p/b', group: 'ABC' },
+      { title: 'Later', path: '/p/n' },
+    ]
+    expect(sectionizeWorkspaces(rows).map(section => [
+      section.key, section.label, section.rows.map(row => row.title),
+    ])).toEqual([
+      ['ABC', 'ABC', ['Bev']],
+      ['SIG', 'SIG', ['Site 9', 'Site 10']],
+      [UNGROUPED_SECTION_KEY, undefined, ['Mid', 'Later']],
+    ])
+  })
+
+  it('keeps the ungrouped section in its incoming Host order, not A-Z', () => {
+    const rows = [{ title: 'Zebra', path: '/p/z' }, { title: 'Apple', path: '/p/a' }]
+    expect(sectionizeWorkspaces(rows).at(-1)?.rows.map(row => row.title)).toEqual(['Zebra', 'Apple'])
+  })
+
+  it('orders a blank-titled member by its path, matching the sidebar', () => {
+    const rows = [
+      { title: '', path: 'Zebra', group: 'ABC' },
+      { title: '', path: 'Apple', group: 'ABC' },
+    ]
+    const [section] = sectionizeWorkspaces(rows)
+    // Blank titles alone would keep the incoming order, so reaching A-Z
+    // proves the path was the name compared. The sidebar reads the same rule.
+    expect(section?.rows.map(row => row.path)).toEqual(['Apple', 'Zebra'])
+  })
+
+  it('orders a named member by its title rather than its path', () => {
+    const rows = [
+      { title: 'Zebra', path: 'Apple', group: 'ABC' },
+      { title: 'Apple', path: 'Zebra', group: 'ABC' },
+    ]
+    const [section] = sectionizeWorkspaces(rows)
+    expect(section?.rows.map(row => row.title)).toEqual(['Apple', 'Zebra'])
+  })
+
+  it('reads a whitespace-only group as ungrouped and trims a named one', () => {
+    expect(workspaceNameOf('   ', '/p/x')).toBe('/p/x')
+    expect(workspaceNameOf(' Title ', '/p/x')).toBe(' Title ')
+    const sections = sectionizeWorkspaces([{ title: 'a', path: '/p/a', group: '   ' }])
+    expect(sections.map(section => section.key)).toEqual([UNGROUPED_SECTION_KEY])
   })
 
   it('folds only named sections', () => {
