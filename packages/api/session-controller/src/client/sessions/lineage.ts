@@ -27,6 +27,8 @@ export interface SessionListEntry {
   parentSessionId?: SessionId
   /** Coarse durable origin for navigation filtering; not a continuation capability. */
   origin?: 'subagent'
+  /** Format classification supplied by the Host list. */
+  formatStatus?: SessionSummary['formatStatus']
   cwd?: string
   /** Front-door URL of the dashboard this Session's workspace is associated with; absent when there is no association. */
   dashboardUrl?: string
