@@ -1,5 +1,16 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-18 - 0.2.1-rc.2 post-upgrade review (hooks, plan mode, worktree guard)
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Hook bridge package in profile | both at 0.2.1-rc.2 | package.json and both node_modules copies read `0.2.1-rc.2` | VERIFIED |
+| Hooks fire after restart | non-zero `hook/result`, exit 0 | session f4db5a32: 341 PreToolUse, 340 PostToolUse, 23 UserPromptSubmit, Stop 5 pass + 1 block | VERIFIED |
+| Deny path | worktree guard refuses a primary-checkout Write | refused 10:10, with the `working_directory` hint | VERIFIED |
+| Plan dismissal is a decline | `{approved:false}` and 0.2.1 text not read as approval | `test_plan_handoff_dsh.py` 17 passed | VERIFIED |
+| Guard and bridge suites | green | 134 passed (guard + backend capability), 106 passed (bridge) | VERIFIED |
+| Skill copies | three equal hashes, v5 | all `D7DF0900...`; `skill_version.py` "both copies agree" | VERIFIED |
+
 ## 2026-10-18 - Claude route and hook bridge after the 0.2.1-rc.2 install
 
 | Check | Expected | Result | Status |
