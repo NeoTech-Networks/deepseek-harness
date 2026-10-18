@@ -1,5 +1,29 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-10-18 - 0.2.1-rc.2 post-upgrade review: hook bridge is now a pinned profile plugin
+
+- ROOT CAUSE OF THE DEAD HOOKS, IN ONE LINE: 0.2.1 no longer ships
+  `@deepseek-ai/dsh-hooks-claude-code` in the installer (upstream guide
+  `docs/upgrade-guide/v0.2.1-alpha.1/experimental-package-composition`). It was
+  installed into `~\.dsh\profiles\desktop` at 08:19 with
+  `dsh.cmd plugin --profile desktop add @deepseek-ai/dsh-hooks-claude-code@0.2.1-rc.2 @deepseek-ai/dsh-hook-protocol@0.2.1-rc.2`
+  (package.json read back at exactly `0.2.1-rc.2`; backup
+  `package.json.bak-before-hooks-021`). Always pin: npm `latest` for both is a stale
+  `0.0.1-rc.x`. The 09:06 restart is what loaded it (section below).
+- DENY PATH PROVEN 10:10: a Write of `hook-probe.tmp` into this repo's primary
+  checkout was refused by `shared_checkout_worktree_guard.py`, and the refusal
+  carried the new `working_directory({cd: ...})` hint.
+- PLAN MODE: 0.2.1 returns `{approved: false}` and ends the turn on a dismissed plan
+  review. `~\.claude\hooks\plan_handoff_prompt.py` now treats that text and value as
+  a decline (17 tests pass).
+- WORKTREE GUARD: the bridge exports `DSH_HOOK_BRIDGE=1`. Under it the guard tells a
+  Harness session to `working_directory` into the worktree it created, because 0.2.1
+  runs hooks in the session's current directory (guard suite 134 pass, bridge 106).
+- RUNBOOK: `ds-harness-update` skill v5 (dynamic port, profile-plugin re-pin step,
+  ledger rows 56 to 58), claude-cowork-config PR #480 merged `cbf29b54`; playbook
+  PR #199 merged. Launchers unchanged: DeepSeek Flash-1017 ships under the same
+  `deepseek-flash` id (live `/models`).
+
 ## 2026-10-18 - Claude route restored and the hook bridge proven live after the 0.2.1-rc.2 install
 
 - TWO FAULTS IN ONE SESSION. (1) Every turn ended "This turn failed / Request
