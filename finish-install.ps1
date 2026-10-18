@@ -304,6 +304,7 @@ if ($WhatIf) {
   } else {
     Write-Host "  4. launch, wait for the local host listener, verify settings with the vault, repair drift"
   }
+  Write-Host "  preset: re-derive the pinned 'Standard + Claude Code hooks' preset if upstream's standard moved, then snapshot"
   Write-Host "  final: assert the AGENTS.md hardlink, print SETUP COMPLETE. Running $version"
   Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
   Write-Host "WHATIF done: nothing was installed and nothing under $dshHome was written."
@@ -379,6 +380,40 @@ if ($migrating) {
     Restore-AgentsHardlink
     & py $VaultTool restore --all 2>&1 | ForEach-Object { Write-Host "  $_" }
     Assert-AgentsHardlink 'after the pre-launch repair'
+  }
+}
+
+# --- 3b. Re-derive the pinned standard preset (app is still closed) ------------
+# The operator's home patch holds its own copy of the standard agent preset. It
+# is a snapshot and does NOT track upstream, so a release that changes upstream's
+# standard silently leaves the pinned copy behind: at 0.2.1 it was missing
+# time-context, tool-schedule and tool-plugin-market and still carried three
+# things upstream had removed or reworded. Nothing fails when that happens; the
+# preset just quietly is not the standard one any more.
+#
+# Runs here, before the relaunch, because the file is hot-reloaded and must not
+# be written underneath a running app. Runs AFTER the vault repair above, so a
+# restore cannot put the stale copy back, and snapshots straight after so the
+# post-launch verify compares against the re-derived file rather than repairing
+# it away.
+$presetTool = Join-Path $PSScriptRoot 'dsh-preset-rederive.py'
+if ((Test-Path $presetTool) -and (Test-Path $VaultTool)) {
+  Write-Host "[preset] checking the pinned Standard + Claude Code hooks preset..."
+  $presetCheck = & py $presetTool --check --home $dshHome 2>&1
+  $presetCode = $LASTEXITCODE
+  $presetCheck | ForEach-Object { Write-Host "  $_" }
+  if ($presetCode -eq 3) {
+    Write-Host "[preset] re-deriving it from the preset this build ships..."
+    $presetApply = & py $presetTool --home $dshHome 2>&1
+    $applyCode = $LASTEXITCODE
+    $presetApply | ForEach-Object { Write-Host "  $_" }
+    if ($applyCode -ne 0) {
+      Write-Warning "[preset] re-derive FAILED; your preset is unchanged. Nothing else is blocked."
+    } else {
+      & py $VaultTool snapshot --reason "post-install $version (preset re-derive)" 2>&1 | ForEach-Object { Write-Host "  $_" }
+    }
+  } elseif ($presetCode -ne 0) {
+    Write-Warning "[preset] could not be checked (exit $presetCode); leaving it alone."
   }
 }
 
