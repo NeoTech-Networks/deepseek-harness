@@ -56,7 +56,10 @@ $staged     = Join-Path $dshHome 'migration-0.1.7'
 $newManifest = Join-Path $PSScriptRoot 'dsh-config.vault.manifest.0.1.7.yaml'
 $vaultRepo  = 'C:\Projects\repos\dsh-config'
 $VaultTool  = 'C:\Claude\bin\dsh_config_vault.py'
-$hostPort   = 19387
+# 0.2.1 launches the desktop host with `--port 0` (system-assigned) and keeps
+# the resulting URL in memory only (`hostUrl = ready.url` in main.ts), so there
+# is no fixed port to probe and nothing on disk to read it from. Readiness is
+# decided by Test-HostPort from the OS socket table instead.
 # electron-builder derives the NSIS uninstall key as uuid5(appId); only
 # DSH_DESKTOP_APP_ID=com.deepseek.harness yields this one. Any other key means a
 # SECOND copy was installed beside the running one.
@@ -133,11 +136,22 @@ function Assert-AgentsHardlink($when) {
 }
 
 function Test-HostPort {
-  $client = New-Object System.Net.Sockets.TcpClient
-  try {
-    $task = $client.ConnectAsync('127.0.0.1', $hostPort)
-    return ($task.Wait(1000) -and $client.Connected)
-  } catch { return $false } finally { $client.Dispose() }
+  # Readiness without a port number. Ask Windows which sockets are listening and
+  # whether any of them belongs to a DeepSeek Harness process. This is the same
+  # signal the fixed-port probe gave (the local host has opened and is serving),
+  # with no assumption about which port the system handed out.
+  #
+  # Only loopback listeners count: an unrelated listening socket owned by the
+  # app would otherwise read as ready before the host is up.
+  $procs = @(Get-Process -Name 'DeepSeek Harness' -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty Id)
+  if ($procs.Count -eq 0) { return $false }
+  $listeners = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+    Where-Object {
+      $procs -contains $_.OwningProcess -and
+      ($_.LocalAddress -eq '127.0.0.1' -or $_.LocalAddress -eq '::1')
+    })
+  return ($listeners.Count -gt 0)
 }
 
 function Wait-AppReady($minutes) {
@@ -255,7 +269,7 @@ if (Test-Path $oldRuntime) {
 
 Write-Host "installer : $(Split-Path $installer -Leaf)"
 Write-Host "home      : $dshHome"
-Write-Host "mode      : $(if ($migrating) { 'FIRST 0.1.7 INSTALL - one-time settings migration' } else { 'reinstall on the 0.1.7 line' })"
+Write-Host "mode      : $(if ($migrating) { 'FIRST 0.1.7 INSTALL - one-time settings migration' } else { 'reinstall on the current line - vault guards your settings' })"
 
 if ($migrating) {
   # Staging reads the live files and writes only $staged, so it is safe before the
@@ -284,11 +298,11 @@ if ($WhatIf) {
   if ($migrating) {
     Write-Host "  4. move profiles\desktop aside to profiles\desktop.0.1.5-runtime"
     Write-Host "  5. write the staged settings.yaml and home cordis.patch.yml (originals kept as *.pre-0.1.7)"
-    Write-Host "  6. launch, wait for port $hostPort, wait for settings.yaml.imported, verify every section"
+    Write-Host "  6. launch, wait for the local host listener, wait for settings.yaml.imported, verify every section"
     Write-Host "  7. repair any section that did not import by re-importing it alone"
     Write-Host "  8. switch the vault manifest to the 0.1.7 layout and snapshot again"
   } else {
-    Write-Host "  4. launch, wait for port $hostPort, verify settings with the vault, repair drift"
+    Write-Host "  4. launch, wait for the local host listener, verify settings with the vault, repair drift"
   }
   Write-Host "  final: assert the AGENTS.md hardlink, print SETUP COMPLETE. Running $version"
   Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
@@ -377,7 +391,7 @@ if ($NoWait) {
   Remove-Item $selfLock -Force -ErrorAction SilentlyContinue
   exit 0
 }
-Write-Host "waiting for the app to come up (port $hostPort)..."
+Write-Host "waiting for the app to come up (local host listener)..."
 $state = Wait-AppReady 3
 if ($state -ne 'ready') {
   Write-Host ""
