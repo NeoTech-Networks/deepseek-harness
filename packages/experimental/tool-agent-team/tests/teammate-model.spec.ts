@@ -17,6 +17,7 @@ import * as SubagentFork from '@deepseek-ai/dsh-subagent-fork-in-process'
 import * as SubagentSpawn from '@deepseek-ai/dsh-subagent-spawn-in-process'
 import SubagentModelSelectionConfig from '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
 import { MockAdapter, textResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
+import { mountWorkingDirectoryFixture } from '../../../subagent/subagent/tests/working-directory-fixture.ts'
 import TeamService from '../../agent-team/src/index.ts'
 import * as toolTeam from '../src/index.ts'
 
@@ -52,6 +53,12 @@ async function setup(options: SetupOptions = {}) {
   contexts.add(ctx)
   if (options.selection !== undefined) await ctx.plugin(SubagentModelSelectionConfig, options.selection)
   await mountAgentLoopTestDependencies(ctx)
+  // Team tools register into the exact Agent scope, which needs a working
+  // directory service before the Agent exists. Without this fixture every
+  // Team tool silently fails to register and the failure surfaces as
+  // `unknown tool "spawn_teammate"`. tool-team.spec.ts mounts it for the same
+  // reason; this spec predates the requirement.
+  await mountWorkingDirectoryFixture(ctx)
   const storageRoot = mkdtempSync(join(tmpdir(), 'dsh-tool-team-model-'))
   roots.push(storageRoot)
   await ctx.plugin(JsonlSessionPersistence, { root: storageRoot })
