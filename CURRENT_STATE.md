@@ -1,5 +1,49 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-10-18 - Claude route restored and the hook bridge proven live after the 0.2.1-rc.2 install
+
+- TWO FAULTS IN ONE SESSION. (1) Every turn ended "This turn failed / Request
+  timed out. / TIMEOUT" on the default `anthropic / claude-opus-5-5` route. (2) The
+  entire Claude Code hook layer (promote gate, worktree guard, verification hooks)
+  was silently OFF inside the app.
+- FAULT 1 WAS A TRANSPORT DROP, NOT THE UPDATE AND NOT THE PROVIDER. Six of six
+  turns failed 08:20 to 08:55; every retry event carried `provider: anthropic`,
+  `usage` 0/0/0 and five attempts of 10 to 12 s each. The stored OAuth token was
+  healthy throughout: `GET /v1/models` HTTP 200 in 0.33 s (14 models, `expires`
+  1792353892060 = 2026-10-18T20:04:52Z) and `POST /v1/messages` reached Anthropic
+  and answered HTTP 429 in 0.30 s. The model setting is byte-identical to the
+  2026-10-07 backup, so the upgrade rerouted nothing.
+- THE PATH CLEARED BY ITSELF; NO VPN CHANGE WAS MADE. A 60-second probe at 09:10
+  gave 20 of 20 connects to `160.79.104.10:443` at 13 to 46 ms, and the NordLynx
+  tunnel never changed state (last transition 07:31:32). No route exception, no
+  Nord server change and no split tunnelling was made or needed. The 08:57
+  readings that looked like a hard block were source-bound socket tests, which
+  prove nothing: binding a source address does not change the egress interface.
+- FAULT 2 WAS A RESTART, AND IT IS PROVEN. The hook plugins were written 08:19:14
+  while all five app processes had started 08:04:20, so the 0.2.1 bridge never
+  loaded and nothing warned. Restarted 09:06, created a session, sent one prompt:
+  `hook/result` `exitCode 0` for UserPromptSubmit, PreToolUse, PostToolUse and
+  Stop, and `turn/end` `{"kind":"completed"}` with zero retries on
+  `claude-opus-5-5` (a real `pwsh` tool call ran). ALL FIVE POINTS ARE PROVEN:
+  SessionStart is never logged as `hook/result` (OPEN_ISSUES 16, reconfirmed over
+  13 records today), but it FIRED for that session, proven by its emitted-context
+  card `session-c1f0c807-....json` written at 09:21:25 carrying the railway
+  orientation block. So the four logged points plus the card are five.
+- DRIVEN WITH NO GUI CLICKS. The desktop host is a web app: launch it with stdout
+  redirected and it prints `dsh web: http://127.0.0.1:<port>/?token=...`; headless
+  Playwright then drove the real composer. 0.2.1 picks a new port every launch
+  (ledger 80), so read that URL, never hard-code a port.
+- TWO SIDE FACTS FOR NEXT TIME. Nord blocks UDP/53 to every resolver except its
+  own `103.86.99.100`, so `dns.resolve4` (c-ares) times out while `dns.lookup`
+  answers in 9 ms; and `api.anthropic.com` publishes an AAAA record on a machine
+  with no IPv6 address and no IPv6 route.
+- WRITTEN BACK: playbook `05-neotech-fork.md` error ledger row 82, a corrected
+  hook check (four logged points plus the SessionStart card) and a "bridge was
+  LOADED, not just installed" row in section 6;
+  memory notes `dsh-anthropic-oauth-and-slow-dns` (second mechanism) and the new
+  `dsh-hook-bridge-needs-a-restart`. Session page:
+  `C:\Projects\logs\2026-10-18\dsh-anthropic-route-restore\`.
+
 ## 2026-10-16 - New Session workspace picker mirrors the sidebar grouping
 
 - WHAT SHIPPED: the blank-session "Choose workspace" dropdown now lists Workspaces under the same named headings as the left pane, A to Z inside each heading, with the ungrouped folders last in their Host order. Commit `bb3fb9b8f0` on `update/v0.2.0-rc.2` (worktree `C:\d202`), pushed with `CI=true` set for the push (without it the pre-push hook's `pnpm install` dies before the typecheck body: ledger 43 and 75).
@@ -68,32 +112,6 @@
 - INSTALLED 2026-10-01 by the operator from a NEW PowerShell window. This session runs INSIDE the app (`pwsh<-DeepSeek Harness.exe<-...<-explorer.exe`), so `Test-RunningInsideHarness` DID fire and the `-WhatIf` dry run refused with exit 2, which is the correct behaviour and the reason the install was handed over rather than run here.
 - VERIFIED LIVE against the running app: `DisplayVersion 0.2.0-rc.2` and exactly ONE uninstall row `7808434f-...`; the installed `resources\app.asar` is **byte-identical to the built one**, 127,016,675 bytes, sha256 `6EACBC9356D023DFDD5171820246D9239EF47E260F8B7EFD7E8DB3C6FB22DE8B`; `dsh_local_features_check.py` reads **35 of 35**; `openWhenSeated` 0, `sidebarMounted` 3, `onToggleMode` 4, `headingInBody` 3; port 19387 answers with 7 processes started 04:55:49 to 05:01:03; `settings.yaml.imported` present with the home patch at 20,093 bytes and the profile patch at 5,541 bytes, BOTH identical to their pre-install sizes; `selectedDefault: standard-hooks` with the deliberate `maxBytes: 131072` intact; **443 of 443 `hook/result` events exit 0** with this session showing PreToolUse 222, PostToolUse 221, UserPromptSubmit 3 and Stop 1; SessionStart proven from the bridge's own `emitted-context` record `session-c112bdab-....json` written 05:00:47; a real `memory_search` MCP call answered; 1,161 session files on disk with the newest 6 all readable; and the `AGENTS.md` hardlink holding two names with equal hashes.
 - NOT PROVEN, AND NOT CLAIMED: the mode picker seen ON SCREEN (file read only), the model menu seen visually, and a plan review watched auto-opening - which is OPEN_ISSUES item 1 and now needs a real plan to finish while another session is on screen. One useful side finding: this session runs on `deepseek-flash`, so the DeepSeek route survived the pi-ai 0.87.1 bump in this release despite the release note warning that saved model selections might need re-picking.
-
-## 2026-09-28 - DSH 0.2.0-rc.1 built, installed and verified
-
-- WHAT SHIPPED: a same-architecture stack REPLAY of the 55 commits on `update/v0.1.7-rc.2` onto upstream `dsh-v0.2.0-rc.1` (released 2026-09-28T12:36Z, merge `4878cdabd8`). Branch `update/v0.2.0-rc.1`, worktree `C:\d201`, HEAD `eea5627d7d`, pushed to origin. Mechanism: a NATIVE THREE-WAY SQUASH MERGE, because `merge-base(dsh-v0.2.0-rc.1, update/v0.1.7-rc.2)` is exactly `dsh-v0.1.7-rc.2` (`477b4f4205`), so git resolved the non-overlapping changes itself and only **9 files conflicted** out of 380. Three commits: `c0caac67fb` (the replay), `41ef7921d7` (the plan-review fix cherry-picked), `eea5627d7d` (version bump and regeneration).
-- NO LOSS, PROVEN MECHANICALLY: every one of the **316 files the stack touched that upstream did NOT also touch is byte-identical to the fork's version**, and all 160 added files are present. This replaces the subject-list `comm` check, which is meaningless under a squash because HEAD carries 2 commits rather than 55. (The first attempt at this check was WRONG and silently proved nothing: Git Bash MSYS rewrote the `:` in `ref:path`, so the comparisons were empty-vs-empty and read as equal. `MSYS_NO_PATHCONV=1` fixes it.)
-- SCHEDULE / AGENT-EXPERIENCE: upstream 0.2.0 REMOVED `time-context`, `schedule` and `ui-schedule` from the web-app bundle (automation moved to an optional plugin bundle). The fork had inherited them, so the merge deliberately does NOT restore them; a comment in `packages/bundle/web-app/cordis.patch.yml` records why. `agent-experience` is a SKILL.md inside `packages/preset/agent-preset`, shipped with the package, so it reaches every mode with no preset change.
-- THE OPERATOR'S MODE NEEDED NO RE-DERIVE, AND RE-DERIVING WOULD HAVE HURT. The shipped `standard.patch.yml` is byte-identical between the two tags, and the merged tree's shipped copy differs from it ONLY by two fork edits (the session-status rows and `plan-mode.defaultActive`). A structural diff shows the operator's `preset-standard-hooks` plugin list matches the shipped list exactly - 142 lines each, the ONLY divergence being the deliberate `agent-instructions.maxBytes: 131072` (raised 2026-09-24, ledger 34). `dsh-017-restore-mode.py` copies the shipped list wholesale and asserts equality, so running it would have reverted that to 65536 and silently dropped the global AGENTS.md rules. It would also have exited on its own `already restored` guard.
-- TWO REAL FORK BUGS FOUND ON THE REPLAY AND FIXED rather than handed back: `packages/README.md` was 997 words against a 994-word ceiling because the fork added a session-status row (condensed on both the en and zh sides to 992), and the `docs/subsystems/agent-team.md` type-equiv block for `TeamMemberSnapshot` was missing the `model?: string` field and its JSDoc that the teammate-model feature added to the source (added on both sides). `verify-doc-budgets` and `verify-type-equiv` now pass, the latter 470/470 with 470 paired derivatives. Three stale translation-pairing records re-recorded; 1171 pairs consistent.
-- BUILD AND PACKAGE: `pnpm run build` exit 0, 353 client artifacts (347 on the clean tag). The pre-push hook independently passed the client typecheck in 32.59 s. Packaging FAILED TWICE on `prepare:runtime` `TypeError: fetch failed`, then succeeded on the third run. THE KNOWN "SEED THE CACHE" REMEDY DOES NOT APPLY ANY MORE and the cause is now measured, not assumed: wrapping `globalThis.fetch` showed a **transient 10-second connect timeout to github.com** fetching `electron-v44.0.0/SHASUMS256.txt`. `@electron/get` verifies that SHASUMS file **even when the archive is already cached**, so seeding `downloads` cannot prevent the fetch. Every artifact the primary-runtime lock requires was verified present in the cache by sha256 before the retry, and both worktrees are on Electron 44.0.0. A plain retry is the fix.
-- THE ARTIFACT: `deepseek-harness-0.2.0-rc.1-win-x64-unsigned.exe`, **287,621,301 bytes**, sha256 `CD77B230DE4BCCAC8E7A14F6ED4C3625DFC31B2B94B9D4F60ADEC1A2548C885A`, packaged smoke passed (DOCX, XLSX, PPTX to PDF and skill CLI discovery).
-- INSTALLED 2026-09-28 at 17:10 by running `C:\d201\finish-install.ps1` from a Claude Code session. THE PLAN'S PREMISE THAT THE APP HOSTS THIS SESSION IS FALSE and is worth not re-asserting: the ancestry is `pwsh, cmd, claude.exe, pwsh, Code.exe, explorer.exe`, so `Test-RunningInsideHarness` did NOT fire, and the guard - not the plan text - is the authority. There is a 2026-09-24 precedent of installing from exactly this position. Script output: `installer exit code: 0`, `installed 0.2.0-rc.1 (1 ... uninstall row(s))`, settings `19 files, all same` BOTH before the install and after the relaunch with no repair, `HARDLINK OK (final)`, `SETUP COMPLETE. Running 0.2.0-rc.1`, exit 0.
-- VERIFIED: the installed `resources\app.asar` is **byte-identical to the built one** (`91AC29A3FF0F6C147C64CACBDF09DE3189A9E5ABB3A266D9415B4DDED0CFD2D0`, 123,862,667 bytes), so every marker read out of it is a fact about the code built here; exactly ONE uninstall row `7808434f-...` reading `DisplayVersion 0.2.0-rc.1`; 6 processes all started 17:10:37-17:11:00; port 19387 answers; `dsh_local_features_check.py` reads **35 of 35** against the installed asar; the plan-review fix is present (`openWhenSeated` = 2, `sidebarMounted` = 0); hooks exit 0 for UserPromptSubmit (2), PreToolUse (8), PostToolUse (8) and Stop (2). NOT PROVEN, and NOT claimed: a real MCP call from a post-install session, a session CREATED after the install (the one that ran was resumed from 2026-09-25), and the mode picker seen on screen (file read only: `selectedDefault: standard-hooks`). Nothing in this session was seen on screen.
-- SESSIONSTART IS NOT LOGGED, BUT IT FIRES. `SessionStart` has no `hook/result` row in ANY of the 95 session files on disk, so it cannot be measured from the session log - a harness logging fact, not a regression. It is proven to fire on 0.2.0-rc.1 from the bridge's own record instead: `state/emitted-context/session-df6f145f-....json` was written at 17:11, after the install, and carries the "Railway orientation (auto, every session)" card, which the `railway_orientation_card.py` SessionStart hook emits. The ledger-28 freeze fix is intact (`work_recall_card.py` still has `RECEIPTS_BUDGET_S = 4.0`).
-- STILL FAILING, ALL PRE-EXISTING AND UNCHANGED BY THIS UPDATE: `verify-client-ui-i18n` (2 hard-coded strings in `ui-sidebar-explorer/definition.ts`) and `verify-repository-references` (commit hashes in `PORT-0.1.7-FEATURE-MAP.md`), both recorded in OPEN_ISSUES item 3 and both caused by fork-only files. `verify-cordis-config` fails on the CLEAN upstream tag too, so it is upstream's. `verify-module-graph` and `verify-tsconfig-paths` pass (the latter needed no alias work: the three new upstream packages already carry their aliases and project references from the tag). Sixteen generators, all exit 0.
-- ROLLBACK FLOOR untouched: `C:\d17p\...\deepseek-harness-0.1.7-rc.2-win-x64-unsigned.exe`, 287,433,586 bytes.
-
-## Last save-state (2026-09-28T21:34:22.876889+00:00)
-
-- Trigger: `save_state`
-- Actor: `claude-code:steve`
-- Session id: `1de95b99-9bed-4b81-bcb4-101f281a0cb8`
-- Repos touched: deepseek-harness (source: cwd fallback (transcript scan found none))
-- Plan: (none)
-- Transcript: C:\Users\SteveDempsey\.claude\projects\C--Projects-general-DS-harness\ab143138-bff1-43e0-ab69-db2a9f22ea0a.jsonl
-
-<!-- claude-memory-actor:end -->
 
 <!-- claude-memory-actor:begin
   Auto-managed by the claude-memory save-state hook.

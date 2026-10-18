@@ -1,5 +1,21 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-18 - Claude route and hook bridge after the 0.2.1-rc.2 install
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Anthropic hosts resolve | 3 hosts | api.anthropic.com, claude.ai, console.anthropic.com all 160.79.104.10 (DoH, status 0) | VERIFIED |
+| Anthropic TCP 443 | connects | 20 of 20 over 60 s, 13 to 46 ms; Cloudflare 20 of 20; DeepSeek 8 of 8 | VERIFIED |
+| Stored OAuth token valid | HTTP 200 | `GET /v1/models` 200 in 0.33 s, 14 models, expires 2026-10-18T20:04:52Z | VERIFIED |
+| Endpoint reaches Anthropic | any HTTP answer | `POST /v1/messages` HTTP 429 in 0.30 s (rate limited, request understood) | VERIFIED |
+| A turn completes | `kind: completed` | `turn/end` `{"kind":"completed"}`, 0 retries, `claude-opus-5-5` | VERIFIED |
+| Tool call ran | tool/result present | `pwsh` echo, tool/call seq 26, tool/result seq 33, PreToolUse and PostToolUse each exit 0 | VERIFIED |
+| Hooks fire after restart | exit 0 per point | UserPromptSubmit 1, PreToolUse 1, PostToolUse 1, Stop 1, all exit 0 | VERIFIED for those four points |
+| SessionStart | fires | not logged as `hook/result` (OPEN_ISSUES 16, reconfirmed over 13 records), but its emitted-context card for the test session was written 09:21:25 carrying the railway orientation block | VERIFIED by card, not by log |
+| Bridge loaded, not just installed | process start earlier than plugin mtime | plugins written 08:19:14, processes started 08:04:20 before restart; 09:06:46 after | VERIFIED |
+| Not a regression of the upgrade | model setting unchanged | `anthropic / claude-opus-5-5` identical to the 2026-10-07 backup | VERIFIED |
+| NordVPN change was the fix | a change was made | NO change made: tunnel last transitioned 07:31:32 and the path cleared on its own | NOT APPLICABLE, recorded as intermittent |
+
 ## 2026-10-16 - Workspace picker groups, installed 0.2.0-rc.2 build
 
 | Check | Expected | Result | Status |
