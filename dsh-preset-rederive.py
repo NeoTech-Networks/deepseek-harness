@@ -155,11 +155,15 @@ def main() -> int:
         print(f"error: no '{PS}plugins:' block under {ROW_ID}", file=sys.stderr)
         return 2
     old_block = [line for line in current_lines[start:] if line.strip() != ""]
+    # Compare like for like: the shipped block keeps its blank lines, the
+    # current one was just filtered, so blank lines would otherwise always read
+    # as a difference and --check could never report "up to date".
+    shipped_block_nonblank = [line for line in new_block if line.strip() != ""]
 
     old_ids, new_ids = row_ids(old_block), row_ids(new_block)
     added = [i for i in new_ids if i not in old_ids]
     removed = [i for i in old_ids if i not in new_ids]
-    same = not added and not removed and old_block == new_block
+    same = not added and not removed and old_block == shipped_block_nonblank
 
     # Every row in the source must carry an id, or the comparison above is blind.
     if len(new_ids) < 10:

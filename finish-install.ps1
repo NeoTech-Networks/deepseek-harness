@@ -51,6 +51,9 @@ $dshHome    = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $env:USERPRO
 $agentsMd   = Join-Path $dshHome 'AGENTS.md'
 $claudeMd   = Join-Path $env:USERPROFILE '.claude\CLAUDE.md'
 $selfLock   = Join-Path $env:TEMP 'dsh-finish-install.lock'
+# The app's own stdout/stderr for the launch this script performed. Read by
+# Test-HostPort for the one line that names the system-assigned host port.
+$bootLog    = Join-Path $env:TEMP 'dsh-app-boot.log'
 $migrator   = Join-Path $PSScriptRoot 'dsh-017-migrate.py'
 $staged     = Join-Path $dshHome 'migration-0.1.7'
 $newManifest = Join-Path $PSScriptRoot 'dsh-config.vault.manifest.0.1.7.yaml'
@@ -136,13 +139,35 @@ function Assert-AgentsHardlink($when) {
 }
 
 function Test-HostPort {
-  # Readiness without a port number. Ask Windows which sockets are listening and
-  # whether any of them belongs to a DeepSeek Harness process. This is the same
-  # signal the fixed-port probe gave (the local host has opened and is serving),
-  # with no assumption about which port the system handed out.
+  # Readiness, with no assumption about the port number.
   #
-  # Only loopback listeners count: an unrelated listening socket owned by the
-  # app would otherwise read as ready before the host is up.
+  # The app assigns its own port (`--port 0`) and prints the result once:
+  #
+  #   dsh web: http://127.0.0.1:<port>/?token=<token>
+  #
+  # That line is the authoritative answer, so it is read first: if it names a
+  # loopback address that accepts a connection, the host is up.
+  #
+  # The socket-table arm below is the fallback for the case where the line was
+  # not captured. It is deliberately kept, because on 2026-10-18 this machine
+  # started reporting OwningProcess 0 for every loopback listener in
+  # Get-NetTCPConnection AND in netstat, which makes that arm useless here even
+  # though it was correct on 2026-10-17.
+  if (Test-Path $bootLog) {
+    $line = Select-String -Path $bootLog -Pattern 'dsh web: (http://127\.0\.0\.1:(\d+))' -ErrorAction SilentlyContinue |
+      Select-Object -First 1
+    if ($null -ne $line) {
+      $port = [int]$line.Matches[0].Groups[2].Value
+      $client = New-Object System.Net.Sockets.TcpClient
+      try {
+        $task = $client.ConnectAsync('127.0.0.1', $port)
+        if ($task.Wait(1500) -and $client.Connected) { return $true }
+      } catch {
+        # The line is printed before the listener accepts; keep waiting.
+      } finally { $client.Dispose() }
+    }
+  }
+
   $procs = @(Get-Process -Name 'DeepSeek Harness' -ErrorAction SilentlyContinue |
     Select-Object -ExpandProperty Id)
   if ($procs.Count -eq 0) { return $false }
@@ -208,7 +233,14 @@ function Reset-LaunchEnvironment {
 
 function Start-AppClean {
   Reset-LaunchEnvironment
-  Start-Process $exe
+  Remove-Item $bootLog, "$bootLog.err" -Force -ErrorAction SilentlyContinue
+  # Capture the app's own output. 0.2.1 launches the desktop host with
+  # `--port 0`, so the port is system-assigned and the URL lives in memory only
+  # (`hostUrl = ready.url` in main.ts). The one place it is ever written down is
+  # the app's own log line:
+  #   dsh web: http://127.0.0.1:<port>/?token=<token>
+  # Start-Process still launches the app normally; this only records what it says.
+  Start-Process $exe -RedirectStandardOutput $bootLog -RedirectStandardError "$bootLog.err"
 }
 
 function Invoke-Migrator {
