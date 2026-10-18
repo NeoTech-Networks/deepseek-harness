@@ -13,6 +13,15 @@
 $ErrorActionPreference = 'Stop'
 $env:CI = 'true'
 
+# github.com and release-assets.githubusercontent.com are unreachable for HTTP
+# from this machine (TCP 443 connects, the transfer stalls: measured with curl
+# on 2026-10-17 - github.com returned a 302 after 34 s and then zero bytes).
+# @electron/get honours ELECTRON_MIRROR, and cdn.npmmirror.com serves the same
+# bytes at about 4 MB/s. Only set it when the caller has not chosen one.
+if (-not $env:ELECTRON_MIRROR) {
+    $env:ELECTRON_MIRROR = 'https://npmmirror.com/mirrors/electron/'
+}
+
 $repo   = 'C:\d212'
 $desktop = Join-Path $repo 'apps\desktop'
 $status  = Join-Path $repo 'package-status.json'
