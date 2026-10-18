@@ -13,6 +13,16 @@
 $ErrorActionPreference = 'Stop'
 $env:CI = 'true'
 
+# Windows ships bsdtar at System32; Git for Windows ships GNU tar, and a
+# developer shell puts Git's usr\bin first. GNU tar reads the drive letter in
+# C:\... as an rsh host and prepare:packages dies with
+#
+#   tar (child): Cannot connect to C: resolve failed
+#
+# Put System32 first so the Windows bsdtar wins, whatever shell launched this.
+$system32 = Join-Path $env:WINDIR 'System32'
+if (($env:PATH -split ';')[0] -ne $system32) { $env:PATH = "$system32;$env:PATH" }
+
 # Electron runtime download.
 #
 # github.com and release-assets.githubusercontent.com are unreachable for HTTP
