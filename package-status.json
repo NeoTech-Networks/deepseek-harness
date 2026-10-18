@@ -1,0 +1,7 @@
+{
+  "state": "failed",
+  "exit_code": 1,
+  "detail": "package:win:x64:unsigned exited 1",
+  "finished": "2026-10-17T20:26:28.7396020-04:00",
+  "repo": "C:\\d212"
+}
