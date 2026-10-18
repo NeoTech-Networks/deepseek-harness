@@ -27,20 +27,24 @@ id: 2026-09-24-vision-routing-source
 baseline: false
 changes:
   - root: "event:agent/inbox/spliced"
-    previous: "2026-09-21-user-question-reply"
-    after: "28cdb31a64154d70062d750383097dce0012cf28493b5a09b0eb3a9bf196c5e9"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "81da0eae559d5adda8302b0efadfcdde0262ad828bc0d9acbf0aa57dc46fda37"
     decision: same-version
   - root: "event:developer/message"
-    previous: "2026-09-21-user-question-reply"
-    after: "64e38f337622492beb69d8bbb9e44758e3bd253533cd1e384811bef150a5dcd9"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "180f3eb1f465d6bade8b1f83a27f859c76ab4a91846fa8c89f18c1d186d4181d"
+    decision: same-version
+  - root: "event:session/purpose"
+    previous: null
+    after: "46cfdb8083cf88f5b76acf1aedb5aaed74dc8b9c4063e006f00403b42c23bb9c"
     decision: same-version
   - root: "event:session/title-llm-request"
-    previous: "2026-09-21-user-question-reply"
-    after: "bf784428f054089d29623cca3cfff14467c47472373056c711020b886055b089"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "dc12155491371ac6639c975c2a256a75c67b2ea09d54b180c170169718364520"
     decision: same-version
   - root: "event:user/message"
-    previous: "2026-09-21-user-question-reply"
-    after: "43b3a0d3f69890698c198be8cdabd3cf0b5cda83e11bef44b8991c2601bc424b"
+    previous: "2026-10-13-user-rpc-principal"
+    after: "562cfb33482ebaa016b9c9f53739282568797789433260cedad0ebb5c5b4cb4c"
     decision: same-version
 ```
 

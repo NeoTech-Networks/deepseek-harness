@@ -286,6 +286,7 @@ describe('WorkspacePicker', () => {
     render(
       <WorkspacePicker
         open anchorRef={anchor()} useSessions={hook(sessions)}
+        {...allowAllAccess}
         useWorkspaces={hook(workspaceState([
           workspace('alpha', 'Alpha', 'ABC'), workspace('beta', 'Beta', 'ABC'),
         ]))}
