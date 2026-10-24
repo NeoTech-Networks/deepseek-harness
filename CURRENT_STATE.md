@@ -1,5 +1,15 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-10-24 - 0.2.1-rc.3 installed and verified (43 of 43 features)
+
+- UPDATE: upstream `dsh-v0.2.1-rc.3` (2026-10-23, six commits: More menus, navigation pins, New Session draft kept, analytics click events, API-key route follows `/models`). Branch `update/v0.2.1-rc.3`, worktree `C:\d213`, HEAD `35ba87ca75`, fork tag `dsh-v0.2.1-rc.3-fork`, both pushed and read back.
+- METHOD: merged the new tag into `update/v0.2.1-rc.2` (`44eeca3c91`), because that branch was itself a tag merge (`740d66a971`) and the planned cherry-pick conflicted in about 40 files. 7 conflicts, all keep-both; slot catalog regenerated; llm-deepseek README pair re-recorded; nine fork-only packages stamped rc.3 (`35ba87ca75`); `stage-package.ps1` now uses `$PSScriptRoot`.
+- COMPLETENESS: old branch is an ancestor of HEAD (21 of 21 commits); 349 of 359 fork-only files byte-identical, the 10 others deliberate.
+- INSTALLED 10:58 from Claude Code (ancestry had no Harness; `-WhatIf` clean). Installer 290,524,001 bytes, sha256 `194C9CD3...772E`, kept in `C:\Projects\exports6-10-24-dsh-0.2.1-rc.3\`. Installed `app.asar` byte-identical to the built one (`63ACDB2F...C5C`).
+- HARDLINK REPAIRED: the final assert refused because `~\.dsh\AGENTS.md` had been replaced that morning by an edit tool carrying the newer Composio rule. Its text was written into `CLAUDE.md` in place and the link remade (one file id, two names); both originals kept beside the installer.
+- HOOK BRIDGE re-pinned at exactly `0.2.1-rc.3`; app restarted after the plugin write (process 11:01:00 > plugin 11:00:25).
+- Session log: `C:\Projects\logs6-10-24\dsh-rc3-verify\` (screenshots 01 to 09).
+
 ## 2026-10-18 - 0.2.1-rc.2 post-upgrade review: hook bridge is now a pinned profile plugin
 
 - ROOT CAUSE OF THE DEAD HOOKS, IN ONE LINE: 0.2.1 no longer ships
