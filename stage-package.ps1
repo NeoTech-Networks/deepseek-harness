@@ -1,4 +1,4 @@
-# Stage the unsigned Windows installer for the 0.2.1-rc.2 port.
+# Stage the unsigned Windows installer for the current port (repo = this script's folder).
 #
 # Run this through Start-Process with -WindowStyle Hidden and NO stdio
 # redirection. prepare-dsh.ts requires a real console handle; a redirected file
@@ -64,7 +64,7 @@ if (-not $env:ELECTRON_MIRROR) {
     }
 }
 
-$repo   = 'C:\d212'
+$repo   = $PSScriptRoot
 $desktop = Join-Path $repo 'apps\desktop'
 $status  = Join-Path $repo 'package-status.json'
 
