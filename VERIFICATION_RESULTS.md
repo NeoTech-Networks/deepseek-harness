@@ -1,5 +1,18 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-24 - 0.2.1-rc.3 install
+
+- VERIFIED version: `DisplayVersion 0.2.1-rc.3`, exactly one uninstall row; `dsh_update_check.py` VERDICT: UP TO DATE.
+- VERIFIED features: `dsh_local_features_check.py` 43 of 43 on the packaged asar and again on the installed asar.
+- VERIFIED build gates: build 9 of 9 PASS, typecheck exit 0, pre-push typecheck PASS. Conflicted packages' tests: 4815 passed; failures are the known symlink EPERM and the four all-sessions failures (item 13); six 5 s timeouts under load passed when rerun alone (263 passed, 1 EPERM).
+- VERIFIED settings: finish-install `every one of your settings survived the install` (20 files, all same), preset pinned 34 rows = shipped 34.
+- VERIFIED host: `dsh web` on port 61031 accepted a connection (the socket table reports owner PID 0 on this machine, so that arm cannot be used).
+- VERIFIED hooks: new Flash session `session-97f5f46e...` and new Pro session `session-9ba390fe...` each logged UserPromptSubmit, PreToolUse, PostToolUse and Stop at exitCode 0, and each has a SessionStart emitted-context card.
+- VERIFIED models: the live `/models` lists `deepseek-flash` and `deepseek-v4-pro`; both appear in the model menu and both answered a tool-using turn (`2026-10-24T11:06:35`, `2026-10-24T11:07:48`).
+- VERIFIED MCP: 10 of 10 mounted servers answered a read-only call (composio on a retry after a transient `fetch failed`). Screaming Frog is not mounted because its local app was not running.
+- SEEN on screen (headless against the live host): mode picker "Standard + Claude Code hooks"; More menu with Browse other plugins and Create your plugin; New Session draft kept after switching away and back (probe text cleared afterwards); composer Save / Archive / Production buttons; footer Skills Used and Purpose lines.
+- VERIFIED hardlink: `fsutil hardlink list` names both paths, both file ids `0x...01116b38`.
+
 ## 2026-10-18 - 0.2.1-rc.2 post-upgrade review (hooks, plan mode, worktree guard)
 
 | Check | Expected | Result | Status |
