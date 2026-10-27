@@ -11,7 +11,17 @@
 - VERIFIED SessionStart chain: 17 hooks, 0 non-zero exits, 9.0 s serial, slowest `work_recall_card.py` 4.17 s (its own budget).
 - VERIFIED the pre-install dry run: `finish-install.ps1 -WhatIf` exits 0, names `deepseek-harness-0.2.1-rc.4-win-x64-unsigned.exe`, writes nothing, and `Test-RunningInsideHarness` did not fire (ancestry `pwsh, cmd, claude.exe, pwsh, Code.exe, explorer.exe`).
 - VERIFIED the checker fix: `dsh_update_check.py --self-test` passes 8 version comparisons and 6 verdicts; live, against the still-installed rc.3, it answers `NPM AHEAD, NO SOURCE TAG 0.2.1-rc.4 (next)` where it previously answered `UP TO DATE`.
-- NOT VERIFIED, and not claimed: the install itself, `DisplayVersion 0.2.1-rc.4`, the installed asar, hook firing in a new session, MCP calls, the mode picker and the hardlink. All of those need the operator's install and a new session.
+- NOT VERIFIED at that point, and not claimed then: the install itself, `DisplayVersion 0.2.1-rc.4`, the installed asar, hook firing in a new session, MCP calls, the mode picker and the hardlink. SUPERSEDED the same evening by the INSTALLED section below.
+
+## 2026-10-27 - 0.2.1-rc.4 INSTALLED and read back
+
+- VERIFIED version: `finish-install.ps1` printed `installed 0.2.1-rc.4 (1 DeepSeek Harness uninstall row(s))` and `SETUP COMPLETE. Running 0.2.1-rc.4`, with no `STILL DRIFTED`. An independent registry read afterwards returns `DisplayVersion 0.2.1-rc.4` and exactly one DeepSeek Harness uninstall row.
+- VERIFIED settings: `verify: 20 files, all same` and `every one of your settings survived the install`; preset `up to date; nothing to change` (pinned 34 rows = shipped 34).
+- VERIFIED hardlink: `HARDLINK OK (final): AGENTS.md and .claude\CLAUDE.md are one file, 2 links, id 0x00000000000000000001000001116b38`.
+- VERIFIED the RUNNING code carries the fix: `dsh_local_features_check.py` reads 43 of 43 from the INSTALLED asar, and `asar_guard_check.cjs` on the installed `app.asar` reports `const listable guard: true` with `empty pages on the false branch: true`.
+- VERIFIED the hook-bridge pin and the load order: `~\.dsh\profiles\desktop\node_modules\@deepseek-ai\dsh-hooks-claude-code\package.json` reads `0.2.1-rc.4` with mtime 19:13:55, and the earliest DeepSeek Harness process started 19:14:08 after the restart (5 processes alive).
+- VERIFIED the checker in both directions: before the install, against rc.3, it answered `NPM AHEAD, NO SOURCE TAG 0.2.1-rc.4 (next)`; after it answers `UP TO DATE` with `npm newest 0.2.1-rc.4 (tag next)` and no "newer than installed" mark. `--self-test` passes 8 comparisons and 6 verdicts.
+- NOT VERIFIED: hook firing in a session created AFTER the restart (the restored `cipp_gateway` session holds 386 hook events, all predating it, and its last event is an app-level `agent/inbox/spliced` at 19:14:35), one real MCP call per server, and the mode picker seen on screen. The loopback-listener arm is unusable on this machine because every loopback listener reports owner PID 0.
 
 ## 2026-10-24 - 0.2.1-rc.3 install
 

@@ -1,31 +1,28 @@
 # NEXT_SESSION_PROMPT (one current pointer)
 
-0.2.1-rc.4 is BUILT AND PROVEN but NOT INSTALLED (2026-10-27). It is an npm-only
-release with no upstream tag, so it was backported: one guard in `dsh-mcp-client`,
-proved by the built `lib/index.js` being byte-identical to the published rc.4
-artifact. Branch `update/v0.2.1-rc.4` in `C:\d214` and tag `dsh-v0.2.1-rc.4-fork`
-are pushed. The installer is
-`C:\Projects\exports\2026-10-27-dsh-0.2.1-rc.4\deepseek-harness-0.2.1-rc.4-win-x64-unsigned.exe`
-(290,670,337 bytes, sha256 `361898423A8BC96582BB1D2D5FE094C89B1B98DF850FA88F5B53BCC2E97F0DA8`).
+0.2.1-rc.4 is INSTALLED (2026-10-27 19:12) and read back: `DisplayVersion` 0.2.1-rc.4
+with one uninstall row, 43 of 43 features on the installed asar, the `listable`
+guard present in that asar, settings all `same`, `HARDLINK OK (final)`, and the
+hook bridge re-pinned at exactly 0.2.1-rc.4 with the app restarted after it
+(process 19:14:08 > plugin 19:13:55). It is an npm-only release with no upstream
+tag, so it was backported, and the backport is proved by the built
+`mcp-client/lib/index.js` being byte-identical to the published rc.4 artifact.
+Branch `update/v0.2.1-rc.4` in `C:\d214` and tag `dsh-v0.2.1-rc.4-fork` are pushed.
 
 Next, in this order:
 
-1. Steve runs the install, which was not run because the Harness app was mid-session:
-   `powershell -ExecutionPolicy Bypass -File "C:\d214\finish-install.ps1"`, from a
-   window that is not inside the app. Expect `SETUP COMPLETE. Running 0.2.1-rc.4`.
-2. Re-pin the hook bridge at exactly `0.2.1-rc.4` and restart the app:
-   `dsh.cmd plugin --profile desktop add @deepseek-ai/dsh-hooks-claude-code@0.2.1-rc.4 @deepseek-ai/dsh-hook-protocol@0.2.1-rc.4`,
-   then confirm the earliest app process started LATER than the plugin package.json.
-3. Read back `DisplayVersion` (must be `0.2.1-rc.4`, one uninstall row),
-   `dsh_local_features_check.py` (43 of 43) and the guard inside the installed
-   `app.asar` (`node C:\Projects\temp\asar_guard_check.cjs "<installed app.asar>"`
-   must report `const listable guard: true`).
+1. Start one NEW session in the app and send any prompt, then read its log for
+   `hook/result` at `exitCode 0` on UserPromptSubmit, PreToolUse, PostToolUse and
+   Stop plus a SessionStart card (`node C:\Projects\temp\read_session_hooks.mjs
+   "<session file v4 zstd>" "2026-10-27T19:14"`). Nothing has run a turn since the
+   restart, so this is the one arm still open.
+2. One real MCP call from that session, and the mode picker read on screen
+   (Developer tools may be needed to see the chip).
+3. Then the older visual items: press the composer buttons in a scratch session
+   (OPEN_ISSUES 12), photograph the lower workspace-picker headings (14), and
+   diagnose the four all-sessions spec failures (13).
 
-Still open from before: product analytics decision (OPEN_ISSUES 16); the composer
-buttons pressed in a scratch Session (12); the lower workspace-picker headings
-photographed (14); the four all-sessions spec failures diagnosed (13).
-
-The `ds-harness-update` skill is now v7 and still uncommitted in the shared
-`C:\Claude` checkout (OPEN_ISSUES 4).
+The `ds-harness-update` skill is v7 (four identical copies on disk) and still
+uncommitted in the shared `C:\Claude` checkout (OPEN_ISSUES 4 and 19).
 
 Session log: `C:\Projects\logs\2026-10-27\dsh-rc4-backport\`.
