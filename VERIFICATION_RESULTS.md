@@ -1,5 +1,18 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-27 - 0.2.1-rc.4 backport (built and proven; install NOT run)
+
+- VERIFIED the release is npm-only: `npm view @deepseek-ai/dsh time` has 0.2.1-rc.4 at `2026-10-26T15:28:13.431Z`; `git ls-remote --tags upstream` has no rc.4; the releases API's newest entry is `dsh-v0.2.1-rc.3`; `master` still reads `0.2.1-rc.3`.
+- VERIFIED what it contains: both versions of `dsh-mcp-client` and `dsh-mcp-resources` downloaded with `npm pack` and diffed. Only `lib/index.js` (one guard) and three README files in each package differ.
+- VERIFIED the backport: the BUILT `packages/mcp/mcp-client/lib/index.js` is byte-identical to the published rc.4 `lib/index.js` (35,189 bytes, `diff -q` clean), and the extracted copy from the packaged `win-unpacked\resources\app.asar` is identical after CRLF normalisation.
+- VERIFIED the spec has teeth: without the guard it fails with `Client.listResources() called but server does not advertise resources capability - returning empty list`; with it, 6 of 6 in `protocol.spec.ts` pass.
+- VERIFIED build gates: `release:verify --family dsh` 353 members, 0 unordered peers; `pnpm run typecheck` exit 0; `mcp-client` + `mcp-resources` 146 passed, 1 failed (`negotiation-lifecycle` "no child could be spawned"), and that same test fails identically on the untouched rc.3 tree in `C:\d213`; seven catalog verifiers exit 0; `pnpm run build` 9 passed 0 failed in 74.6 s.
+- VERIFIED packaged build: guard present in `win-unpacked\resources\app.asar`; `dsh_local_features_check.py --asar` reads 43 of 43; installer 290,670,337 bytes, sha256 `361898423A8BC96582BB1D2D5FE094C89B1B98DF850FA88F5B53BCC2E97F0DA8`, copied to the exports folder and re-hashed there.
+- VERIFIED SessionStart chain: 17 hooks, 0 non-zero exits, 9.0 s serial, slowest `work_recall_card.py` 4.17 s (its own budget).
+- VERIFIED the pre-install dry run: `finish-install.ps1 -WhatIf` exits 0, names `deepseek-harness-0.2.1-rc.4-win-x64-unsigned.exe`, writes nothing, and `Test-RunningInsideHarness` did not fire (ancestry `pwsh, cmd, claude.exe, pwsh, Code.exe, explorer.exe`).
+- VERIFIED the checker fix: `dsh_update_check.py --self-test` passes 8 version comparisons and 6 verdicts; live, against the still-installed rc.3, it answers `NPM AHEAD, NO SOURCE TAG 0.2.1-rc.4 (next)` where it previously answered `UP TO DATE`.
+- NOT VERIFIED, and not claimed: the install itself, `DisplayVersion 0.2.1-rc.4`, the installed asar, hook firing in a new session, MCP calls, the mode picker and the hardlink. All of those need the operator's install and a new session.
+
 ## 2026-10-24 - 0.2.1-rc.3 install
 
 - VERIFIED version: `DisplayVersion 0.2.1-rc.3`, exactly one uninstall row; `dsh_update_check.py` VERDICT: UP TO DATE.
