@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
-import { InMemoryTransport, type Transport } from '@modelcontextprotocol/client'
+import { Client, InMemoryTransport, type Transport } from '@modelcontextprotocol/client'
 import { McpServer } from '@modelcontextprotocol/server'
 import { serveStdio } from '@modelcontextprotocol/server/stdio'
 import { ToolCallId } from '@deepseek-ai/dsh-llm'
@@ -84,6 +84,34 @@ describe('modern MCP connections', () => {
       callId: ToolCallId('ping-after-resource-errors'), signal: new AbortController().signal,
     })
     expect(ping).toMatchObject({ isError: false, value: { content: [{ type: 'text', text: 'pong' }] } })
+  })
+
+  it('lists nothing for a server without the resource capability, without calling the SDK', async () => {
+    const server = new McpServer({ name: 'tools-only', version: '1' })
+    server.registerTool('ping', { inputSchema: z.object({}) }, async () => ({ content: [] }))
+    const ctx = await connect(server, { resources: true })
+    // The release fix is "the SDK is never called", not "an empty page comes
+    // back": its fallback for an unadvertised capability is what writes the
+    // stray diagnostic into stdout, where the ACP profile carries JSON-RPC. So
+    // assert the call itself, which also fails if the guard silently drifts.
+    const listResources = vi.spyOn(Client.prototype, 'listResources')
+    const listTemplates = vi.spyOn(Client.prototype, 'listResourceTemplates')
+    onTestFinished(() => {
+      listResources.mockRestore()
+      listTemplates.mockRestore()
+    })
+    for (const [name, expected] of [
+      ['list_mcp_resources', { resources: [] }],
+      ['list_mcp_resource_templates', { resourceTemplates: [] }],
+    ] as const) {
+      const result = await ctx.tools.execute({
+        name, arguments: { server: 'fixture' },
+        callId: ToolCallId(`unadvertised-${name}`), signal: new AbortController().signal,
+      })
+      expect(result).toMatchObject({ isError: false, value: expected })
+    }
+    expect(listResources).not.toHaveBeenCalled()
+    expect(listTemplates).not.toHaveBeenCalled()
   })
 
   it('reads resources and preserves explicit list and template cursors through the SDK', async () => {
