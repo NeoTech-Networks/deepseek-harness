@@ -37,7 +37,7 @@ import { queueDockEntry } from './queue/QueueDock.tsx'
 import { EnterBehaviorRow } from './settings/EnterBehaviorRow.tsx'
 import type { EnterBehaviorRowInjected } from './settings/EnterBehaviorRow.tsx'
 import { ConversationRoot } from './skeleton/ConversationRoot.tsx'
-import { ConversationContent } from './skeleton/ConversationContent.tsx'
+import { ConversationContent, resetHeroPicker } from './skeleton/ConversationContent.tsx'
 import { ConversationPanel } from './skeleton/ConversationPanel.tsx'
 import { ConversationHeader } from './skeleton/ConversationHeader.tsx'
 import { ConversationSession, ConversationSessionHeader } from './skeleton/ConversationSession.tsx'
@@ -193,6 +193,8 @@ export function apply(ctx: Context, config: Config = Config({})): void {
   )
 
   ctx.effect(() => () => { submissionPolicy.dispose() })
+  // The hero picker outlives each per-Session body, not this plugin.
+  ctx.effect(() => () => { resetHeroPicker() }, 'ui-conversation: hero picker state')
 
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item',

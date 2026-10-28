@@ -1,10 +1,54 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import clsx from 'clsx'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import { workspaceDisplayTitle } from '@deepseek-ai/dsh-api-workspace-controller/default-workspace'
+import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { ConversationContentProps, ConversationViewsProps, InputZone } from '../contract/slots.ts'
 import { HeroShell, WorkspaceChip, workspaceLabel } from './EmptyHero.tsx'
 import css from './ConversationRoot.module.css'
+
+/**
+ * The hero workspace picker's state: whether its dropdown is open and the pick
+ * still waiting for its blank Session. It lives outside the component because
+ * the body is rebuilt for every Session it shows, and the picked folder's
+ * blank Session lands seconds after the pick: component state would close the
+ * open dropdown and drop the pick exactly then.
+ */
+export interface HeroPickerState {
+  /** The workspace dropdown is open. */
+  readonly open: boolean
+  /** The picked Workspace whose blank Session has not become current yet. */
+  readonly pending: WorkspaceId | undefined
+  /** The last ready Workspace list that did not contain `pending`, so one list is counted once. */
+  readonly missedIn: readonly unknown[] | undefined
+}
+
+const HERO_PICKER_INITIAL: HeroPickerState = { open: false, pending: undefined, missedIn: undefined }
+
+/** The main occurrence's picker, shared across its per-Session rebuilds. */
+const MAIN_HERO_PICKER: SnapshotStore<HeroPickerState> = createSnapshotStore(HERO_PICKER_INITIAL)
+
+/** Return the main occurrence's picker to closed with no pick (test isolation). */
+export function resetHeroPicker(): void {
+  MAIN_HERO_PICKER.set(HERO_PICKER_INITIAL)
+}
+
+/**
+ * The picker store for one occurrence: the main one survives rebuilds; an
+ * embedded one keeps its own, as component state did.
+ * @param variant - the occurrence variant.
+ * @returns the store and its current state.
+ */
+function useHeroPicker(variant: ConversationContentProps['variant']): [HeroPickerState, SnapshotStore<HeroPickerState>] {
+  const store = useMemo(
+    () => variant === 'main' ? MAIN_HERO_PICKER : createSnapshotStore(HERO_PICKER_INITIAL),
+    [variant],
+  )
+  const subscribe = useCallback((notify: () => void) => store.subscribe(notify), [store])
+  const getSnapshot = useCallback(() => store.getSnapshot(), [store])
+  const state = useSyncExternalStore(subscribe, getSnapshot)
+  return [state, store]
+}
 
 function ConversationSessionView({ renderSlot }: ConversationViewsProps) {
   return renderSlot('conversation.session', {})
@@ -56,9 +100,27 @@ export function ConversationContent(props: ConversationContentProps) {
   // send; its reason is already localized by whoever raised it.
   const composerBlock = useComposerBlock(block => block)
 
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [pendingWorkspaceId, setPendingWorkspaceId] = useState<WorkspaceId | undefined>()
+  const [picker, pickerStore] = useHeroPicker(props.variant)
+  const pickerOpen = picker.open
+  const pendingWorkspaceId = picker.pending
+  const setPickerOpen = useCallback((next: boolean | ((open: boolean) => boolean)): void => {
+    const current = pickerStore.getSnapshot()
+    const open = typeof next === 'function' ? next(current.open) : next
+    if (open !== current.open) pickerStore.set({ ...current, open })
+  }, [pickerStore])
+  const setPendingWorkspaceId = useCallback((
+    next: WorkspaceId | undefined | ((current: WorkspaceId | undefined) => WorkspaceId | undefined),
+  ): void => {
+    const current = pickerStore.getSnapshot()
+    const pending = typeof next === 'function' ? next(current.pending) : next
+    if (pending !== current.pending) pickerStore.set({ ...current, pending, missedIn: undefined })
+  }, [pickerStore])
   const pickerAnchor = useRef<HTMLButtonElement>(null)
+  // The dropdown belongs to the hero row: a Session that leaves the hero (its
+  // first message went out) takes it down, so a later hero never opens on its own.
+  useEffect(() => {
+    if (!hero) setPickerOpen(false)
+  }, [hero, setPickerOpen])
 
   // Publishes the two live measurements floating View chrome reads off the
   // scroll body: the seat's height as --dsh-composer-height, so controls clear
@@ -91,15 +153,33 @@ export function ConversationContent(props: ConversationContentProps) {
     workspace => workspace.workspaceId === pendingWorkspaceId,
   )
 
-  // Clear the pending pick once the session lands in it, or when the picked
-  // workspace disappears from a ready list (deleted from the sidebar).
+  // Clear the pending pick once the session lands in it, or once the picked
+  // workspace is missing from two different ready lists (deleted from the
+  // sidebar). One list is not enough: a reconnect baseline can arrive between
+  // two complete lists, and a single miss would drop a pick that still exists.
+  const workspaceItems = workspaces.items
   useEffect(() => {
     if (pendingWorkspaceId === undefined) return
-    if (sessionWorkspace?.workspaceId === pendingWorkspaceId
-      || (workspaces.phase === 'ready' && pendingWorkspace === undefined)) {
+    if (sessionWorkspace?.workspaceId === pendingWorkspaceId) {
       setPendingWorkspaceId(undefined)
+      return
     }
-  }, [pendingWorkspaceId, sessionWorkspace?.workspaceId, workspaces.phase, pendingWorkspace])
+    const current = pickerStore.getSnapshot()
+    if (pendingWorkspace !== undefined) {
+      if (current.missedIn !== undefined) pickerStore.set({ ...current, missedIn: undefined })
+      return
+    }
+    if (workspaces.phase !== 'ready') return
+    if (current.missedIn === workspaceItems) return
+    if (current.missedIn === undefined) {
+      pickerStore.set({ ...current, missedIn: workspaceItems })
+      return
+    }
+    setPendingWorkspaceId(undefined)
+  }, [
+    pendingWorkspaceId, sessionWorkspace?.workspaceId, workspaces.phase, pendingWorkspace,
+    workspaceItems, pickerStore, setPendingWorkspaceId,
+  ])
 
   const zone: InputZone | undefined =
     session === undefined || inputState === undefined ? undefined : { session, input: inputState }

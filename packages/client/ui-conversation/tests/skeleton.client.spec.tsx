@@ -20,7 +20,7 @@ import type { ConversationSnapshot } from '../src/client/contract/snapshot.ts'
 import { createConversationStore } from '../src/client/stores.ts'
 import { SessionInputShell } from '../src/client/input/facade.ts'
 import { en, zh } from '../src/client/locales.ts'
-import { ConversationContent } from '../src/client/skeleton/ConversationContent.tsx'
+import { ConversationContent, resetHeroPicker } from '../src/client/skeleton/ConversationContent.tsx'
 import { ConversationHeader } from '../src/client/skeleton/ConversationHeader.tsx'
 import { ConversationMainPanel } from '../src/client/skeleton/ConversationMainPanel.tsx'
 import { ConversationSession, ConversationSessionHeader } from '../src/client/skeleton/ConversationSession.tsx'
@@ -85,6 +85,7 @@ function fireResize(el: Element): void {
 
 afterEach(() => {
   cleanup()
+  resetHeroPicker()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   resizeObservers.length = 0
@@ -411,7 +412,7 @@ function mount(
   const props: ConversationSlotProps = { ...runtimeProps, renderSlot, renderFactorySlot }
   const view = render(<ConversationMainPanel {...props} />)
   return {
-    view, store, wiring, sink, retargetWorkspace, session, conversation, slotCalls, lineageOwners, seatOwners, open,
+    view, store, wiring, sink, retargetWorkspace, session, conversation, slotCalls, lineageOwners, seatOwners, open, workspaces,
     pickerOwner: () => pickerOwner,
     setPinned,
     actionsOwner: () => {
@@ -863,6 +864,48 @@ describe('ConversationRoot resident composer', () => {
     const owner = b.pickerOwner() as { onPick(id: WorkspaceId): void }
     await act(async () => { owner.onPick(wid('second')); await Promise.resolve() })
     expect(selectWorkspace).toHaveBeenCalledWith(wid('second'))
+    expect(b.view.queryByText('Selected Folder')).toBeNull()
+    expect(b.view.getByText('one')).toBeTruthy()
+  })
+
+  it('keeps the open dropdown and the pending pick when the body is rebuilt for the landing Session', async () => {
+    const pending = vi.fn(() => new Promise<void>(() => {}))
+    const rows = [
+      { ...workspace('one'), sessionIds: [SID] },
+      { ...workspace('second'), title: 'Selected Folder' },
+    ]
+    const first = mount(sessionSnapshotOf({ blank: true }), rows, pending)
+    fireEvent.click(first.view.getByRole('button', { name: '选择工作区' }))
+    const owner = first.pickerOwner() as { onPick(id: WorkspaceId): void }
+    await act(async () => { owner.onPick(wid('second')); await Promise.resolve() })
+    fireEvent.click(first.view.getByRole('button', { name: '选择工作区' }))
+    expect(first.view.getByRole('button', { name: '选择工作区' }).getAttribute('aria-expanded')).toBe('true')
+    first.view.unmount()
+
+    const rebuilt = mount(sessionSnapshotOf({ blank: true }), rows, pending)
+    const chip = rebuilt.view.getByRole('button', { name: '选择工作区' })
+    expect(chip.getAttribute('aria-expanded')).toBe('true')
+    expect(rebuilt.view.getByText('Selected Folder')).toBeTruthy()
+    expect((rebuilt.pickerOwner() as { selectedId?: WorkspaceId }).selectedId).toBe(wid('second'))
+  })
+
+  it('keeps a pending pick through one ready list that lacks it, and drops it after a second', async () => {
+    const pending = vi.fn(() => new Promise<void>(() => {}))
+    const one = { ...workspace('one'), sessionIds: [SID] }
+    const second = { ...workspace('second'), title: 'Selected Folder' }
+    const b = mount(sessionSnapshotOf({ blank: true }), [one, second], pending)
+    fireEvent.click(b.view.getByRole('button', { name: '选择工作区' }))
+    const owner = b.pickerOwner() as { onPick(id: WorkspaceId): void }
+    await act(async () => { owner.onPick(wid('second')); await Promise.resolve() })
+    expect(b.view.getByText('Selected Folder')).toBeTruthy()
+
+    act(() => { b.workspaces.set(workspaceState([one])) })
+    act(() => { b.workspaces.set(workspaceState([one, second])) })
+    expect(b.view.getByText('Selected Folder')).toBeTruthy()
+
+    act(() => { b.workspaces.set(workspaceState([one])) })
+    act(() => { b.workspaces.set(workspaceState([{ ...one }])) })
+    act(() => { b.workspaces.set(workspaceState([one, second])) })
     expect(b.view.queryByText('Selected Folder')).toBeNull()
     expect(b.view.getByText('one')).toBeTruthy()
   })
