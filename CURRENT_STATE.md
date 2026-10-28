@@ -151,15 +151,15 @@
   Auto-managed by the claude-memory save-state hook.
   Anything between :begin and :end is overwritten on every save-state.
   Edits outside this block are preserved.
-  Last write: actor=claude-code:steve session=f4cba619-1774-494d-9bf4-7e2b798e9d6b at=2026-10-11T19:40:30.811883+00:00
+  Last write: actor=claude-code:steve session=ef7df7d0-3182-4830-ba9c-71eed6b3f679 at=2026-10-28T19:34:20.375508+00:00
 -->
-## Last save-state (2026-10-11T19:40:30.811883+00:00)
+## Last save-state (2026-10-28T19:34:20.375508+00:00)
 
-- Trigger: `handoff`
+- Trigger: `save_state`
 - Actor: `claude-code:steve`
-- Session id: `f4cba619-1774-494d-9bf4-7e2b798e9d6b`
+- Session id: `ef7df7d0-3182-4830-ba9c-71eed6b3f679`
 - Repos touched: claude-cowork-config, deepseek-harness (source: transcript scan)
 - Plan: (none)
-- Transcript: C:\Claude\integrations\dsh-hook-bridge\transcripts\56a1ebf5-342f-45c4-b0d1-6717a131ccfd.jsonl
+- Transcript: C:\Claude\integrations\dsh-hook-bridge\transcripts\01a0d163-bc8d-4c8c-9a8d-92bece4a8d52.jsonl
 
 <!-- claude-memory-actor:end -->
