@@ -1,5 +1,12 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-28 - New Session workspace dropdown reset fix
+
+- VERIFIED the cause live (`record.json`): body remount `wd4y4 -> kme6u` and `aria-expanded true -> false` at 53.6 s, the instant `dsh.sessions.current` switched to the picked folder's blank session, 7.2 s after the pick. With no input the chip held for 45 s.
+- VERIFIED tests: `ui-conversation` 50 files, 852 passed, including two new specs (state survives a body rebuild; a pick survives one list that lacks it and drops after a second). `tsc -b tsconfig.client.json` exit 0; oxlint clean on the touched files. `ui-workspace` all-sessions 4 failures reproduce identically with the change stashed (pre-existing, OPEN_ISSUES 13).
+- VERIFIED build and package: `pnpm run build` 9 of 9; package exit 0; marker `ui-conversation: hero picker state` in the packaged asar; `dsh_local_features_check.py --asar` 44 of 44.
+- VERIFIED installed and live: `dsh_local_features_check.py` on the running build 44 of 44 including `picker-reset-fix`; the recorder on the new GUI (`verify.json`) picked `abc-outreach`, the blank session landed at 28.3 s with NO body remount and the dropdown stayed open, chip unchanged to 146 s.
+
 ## 2026-10-27 - 0.2.1-rc.4 backport (built and proven; install NOT run)
 
 - VERIFIED the release is npm-only: `npm view @deepseek-ai/dsh time` has 0.2.1-rc.4 at `2026-10-26T15:28:13.431Z`; `git ls-remote --tags upstream` has no rc.4; the releases API's newest entry is `dsh-v0.2.1-rc.3`; `master` still reads `0.2.1-rc.3`.

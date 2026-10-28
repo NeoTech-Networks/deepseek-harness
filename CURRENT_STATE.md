@@ -1,5 +1,11 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-10-28 - New Session workspace dropdown no longer resets (installed)
+
+- CAUSE (recorded live): picking a folder makes the Host attach or create that folder's blank session about 7 s later; the conversation body is rebuilt for it, and the hero picker's open state and pending pick lived in `ConversationContent` local state, so the open dropdown closed and the pick dropped. Log `C:\Projects\logs\2026-10-28\dsh-new-session-picker-reset\phase1-finding.md`.
+- FIX `2cc541e27c` on `update/v0.2.1-rc.4` (also branch `fix/new-session-picker-reset`), both pushed: picker state moved to a module store that outlives the body (main occurrence; embedded keeps its own), a pick is dropped only after two distinct ready lists lack it, the dropdown closes when the Session leaves the hero, and the store resets on plugin dispose.
+- INSTALLED by Steve 2026-10-28 (app process 15:21:19). Installer sha256 `18CBBDD5E5AB2043E252840BC01E31D4C510081CF47D6179E98A5EF892070C47`; it and the previous rc.4 rollback installer are in `C:\Projects\exports\2026-10-28-dsh-picker-reset\`. Version stays 0.2.1-rc.4. Feature ledger row `picker-reset-fix` added (44 features).
+
 ## 2026-10-27 - 0.2.1-rc.4 backported from an npm-only release; install handed to Steve
 
 - THE RELEASE EXISTS ONLY ON npm: 0.2.1-rc.4 published 2026-10-26T15:28:13Z on the `next` tag, with no git tag, no GitHub release and no public commit (`git ls-remote --tags upstream` has none; releases newest is `dsh-v0.2.1-rc.3`; `master` still reads `0.2.1-rc.3` at `22ddee3792`; the publishes carry no `gitHead`).
