@@ -51,6 +51,14 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
      */
     'sidebar.workspaces': { kind: 'single'; scope: 'root'; owner: SidebarSectionOwnerProps }
     /**
+     * The fork's seat for the native workspace browser (ui-workspace
+     * registers it here). `sidebar.workspaces` above is then a plugin seat:
+     * when a plugin fills it (ds-bot's team list), its list sits in a
+     * foldable section above All Sessions and this browser keeps the rest of
+     * the column, so both stay reachable.
+     */
+    'sidebar.sessions': { kind: 'single'; scope: 'root'; owner: SidebarSectionOwnerProps }
+    /**
      * The settings seat at the sidebar foot. Declared by this package's
      * 'sidebar' entry; ui-settings registers its trigger row + modal panel.
      * The sidebar passes only its column state — it holds no settings state.
@@ -182,6 +190,8 @@ export type SidebarRootInjected = {
     entryPins: ObservableSnapshot<readonly string[]>
     /** Whether `sidebar.panellist.actions` has registrations. */
     entryActions: ObservableSnapshot<boolean>
+    /** Whether a plugin fills `sidebar.workspaces` (fork: combined sidebar). */
+    workspacesTakenOver: ObservableSnapshot<boolean>
   }
 }
 
@@ -200,6 +210,7 @@ export type SidebarRootComponentProps =
     | 'sidebar.allSessions'
     | 'sidebar.panellist.actions'
     | 'sidebar.workspaces'
+    | 'sidebar.sessions'
     | 'sidebar.settings'
     | 'sidebar.footer.action'
   >

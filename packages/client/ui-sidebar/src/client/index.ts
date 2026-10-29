@@ -67,6 +67,13 @@ export function apply(ctx: ClientContext): void {
     getSnapshot: () => ctx.slots.entriesOfSlot('sidebar.panellist.actions').length > 0,
     subscribe: (listener: () => void) => ctx.slots.subscribe('sidebar.panellist.actions', listener),
   }
+  // Fork: the native browser lives in `sidebar.sessions`, so anything in
+  // `sidebar.workspaces` is a plugin's list (ds-bot's team), which the shell
+  // shows in a foldable section above the browser instead of in its place.
+  const workspacesTakenOver = {
+    getSnapshot: () => ctx.slots.entriesOfSlot('sidebar.workspaces').length > 0,
+    subscribe: (listener: () => void) => ctx.slots.subscribe('sidebar.workspaces', listener),
+  }
 
   const injectProps = (): SidebarRootInjected => ({
     // The shell's New Session button rides the Workspace UI's shared action
@@ -76,7 +83,7 @@ export function apply(ctx: ClientContext): void {
     selectPanel: (id) => { ctx.layout.selectPanel(id) },
     setPinned: panelPins.setPinned,
     trackEntryClick: (attributes) => { ctx.get('productAnalytics')?.track('sidebar_menu_click', attributes) },
-    hooks: { panels, shortcuts: ctx.shortcuts.catalog, entryPins: panelPins.unpinned, entryActions },
+    hooks: { panels, shortcuts: ctx.shortcuts.catalog, entryPins: panelPins.unpinned, entryActions, workspacesTakenOver },
   })
   ctx.slots.inject('sidebar', () => ctx.slots.register({
     name: 'sidebar',
@@ -89,6 +96,7 @@ export function apply(ctx: ClientContext): void {
       'sidebar.allSessions': { kind: 'single', scope: 'root' },
       'sidebar.panellist.actions': { kind: 'list', scope: 'root' },
       'sidebar.workspaces': { kind: 'single', scope: 'root' },
+      'sidebar.sessions': { kind: 'single', scope: 'root' },
       'sidebar.settings': { kind: 'single', scope: 'root' },
       'sidebar.footer.action': { kind: 'list', scope: 'root' },
     },

@@ -20,7 +20,7 @@ import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   FishLogo, IconAppsAddOutlineRegular, IconNewChatOutlineMedium, IconNewChatOutlineRegular, IconPanelLeftOutlineRegular,
-  isDarwinDesktop, Menu, ShortcutKeys, Tooltip,
+  IconTriangleRightFillRegular, isDarwinDesktop, Menu, ShortcutKeys, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {
@@ -39,6 +39,18 @@ const COLLAPSE_SETTLE_MS = 150
  * edge — on the way to the conversation, or around a portalled menu.
  */
 const SCROLLBAR_LINGER_MS = 2000
+
+/** Where the combined sidebar remembers whether its plugin (Bots) section is open. */
+const PLUGIN_SECTION_KEY = 'dsh.sidebar.pluginSection.open'
+
+/** Read the remembered plugin-section fold state; open unless the operator folded it. */
+function readPluginSectionOpen(): boolean {
+  try {
+    return window.localStorage.getItem(PLUGIN_SECTION_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
 
 /** Format complete-build metadata for the local brand badge. */
 function localBuildVersion(): string | undefined {
@@ -138,12 +150,24 @@ export function SidebarRoot({
   usePanels,
   useEntryPins,
   useEntryActions,
+  useWorkspacesTakenOver,
   useShortcuts,
   usePanelInfo,
   t,
   renderSlot,
 }: SidebarRootComponentProps) {
   const panels = usePanels(snapshot => snapshot)
+  // Fork: a plugin (ds-bot) shadowing the workspace region no longer replaces
+  // it. Its list moves into a foldable section and the native browser renders
+  // from its second seat, so both are on screen.
+  const takenOver = useWorkspacesTakenOver(value => value)
+  const [pluginOpen, setPluginOpen] = useState(readPluginSectionOpen)
+  const togglePluginSection = (): void => {
+    setPluginOpen((open) => {
+      try { window.localStorage.setItem(PLUGIN_SECTION_KEY, String(!open)) } catch { /* storage unavailable: keep in memory */ }
+      return !open
+    })
+  }
   const unpinned = useEntryPins(ids => ids)
   const activePanelId = usePanelInfo(info => info.activePanelId)
   const hasEntryActions = useEntryActions(registered => registered)
@@ -255,8 +279,9 @@ export function SidebarRoot({
       ref={column}
       className={clsx(
         css.root, !wide && css.collapsed, !wide && everWide.current && css.railIn,
-        collapsed && wide && css.fading, !pointerInside && css.quietBars,
+        collapsed && wide && css.fading, !pointerInside && css.quietBars, takenOver && css.combined,
       )}
+      data-sidebar-combined={takenOver ? '' : undefined}
       style={wide ? { width: collapsed ? lastWideWidth.current : width } : undefined}
       onPointerEnter={() => {
         cancelLinger()
@@ -367,14 +392,52 @@ export function SidebarRoot({
       {/* The browsing region fills the column between the controls and the
           foot in both states; its rail icon column rides the same slot. */}
       <div className={css.regionArea}>
-        {renderSlot('sidebar.allSessions', {
-          wide,
-          expandSidebar: () => { if (collapsed) toggleSidebar() },
-        })}
-        {renderSlot('sidebar.workspaces', {
-          wide,
-          expandSidebar: () => { if (collapsed) toggleSidebar() },
-        })}
+        {takenOver && wide
+          ? (
+            <>
+              <section className={css.pluginSection} data-sidebar-plugin-section="">
+                <button
+                  type="button"
+                  className={css.pluginHeader}
+                  aria-expanded={pluginOpen}
+                  onClick={togglePluginSection}
+                >
+                  <IconTriangleRightFillRegular className={clsx(css.pluginChevron, pluginOpen && css.pluginChevronOpen)} />
+                  <span className={css.pluginLabel}>{t('pluginSection.title')}</span>
+                </button>
+                {pluginOpen && (
+                  <div className={css.pluginBody}>
+                    {renderSlot('sidebar.workspaces', {
+                      wide,
+                      expandSidebar: () => { if (collapsed) toggleSidebar() },
+                    })}
+                  </div>
+                )}
+              </section>
+              {renderSlot('sidebar.allSessions', {
+                wide,
+                expandSidebar: () => { if (collapsed) toggleSidebar() },
+              })}
+              {renderSlot('sidebar.sessions', {
+                wide,
+                expandSidebar: () => { if (collapsed) toggleSidebar() },
+              })}
+            </>
+          )
+          : (
+            <>
+              {renderSlot('sidebar.allSessions', {
+                wide,
+                expandSidebar: () => { if (collapsed) toggleSidebar() },
+              })}
+              {/* The collapsed rail has room for one icon column: the plugin's
+                  when one fills the region seat, otherwise the browser's. */}
+              {renderSlot(takenOver ? 'sidebar.workspaces' : 'sidebar.sessions', {
+                wide,
+                expandSidebar: () => { if (collapsed) toggleSidebar() },
+              })}
+            </>
+          )}
       </div>
 
       {/* Footer actions stack above Settings in both sidebar widths. */}

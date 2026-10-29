@@ -51,11 +51,11 @@ async function createRuntime(): Promise<SlotTestRuntime> {
 }
 
 /** Test-owned shell role: declares and renders the browsing region and the frame-wide overlay list. */
-type FrameProps = PropsRenderSlots<'sidebar.workspaces' | 'shell.overlay'>
+type FrameProps = PropsRenderSlots<'sidebar.sessions' | 'shell.overlay'>
 function SidebarFrame({ renderSlot }: FrameProps) {
   return (
     <>
-      {renderSlot('sidebar.workspaces', { wide: true, expandSidebar: () => {} })}
+      {renderSlot('sidebar.sessions', { wide: true, expandSidebar: () => {} })}
       {renderSlot('shell.overlay', {})}
     </>
   )
@@ -65,7 +65,7 @@ function SidebarFrame({ renderSlot }: FrameProps) {
 async function declareFrame(runtime: SlotTestRuntime): Promise<void> {
   await runtime.root.declare(
     {
-      'sidebar.workspaces': { kind: 'single', scope: 'root' },
+      'sidebar.sessions': { kind: 'single', scope: 'root' },
       'shell.overlay': { kind: 'list', scope: 'root' },
     } as never,
     SidebarFrame as never,

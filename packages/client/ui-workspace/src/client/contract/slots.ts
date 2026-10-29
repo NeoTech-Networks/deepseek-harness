@@ -548,7 +548,7 @@ export type RowToastProps =
 
 /** Full browser props: shell owner share + viewing store + injected actions + the locale seat. */
 export type WorkspaceBrowserProps =
-  PropsRuntime<'sidebar.workspaces'>
+  PropsRuntime<'sidebar.sessions'>
   & PropsRenderSlots<
     | 'sidebar.workspaces.directoryFlow'
     | 'sidebar.workspaces.session.menu.item'

@@ -365,9 +365,12 @@ export function apply(ctx: Context): void {
   })
   // Each registration declares its owned children in the same call; slot
   // injection follows both the owner and declaration HMR lifetimes.
-  ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register(
+  // Fork: the browser lives in the shell's `sidebar.sessions` seat, so a
+  // plugin that fills `sidebar.workspaces` (ds-bot's team list) shows beside
+  // it instead of replacing it. The child list names keep their old prefix.
+  ctx.slots.inject('sidebar.sessions', () => ctx.slots.register(
     {
-      name: 'sidebar.workspaces',
+      name: 'sidebar.sessions',
       children: {
         'sidebar.workspaces.directoryFlow': { kind: 'single', scope: 'root' },
         // Every row entry reads the menu's open state through a hook bound

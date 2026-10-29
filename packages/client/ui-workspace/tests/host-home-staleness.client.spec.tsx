@@ -21,9 +21,9 @@ afterEach(cleanup)
 beforeEach(() => { localStorage.clear() })
 
 /** Test-owned sidebar shell role: declares and renders the browsing region. */
-type FrameProps = PropsRenderSlots<'sidebar.workspaces'>
+type FrameProps = PropsRenderSlots<'sidebar.sessions'>
 function SidebarFrame({ renderSlot }: FrameProps) {
-  return <>{renderSlot('sidebar.workspaces', { wide: true, expandSidebar: () => {} })}</>
+  return <>{renderSlot('sidebar.sessions', { wide: true, expandSidebar: () => {} })}</>
 }
 
 /** The assembled sidebar over one Workspace inside the POSIX home the Host reports. */
@@ -46,7 +46,7 @@ async function bench() {
     }] as never
   })
   await runtime.root.declare(
-    { 'sidebar.workspaces': { kind: 'single', scope: 'root' } } as never,
+    { 'sidebar.sessions': { kind: 'single', scope: 'root' } } as never,
     SidebarFrame as never,
   )
   await runtime.mount({ inject: [...inject], apply })

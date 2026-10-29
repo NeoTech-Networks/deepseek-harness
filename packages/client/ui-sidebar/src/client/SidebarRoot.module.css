@@ -626,3 +626,112 @@
     animation: none;
   }
 }
+
+/* Fork: the combined sidebar. While a plugin (ds-bot) shadows the workspace
+   region, its list sits in this foldable section above All Sessions and the
+   native browser keeps the rest of the column. The section is capped so the
+   browser below always keeps room; the plugin list scrolls inside it. */
+.pluginSection {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-right: var(--dsh-sidebar-inline-padding);
+  box-sizing: border-box;
+}
+
+.pluginHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 36px;
+  padding: 0 4px;
+  margin-bottom: 4px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.pluginHeader:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.pluginChevron {
+  flex: none;
+  color: var(--dsw-alias-label-caption);
+  transition: transform 150ms var(--ds-ease-in-out);
+}
+
+.pluginChevronOpen {
+  transform: rotate(90deg);
+}
+
+.pluginLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.pluginBody {
+  display: flex;
+  flex-direction: column;
+  max-height: min(40vh, 380px);
+  min-height: 0;
+  margin-bottom: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.pluginBody > * {
+  flex: 0 1 auto;
+  min-height: 0;
+}
+
+/* ds-bot's shell CSS hides the shell's own controls with attribute selectors
+   and !important (it expects to own the whole column). In the combined view
+   they come back; the doubled class out-ranks every one of those rules. */
+:global(html) .root.combined.combined .newSession {
+  display: flex !important;
+}
+
+/* ds-bot's selector is a substring match, so it also hides the button's
+   inner spans; each gets its own display back. */
+:global(html) .root.combined.combined .newSessionLabelMask {
+  display: block !important;
+}
+
+:global(html) .root.combined.combined .newSessionContent {
+  display: flex !important;
+}
+
+:global(html) .root.combined.combined .newSessionLabel {
+  display: inline !important;
+}
+
+:global(html) .root.combined.combined .newSessionShortcut {
+  display: inline-flex !important;
+}
+
+:global(html) .root.combined.combined .panelList {
+  display: flex !important;
+}
+
+:global(html) .root.combined.combined .logoRow {
+  display: flex !important;
+}
+
+:global(html) .root.combined.combined .logoRow > .brand {
+  display: inline-flex !important;
+}
+
+:global(html[data-windows-titlebar]) .root.combined.combined:not(.collapsed) .logoRow {
+  height: 40px !important;
+}

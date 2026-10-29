@@ -35,10 +35,11 @@ type AttentionSnapshot = Parameters<Parameters<SidebarRootComponentProps['useSes
 const noAttention: AttentionSnapshot = new Map()
 const useSessionStatus: SidebarRootComponentProps['useSessionStatus'] = selector => selector(noAttention)
 
-function mountShell({ collapsed = false, width = 300, shortcuts = [] }: {
+function mountShell({ collapsed = false, width = 300, shortcuts = [], takenOver = false }: {
   collapsed?: boolean
   width?: number
   shortcuts?: readonly ShortcutCatalogEntry[]
+  takenOver?: boolean
 } = {}) {
   const startSession = vi.fn()
   const toggleSidebar = vi.fn()
@@ -57,6 +58,7 @@ function mountShell({ collapsed = false, width = 300, shortcuts = [] }: {
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
+      useWorkspacesTakenOver={selector => selector(takenOver)}
       useShortcuts={selector => selector(shortcuts)}
       useResource={useResource} useWorkspaces={neverHook}
       {...allowAllAccess}
@@ -81,6 +83,7 @@ function mountShell({ collapsed = false, width = 300, shortcuts = [] }: {
           footerActionOwner = owner
           return <div data-testid="footer-action-seat" data-wide={owner.wide} />
         }
+        if (key === 'sidebar.workspaces') return <div data-testid="plugin-seat" data-wide={owner.wide} />
         regionOwner = owner as SidebarSectionOwnerProps
         return <div data-testid="region" data-wide={owner.wide} />
       }) as SidebarRootComponentProps['renderSlot']}
@@ -115,6 +118,48 @@ function mountShell({ collapsed = false, width = 300, shortcuts = [] }: {
   }
 }
 
+describe('SidebarRoot combined sidebar (fork)', () => {
+  afterEach(() => { window.localStorage.clear() })
+
+  it('renders only the browser seat while no plugin fills the region seat', () => {
+    const shell = mountShell()
+    expect(screen.getByTestId('region')).toBeTruthy()
+    expect(screen.queryByTestId('plugin-seat')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Bots' })).toBeNull()
+    expect(shell.seen).not.toContain('sidebar.workspaces')
+  })
+
+  it('shows the plugin list in a foldable section above All Sessions and the native browser', () => {
+    mountShell({ takenOver: true })
+    const header = screen.getByRole('button', { name: 'Bots' })
+    expect(header.getAttribute('aria-expanded')).toBe('true')
+    const plugin = screen.getByTestId('plugin-seat')
+    const allSessions = screen.getByTestId('all-sessions-seat')
+    const browser = screen.getByTestId('region')
+    expect(plugin.compareDocumentPosition(allSessions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(allSessions.compareDocumentPosition(browser) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText('New Session')).toBeTruthy()
+  })
+
+  it('folds the plugin section and remembers the choice', () => {
+    mountShell({ takenOver: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Bots' }))
+    expect(screen.queryByTestId('plugin-seat')).toBeNull()
+    expect(screen.getByTestId('region')).toBeTruthy()
+    expect(window.localStorage.getItem('dsh.sidebar.pluginSection.open')).toBe('false')
+    cleanup()
+    mountShell({ takenOver: true })
+    expect(screen.getByRole('button', { name: 'Bots' }).getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('keeps the plugin rail on the collapsed sidebar', () => {
+    mountShell({ takenOver: true, collapsed: true })
+    expect(screen.queryByRole('button', { name: 'Bots' })).toBeNull()
+    expect(screen.getByTestId('plugin-seat')).toBeTruthy()
+    expect(screen.queryByTestId('region')).toBeNull()
+  })
+})
+
 describe('SidebarRoot shell', () => {
   it('advertises the effective new-session binding', () => {
     const shortcut: ShortcutCatalogEntry = { id: 'session.new' as ShortcutCommandId, label: 'New', aliases: [],
@@ -134,7 +179,8 @@ describe('SidebarRoot shell', () => {
       useSessionRetainInfo={neverHook} useResource={useResource} useWorkspaces={neverHook}
       {...allowAllAccess}
       usePanels={select => select([])} useEntryPins={select => select([])}
-      useEntryActions={select => select(false)} setPinned={vi.fn()} useShortcuts={select => select([shortcut])} />)
+      useEntryActions={select => select(false)} useWorkspacesTakenOver={select => select(false)}
+      setPinned={vi.fn()} useShortcuts={select => select([shortcut])} />)
     const button = screen.getByRole('button', { name: 'New session' })
     expect(button.getAttribute('aria-keyshortcuts')).toBe('Control+N')
     fireEvent.focus(button)
@@ -145,7 +191,7 @@ describe('SidebarRoot shell', () => {
     const b = mountShell()
     const seen = b.seen
     expect(seen.indexOf('sidebar.allSessions')).toBeGreaterThanOrEqual(0)
-    expect(seen.indexOf('sidebar.allSessions')).toBeLessThan(seen.indexOf('sidebar.workspaces'))
+    expect(seen.indexOf('sidebar.allSessions')).toBeLessThan(seen.indexOf('sidebar.sessions'))
     expect(screen.getByTestId('all-sessions-seat').dataset.wide).toBe('true')
     b.allSessionsOwner().expandSidebar()
     expect(b.toggleSidebar).not.toHaveBeenCalled()
@@ -185,7 +231,7 @@ describe('SidebarRoot shell', () => {
       collapsed={false} width={300}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
-      useEntryActions={selector => selector(false)} setPinned={vi.fn()}
+      useEntryActions={selector => selector(false)} useWorkspacesTakenOver={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useResource={useResource} useWorkspaces={neverHook}
       {...allowAllAccess}
@@ -208,7 +254,7 @@ describe('SidebarRoot shell', () => {
       collapsed={false} width={300}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
-      useEntryActions={selector => selector(false)} setPinned={vi.fn()}
+      useEntryActions={selector => selector(false)} useWorkspacesTakenOver={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useResource={useResource} useWorkspaces={neverHook}
       {...allowAllAccess}
@@ -226,7 +272,7 @@ describe('SidebarRoot shell', () => {
       collapsed={false} width={300}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
-      useEntryActions={selector => selector(false)} setPinned={vi.fn()}
+      useEntryActions={selector => selector(false)} useWorkspacesTakenOver={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useResource={useResource} useWorkspaces={neverHook}
       {...allowAllAccess}
@@ -276,7 +322,7 @@ describe('SidebarRoot shell', () => {
       collapsed width={56}
       useSessions={neverHook} useSessionStatus={useSessionStatus} useSessionRetainInfo={neverHook}
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
-      useEntryActions={selector => selector(false)} setPinned={vi.fn()}
+      useEntryActions={selector => selector(false)} useWorkspacesTakenOver={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
       useResource={useResource} useWorkspaces={neverHook}
       {...allowAllAccess}
