@@ -1,5 +1,44 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-29 - Combined ds-bot sidebar, caption launchers, plain sessions
+
+- VERIFIED tests: `ui-sidebar` 74 passed (incl. 4 new combined-sidebar specs; 5 snapshots updated for the seat rename); `ui-workspace` + pickers pass except 4 `all-sessions` and 1 `desktop-picker` failures that reproduce identically with the change stashed.
+- VERIFIED build: `pnpm run build` 9 of 9 gates (incl. client aggregate check); package exit 0; installer 16:18:55; `finish-install.ps1` SETUP COMPLETE, settings 20 `same`, HARDLINK OK.
+- VERIFIED running build: `dsh_local_features_check.py` 46 of 46 incl. new rows `combined-sidebar` and `combined-sidebar-sessions-seat`.
+- VERIFIED on screen (PrintWindow capture `C:\Projects\logs\2026-10-29\dsh-combined-sidebar\window-v3.png`): caption row reads Application, Edit, Plugins, Automation tasks, More; New Session button labelled; Bots section above All Sessions.
+- VERIFIED headless against the live host (`probe\new-session-from-ordinary.png`): an ordinary session renders without `.bt-head` and with the composer dock; New Session from it stays on the hero 6 s+ with the workspace picker visible (was redirected to Chief at 400 ms before the ds-bot patch).
+- FAILED then FIXED in-session: the first build registered the browser twice; the second seat had no `renderSlot` and the page rendered blank (`renderSlot is not a function`). Replaced by the single-registration design before the next install.
+
+## 2026-10-28 - New Session workspace dropdown reset fix
+
+- VERIFIED the cause live (`record.json`): body remount `wd4y4 -> kme6u` and `aria-expanded true -> false` at 53.6 s, the instant `dsh.sessions.current` switched to the picked folder's blank session, 7.2 s after the pick. With no input the chip held for 45 s.
+- VERIFIED tests: `ui-conversation` 50 files, 852 passed, including two new specs (state survives a body rebuild; a pick survives one list that lacks it and drops after a second). `tsc -b tsconfig.client.json` exit 0; oxlint clean on the touched files. `ui-workspace` all-sessions 4 failures reproduce identically with the change stashed (pre-existing, OPEN_ISSUES 13).
+- VERIFIED build and package: `pnpm run build` 9 of 9; package exit 0; marker `ui-conversation: hero picker state` in the packaged asar; `dsh_local_features_check.py --asar` 44 of 44.
+- VERIFIED installed and live: `dsh_local_features_check.py` on the running build 44 of 44 including `picker-reset-fix`; the recorder on the new GUI (`verify.json`) picked `abc-outreach`, the blank session landed at 28.3 s with NO body remount and the dropdown stayed open, chip unchanged to 146 s.
+
+## 2026-10-27 - 0.2.1-rc.4 backport (built and proven; install NOT run)
+
+- VERIFIED the release is npm-only: `npm view @deepseek-ai/dsh time` has 0.2.1-rc.4 at `2026-10-26T15:28:13.431Z`; `git ls-remote --tags upstream` has no rc.4; the releases API's newest entry is `dsh-v0.2.1-rc.3`; `master` still reads `0.2.1-rc.3`.
+- VERIFIED what it contains: both versions of `dsh-mcp-client` and `dsh-mcp-resources` downloaded with `npm pack` and diffed. Only `lib/index.js` (one guard) and three README files in each package differ.
+- VERIFIED the backport: the BUILT `packages/mcp/mcp-client/lib/index.js` is byte-identical to the published rc.4 `lib/index.js` (35,189 bytes, `diff -q` clean), and the extracted copy from the packaged `win-unpacked\resources\app.asar` is identical after CRLF normalisation.
+- VERIFIED the spec has teeth: without the guard it fails with `Client.listResources() called but server does not advertise resources capability - returning empty list`; with it, 6 of 6 in `protocol.spec.ts` pass.
+- VERIFIED build gates: `release:verify --family dsh` 353 members, 0 unordered peers; `pnpm run typecheck` exit 0; `mcp-client` + `mcp-resources` 146 passed, 1 failed (`negotiation-lifecycle` "no child could be spawned"), and that same test fails identically on the untouched rc.3 tree in `C:\d213`; seven catalog verifiers exit 0; `pnpm run build` 9 passed 0 failed in 74.6 s.
+- VERIFIED packaged build: guard present in `win-unpacked\resources\app.asar`; `dsh_local_features_check.py --asar` reads 43 of 43; installer 290,670,337 bytes, sha256 `361898423A8BC96582BB1D2D5FE094C89B1B98DF850FA88F5B53BCC2E97F0DA8`, copied to the exports folder and re-hashed there.
+- VERIFIED SessionStart chain: 17 hooks, 0 non-zero exits, 9.0 s serial, slowest `work_recall_card.py` 4.17 s (its own budget).
+- VERIFIED the pre-install dry run: `finish-install.ps1 -WhatIf` exits 0, names `deepseek-harness-0.2.1-rc.4-win-x64-unsigned.exe`, writes nothing, and `Test-RunningInsideHarness` did not fire (ancestry `pwsh, cmd, claude.exe, pwsh, Code.exe, explorer.exe`).
+- VERIFIED the checker fix: `dsh_update_check.py --self-test` passes 8 version comparisons and 6 verdicts; live, against the still-installed rc.3, it answers `NPM AHEAD, NO SOURCE TAG 0.2.1-rc.4 (next)` where it previously answered `UP TO DATE`.
+- NOT VERIFIED at that point, and not claimed then: the install itself, `DisplayVersion 0.2.1-rc.4`, the installed asar, hook firing in a new session, MCP calls, the mode picker and the hardlink. SUPERSEDED the same evening by the INSTALLED section below.
+
+## 2026-10-27 - 0.2.1-rc.4 INSTALLED and read back
+
+- VERIFIED version: `finish-install.ps1` printed `installed 0.2.1-rc.4 (1 DeepSeek Harness uninstall row(s))` and `SETUP COMPLETE. Running 0.2.1-rc.4`, with no `STILL DRIFTED`. An independent registry read afterwards returns `DisplayVersion 0.2.1-rc.4` and exactly one DeepSeek Harness uninstall row.
+- VERIFIED settings: `verify: 20 files, all same` and `every one of your settings survived the install`; preset `up to date; nothing to change` (pinned 34 rows = shipped 34).
+- VERIFIED hardlink: `HARDLINK OK (final): AGENTS.md and .claude\CLAUDE.md are one file, 2 links, id 0x00000000000000000001000001116b38`.
+- VERIFIED the RUNNING code carries the fix: `dsh_local_features_check.py` reads 43 of 43 from the INSTALLED asar, and `asar_guard_check.cjs` on the installed `app.asar` reports `const listable guard: true` with `empty pages on the false branch: true`.
+- VERIFIED the hook-bridge pin and the load order: `~\.dsh\profiles\desktop\node_modules\@deepseek-ai\dsh-hooks-claude-code\package.json` reads `0.2.1-rc.4` with mtime 19:13:55, and the earliest DeepSeek Harness process started 19:14:08 after the restart (5 processes alive).
+- VERIFIED the checker in both directions: before the install, against rc.3, it answered `NPM AHEAD, NO SOURCE TAG 0.2.1-rc.4 (next)`; after it answers `UP TO DATE` with `npm newest 0.2.1-rc.4 (tag next)` and no "newer than installed" mark. `--self-test` passes 8 comparisons and 6 verdicts.
+- NOT VERIFIED: hook firing in a session created AFTER the restart (the restored `cipp_gateway` session holds 386 hook events, all predating it, and its last event is an app-level `agent/inbox/spliced` at 19:14:35), one real MCP call per server, and the mode picker seen on screen. The loopback-listener arm is unusable on this machine because every loopback listener reports owner PID 0.
+
 ## 2026-10-24 - 0.2.1-rc.3 install
 
 - VERIFIED version: `DisplayVersion 0.2.1-rc.3`, exactly one uninstall row; `dsh_update_check.py` VERDICT: UP TO DATE.
