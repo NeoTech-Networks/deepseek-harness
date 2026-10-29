@@ -8,6 +8,14 @@
 - VERIFIED on screen (PrintWindow capture `C:\Projects\logs\2026-10-29\dsh-combined-sidebar\window-v3.png`): caption row reads Application, Edit, Plugins, Automation tasks, More; New Session button labelled; Bots section above All Sessions.
 - VERIFIED headless against the live host (`probe\new-session-from-ordinary.png`): an ordinary session renders without `.bt-head` and with the composer dock; New Session from it stays on the hero 6 s+ with the workspace picker visible (was redirected to Chief at 400 ms before the ds-bot patch).
 - FAILED then FIXED in-session: the first build registered the browser twice; the second seat had no `renderSlot` and the page rendered blank (`renderSlot is not a function`). Replaced by the single-registration design before the next install.
+## 2026-10-29 - 0.2.1-rc.5 install (from the installer's own log, then re-checked live)
+
+- VERIFIED the dry run: `finish-install.ps1 -WhatIf` exit 0, named `deepseek-harness-0.2.1-rc.5-win-x64-unsigned.exe`, mode `reinstall on the current line`, wrote nothing under `~\.dsh`. `Test-RunningInsideHarness` did not fire: `DSH_SESSION_ID` was empty and the ancestry read this session was `pwsh, cmd, claude.exe, pwsh, Code.exe, Code.exe, explorer.exe`.
+- VERIFIED the install from its log: pre-install snapshot `20 files, 0 changed` commit `0a2f70d` pushed to origin; `installer exit code: 0`; `installed 0.2.1-rc.5 (1 DeepSeek Harness uninstall row(s))`; post-install `verify: 20 files, all same`; `app is up`; `[settings] every one of your settings survived the install.`; `HARDLINK OK (final)` 2 links, one file id `0x00000000000000000001000001116b38`; `SETUP COMPLETE. Running 0.2.1-rc.5`.
+- VERIFIED the running code, not the log: `dsh_local_features_check.py` read the INSTALLED `resources\app.asar` and returned `all 46 local features are present in the running build`, exit 0, across 46 named checks.
+- VERIFIED the preset loss live, not from the log: `Select-String` over `C:\Users\SteveDempsey\.dsh\cordis.patch.yml` returns 0 hits for `brainstorm` and the only `preset-` row id is `preset-standard-hooks`; the same search over `cordis.patch.yml.pre-0.2.1` hits 4 times, including `- id: preset-brainstorm-hooks` at line 431.
+- VERIFIED the rollback floor: `C:\Projects\exports\2026-10-29-dsh-0.2.1-rc.5\deepseek-harness-0.2.1-rc.5-win-x64-unsigned.exe` is 290,479,007 bytes and its SHA256 equals the build tree's (`67A05098DA3BE13D2D9B07F5B36A9C7D49CC40126DCD8536B5DC8005125FFD10`).
+- NOT VERIFIED, and not claimed: hook firing in a session created AFTER the 18:02 restart, one real MCP call, the mode picker on screen, and the composer buttons. Same unproven arms rc.4 left (OPEN_ISSUES 18), now owed to rc.5 as item 26.
 
 ## 2026-10-28 - New Session workspace dropdown reset fix
 
