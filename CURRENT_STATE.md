@@ -1,5 +1,13 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-10-29 - ds-bot and the native interface side by side (installed)
+
+- INSTALLED 0.2.1-rc.5 from `C:\d215` three times today (last install 16:19, installer 16:18:55); settings vault 20 files `same` each time; Brainstorm + approve mode kept (the preset re-derive was held off by renaming `dsh-preset-rederive.py` for the run; see OPEN_ISSUES 22).
+- COMBINED SIDEBAR, commit `bcb71d99f2`: the native workspace browser moved to a new `sidebar.sessions` seat; `sidebar.workspaces` is now a plugin seat. When ds-bot fills it, its team list shows in a foldable "Bots" section (open state in localStorage `dsh.sidebar.pluginSection.open`, body capped at min(40vh, 380px)) above All Sessions and the browser. CSS restores the New Session button, panel list and logo row that ds-bot's shell CSS hides with substring selectors.
+- CAPTION-ROW LAUNCHERS, commit `f308ad2561`: on Windows, Plugins / Automation tasks / More ride the caption row right of Application and Edit (left edge measured from `[data-windows-menu]`), open or collapsed; also restores the New Session button's inner spans.
+- DS-BOT PATCH (outside the fork): `C:\Claude\bin\ds_bot_plain_sessions_patch.py` edits ds-bot 0.2.3's `client.js` in the profile so ordinary sessions get the plain view and New Session no longer bounces to Chief after 400 ms (`useLandOnMainBot`). Backup `client.js.pre-plain-sessions-0.2.3`. A ds-bot update drops it; re-run the script.
+- Branch `update/v0.2.1-rc.5` carries both commits; NOT pushed by this session (the save's work backup covers it). Two `ui-chat` test files are dirty in `C:\d215` from another session and were left alone.
+
 ## 2026-10-28 - New Session workspace dropdown no longer resets (installed)
 
 - CAUSE (recorded live): picking a folder makes the Host attach or create that folder's blank session about 7 s later; the conversation body is rebuilt for it, and the hero picker's open state and pending pick lived in `ConversationContent` local state, so the open dropdown closed and the pick dropped. Log `C:\Projects\logs\2026-10-28\dsh-new-session-picker-reset\phase1-finding.md`.

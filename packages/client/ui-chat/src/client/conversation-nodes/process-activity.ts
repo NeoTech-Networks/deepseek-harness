@@ -4,6 +4,7 @@ import type { ProcessActivity, ProcessActivitySummary } from '../contract/proces
 import type { ChatNode } from '../contract/chat-nodes.ts'
 import { isRunningTool } from '../contract/chat-nodes.ts'
 import type { ToolCallBlock } from '../contract/snapshot.ts'
+import { reasoningText } from '../reasoning-text.ts'
 
 function activity(name: string): ProcessActivity {
   if (name === 'read') return 'read'
@@ -99,7 +100,7 @@ function liveReasoningDetail(nodes: readonly ChatNode[]): string {
     for (let blockIndex = node.data.blocks.length - 1; blockIndex >= 0; blockIndex--) {
       const block = node.data.blocks[blockIndex]
       if (block?.kind !== 'reasoning') continue
-      const paragraphs = block.text.split(/\r?\n[\t ]*\r?\n/)
+      const paragraphs = reasoningText(block.text).split(/\r?\n[\t ]*\r?\n/)
       for (let paragraphIndex = paragraphs.length - 1; paragraphIndex >= 0; paragraphIndex--) {
         const detail = normalizeLiveToolDetail(paragraphs[paragraphIndex]?.replaceAll('**', ''))
         if (detail !== '') return detail
