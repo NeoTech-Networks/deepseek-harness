@@ -40,6 +40,9 @@ const COLLAPSE_SETTLE_MS = 150
  */
 const SCROLLBAR_LINGER_MS = 2000
 
+/** Caption-row panel launchers' left edge until the menubar can be measured (its usual right edge). */
+const CAPTION_PANELS_FALLBACK_LEFT = 200
+
 /** Where the combined sidebar remembers whether its plugin (Bots) section is open. */
 const PLUGIN_SECTION_KEY = 'dsh.sidebar.pluginSection.open'
 
@@ -193,6 +196,33 @@ export function SidebarRoot({
   // (that is what --dsh-windows-menu-start reserves), so a right-side bubble
   // lands under their text. Below the caption is the only clear side.
   const captionTooltipSide = windowsTitlebar ? 'bottom' : 'right'
+  // Fork: on the Windows caption row the global panel launchers (Plugins,
+  // Automation tasks, More) sit right after the caption menubar, so the
+  // sidebar column holds only the session lists. The menubar is a fixed,
+  // shadow-rooted host whose width follows its locale, so its right edge is
+  // measured rather than assumed.
+  const [captionPanelsLeft, setCaptionPanelsLeft] = useState(CAPTION_PANELS_FALLBACK_LEFT)
+  useEffect(() => {
+    if (!windowsTitlebar) return
+    const measure = (): void => {
+      const menubar = document.querySelector('[data-windows-menu]')
+      const right = menubar?.getBoundingClientRect().right
+      setCaptionPanelsLeft(right === undefined || right === 0 ? CAPTION_PANELS_FALLBACK_LEFT : Math.round(right) + 8)
+    }
+    measure()
+    // The menubar moves when the column collapses (--dsh-windows-menu-start);
+    // that shift is a CSS transition, so measure again once it has settled.
+    const settle = window.setTimeout(measure, COLLAPSE_SETTLE_MS + 100)
+    const menubar = document.querySelector('[data-windows-menu]')
+    const resize = menubar === null || typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure)
+    if (menubar !== null) resize?.observe(menubar)
+    window.addEventListener('resize', measure)
+    return () => {
+      window.clearTimeout(settle)
+      resize?.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [windowsTitlebar, collapsed])
   // Freeze the content at its expanded width while it fades out (collapsed
   // && wide): the sliding column then clips it instead of reflowing it. The
   // rail layout (.collapsed styles) only applies once the fade settles.
@@ -356,13 +386,17 @@ export function SidebarRoot({
       </Tooltip>
 
       {panels.length > 0 && (
-        <nav className={css.panelList} aria-label={t('panels.label')}>
+        <nav
+          className={clsx(css.panelList, windowsTitlebar && css.captionPanels)}
+          style={windowsTitlebar ? { left: captionPanelsLeft } : undefined}
+          aria-label={t('panels.label')}
+        >
           {panels.filter(({ id }) => id === FIXED_PANEL_ID || !unpinned.includes(id)).map(({ id, label }) => (
             <PanelRow
               key={id}
               id={id}
               label={label}
-              wide={wide}
+              wide={wide || windowsTitlebar}
               usePanelInfo={usePanelInfo}
               selectPanel={selectPanel}
               trackEntryClick={trackEntryClick}
@@ -371,7 +405,7 @@ export function SidebarRoot({
           ))}
           {hasEntryActions && (
             <PanelMoreMenu
-              wide={wide}
+              wide={wide || windowsTitlebar}
               label={t('panels.more')}
               entries={panels.filter(({ id }) => id !== FIXED_PANEL_ID)
                 .map(({ id, label }) => ({ id, label, pinned: !unpinned.includes(id), active: id === activePanelId }))}

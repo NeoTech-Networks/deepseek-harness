@@ -735,3 +735,42 @@
 :global(html[data-windows-titlebar]) .root.combined.combined:not(.collapsed) .logoRow {
   height: 40px !important;
 }
+
+/* Fork: Windows caption-row panel launchers. The nav leaves the column and
+   rides the caption strip right of the menubar (left is measured in
+   SidebarRoot), in a row of compact labelled buttons styled like the
+   menubar's, in both the open and the collapsed sidebar. */
+.root .captionPanels {
+  position: fixed;
+  top: calc((var(--dsh-windows-titlebar-height) - 28px) / 2);
+  z-index: 1100;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  margin: 0;
+  -webkit-app-region: no-drag;
+  animation: none;
+}
+
+.root .captionPanels .panelRow {
+  width: auto;
+  height: 28px;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 10px;
+  gap: 6px;
+  border-radius: 6px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 14px;
+}
+
+.root .captionPanels .panelRow:hover,
+.root .captionPanels .panelRow.panelActive,
+.root .captionPanels .panelRow[aria-expanded='true'] {
+  color: var(--dsw-alias-label-primary);
+}
+
+.root .captionPanels .moreAnchor {
+  flex-direction: row;
+}
