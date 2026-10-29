@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-api-pinned-files",
   "description": "Operator-pinned directories and unconfined directory listings over the pinnedFiles Remote namespace",
-  "version": "0.2.1-rc.4",
+  "version": "0.2.1-rc.5",
   "publishConfig": {
     "access": "public"
   },
