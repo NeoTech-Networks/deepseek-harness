@@ -1,5 +1,14 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-29 - Combined ds-bot sidebar, caption launchers, plain sessions
+
+- VERIFIED tests: `ui-sidebar` 74 passed (incl. 4 new combined-sidebar specs; 5 snapshots updated for the seat rename); `ui-workspace` + pickers pass except 4 `all-sessions` and 1 `desktop-picker` failures that reproduce identically with the change stashed.
+- VERIFIED build: `pnpm run build` 9 of 9 gates (incl. client aggregate check); package exit 0; installer 16:18:55; `finish-install.ps1` SETUP COMPLETE, settings 20 `same`, HARDLINK OK.
+- VERIFIED running build: `dsh_local_features_check.py` 46 of 46 incl. new rows `combined-sidebar` and `combined-sidebar-sessions-seat`.
+- VERIFIED on screen (PrintWindow capture `C:\Projects\logs\2026-10-29\dsh-combined-sidebar\window-v3.png`): caption row reads Application, Edit, Plugins, Automation tasks, More; New Session button labelled; Bots section above All Sessions.
+- VERIFIED headless against the live host (`probe\new-session-from-ordinary.png`): an ordinary session renders without `.bt-head` and with the composer dock; New Session from it stays on the hero 6 s+ with the workspace picker visible (was redirected to Chief at 400 ms before the ds-bot patch).
+- FAILED then FIXED in-session: the first build registered the browser twice; the second seat had no `renderSlot` and the page rendered blank (`renderSlot is not a function`). Replaced by the single-registration design before the next install.
+
 ## 2026-10-28 - New Session workspace dropdown reset fix
 
 - VERIFIED the cause live (`record.json`): body remount `wd4y4 -> kme6u` and `aria-expanded true -> false` at 53.6 s, the instant `dsh.sessions.current` switched to the picked folder's blank session, 7.2 s after the pick. With no input the chip held for 45 s.
