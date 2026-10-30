@@ -8,7 +8,8 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionProjectionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
 import {
   type ArchivedFilter,
-  deriveFlat, deriveGroups, deriveSearchResults, orderByRecency, owningGroupKey, owningParentFolder,
+  deriveAllSessions, deriveFlat, deriveGroups, deriveSearchResults, isBotWorkspace,
+  orderByRecency, owningGroupKey, owningParentFolder,
   derivePhase, pinCurrentBlank, reconcileManualOrder, sectionize, sectionShowsWorkspaces, sessionMemberIds, visibleSessionIds,
   sectionizeWorkspaces, workspaceNameOf,
   workspaceLabel, LOOSE_SECTION_KEY, UNGROUPED_KEY, UNGROUPED_SECTION_KEY,
@@ -41,8 +42,8 @@ const withMain = (state: SessionListState, id: SessionId): SessionListState => (
     [id]: { ...state.byId[id]!, retainedBy: { ...state.byId[id]!.retainedBy, mainView: 1 } },
   },
 })
-const workspace = (id: string, sessionIds: string[], title = id): WorkspaceView => ({
-  workspaceId: wid(id), path: `/projects/${id}`, title,
+const workspace = (id: string, sessionIds: string[], title = id, path = `/projects/${id}`): WorkspaceView => ({
+  workspaceId: wid(id), path, title,
   sessionIds: sessionIds.map(sid), createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
 })
 const view = (expandedGroups: readonly string[] = [], ungroupedOrder?: readonly string[]) => ({
@@ -1009,5 +1010,40 @@ describe('named Workspace group sections (fork)', () => {
     store.actions.setSectionExpanded('ABC', false)
     store.actions.retainAccountKeys([])
     expect(store.getSnapshot().sectionExpansion).toEqual({ ABC: false })
+  })
+})
+
+describe('isBotWorkspace', () => {
+  const pathOf = (path: string, title: string) => ({ path, title })
+
+  it('matches ds-bot by its Workspace directory, whichever separator or case the Host reports', () => {
+    expect(isBotWorkspace(pathOf('C:\\Users\\SteveDempsey\\.dsh\\bot\\workspace', 'Whatever'))).toBe(true)
+    expect(isBotWorkspace(pathOf('C:/Users/SteveDempsey/.dsh/bot/workspace', 'Whatever'))).toBe(true)
+    expect(isBotWorkspace(pathOf('C:/Users/SteveDempsey/.DSH/Bot/Workspace/', 'Whatever'))).toBe(true)
+  })
+
+  it('still matches by title once ds-bot moves its folder', () => {
+    expect(isBotWorkspace(pathOf('C:/moved/somewhere/else', 'DS Bot'))).toBe(true)
+  })
+
+  it('leaves an ordinary Workspace alone', () => {
+    expect(isBotWorkspace(pathOf('C:/projects/alpha', 'Alpha'))).toBe(false)
+    expect(isBotWorkspace(pathOf('C:/projects/bot/workspace', 'workspace'))).toBe(false)
+    expect(isBotWorkspace(pathOf('C:/projects/ds-bot-tools', 'DS Bot tools'))).toBe(false)
+  })
+})
+
+describe('deriveAllSessions bot membership', () => {
+  it('flags the bot Workspace rows and only those', () => {
+    const rows = deriveAllSessions(
+      list(summary('plain', 2), summary('bot-one', 1)),
+      [
+        workspace('alpha', ['plain'], 'Alpha'),
+        workspace('bot', ['bot-one'], 'DS Bot', 'C:\\Users\\SteveDempsey\\.dsh\\bot\\workspace'),
+      ],
+      noRows,
+      noAttention,
+    )
+    expect(rows.map(row => [row.id, row.bot])).toEqual([['plain', false], ['bot-one', true]])
   })
 })

@@ -3,9 +3,11 @@
  * `sidebar.allSessions` hole: a collapsible header above the workspace
  * browser, and a flat newest-first list of every unarchived session (pinned
  * first). Each row shows the session's live status mark, its title, and the
- * Workspace it belongs to; clicking a row opens that session. Wide-only: the
- * collapsed rail keeps its own search/add icons, so the section renders
- * nothing there.
+ * Workspace it belongs to; clicking a row opens that session. Sessions in the
+ * bot Workspace trail the list in their own collapsible "Bot Sessions" group,
+ * derived from the same live snapshot so a new bot chat joins it by itself.
+ * Wide-only: the collapsed rail keeps its own search/add icons, so the section
+ * renders nothing there.
  */
 import { Component, useMemo, type ReactNode } from 'react'
 import clsx from 'clsx'
@@ -111,6 +113,7 @@ function AllSessionsInner({
   const statuses = useSessionStatus(s => s)
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
   const expanded = useStore(s => s.expanded)
+  const botExpanded = useStore(s => s.botExpanded) === true
   const rows = useMemo(
     () => deriveAllSessions(list, workspaces, { archivedSessionIds, pinnedSessionIds }, statuses),
     [list, workspaces, archivedSessionIds, pinnedSessionIds, statuses],
@@ -122,6 +125,11 @@ function AllSessionsInner({
   const currentId = panelActive
     ? undefined
     : Object.values(list.byId).find(session => (session.retainedBy.mainView ?? 0) > 0)?.id
+  // The bot rows are derived from the same live snapshot as the ordinary ones,
+  // so a session created in the bot Workspace joins the group on its next
+  // render with nothing to tag, move or cache.
+  const ordinaryRows = rows.filter(node => !node.bot)
+  const botRows = rows.filter(node => node.bot)
   return (
     <div className={css.root} data-all-sessions="">
       <button
@@ -137,9 +145,33 @@ function AllSessionsInner({
       {expanded && (
         <div className={css.list} role="tree" aria-label={t('section.allSessions')}>
           {rows.length === 0 && <div className={css.empty}>{t('empty.none')}</div>}
-          {rows.map(node => (
+          {ordinaryRows.map(node => (
             <AllSessionRow key={node.id} node={node} currentId={currentId} onOpen={open} t={t} />
           ))}
+          {/* Trails the ordinary rows inside the one scrolling list, so the
+              group can never become a second scroll container. No bot rows
+              means no header and no placeholder. */}
+          {botRows.length > 0 && (
+            <div className={css.group} data-all-sessions-bot-group="">
+              <button
+                type="button"
+                className={css.groupHeader}
+                aria-expanded={botExpanded}
+                aria-label={t('allSessions.botToggle')}
+                onClick={() => { actions.setBotExpanded(!botExpanded) }}
+              >
+                <IconTriangleRightFillRegular className={clsx(css.chevron, botExpanded && css.chevronOpen)} />
+                <span className={css.groupLabel}>{t('allSessions.botSessions')}</span>
+              </button>
+              {botExpanded && (
+                <div className={css.groupRows} role="tree" aria-label={t('allSessions.botSessions')}>
+                  {botRows.map(node => (
+                    <AllSessionRow key={node.id} node={node} currentId={currentId} onOpen={open} t={t} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -755,6 +755,30 @@ export function sectionShowsWorkspaces(
 export interface AllSessionNode extends SessionNode {
   /** Owning Workspace title, the cwd basename for a loose session, or empty. */
   workspace: string
+  /** The owning Workspace is the bot Workspace, so the row belongs in the Bot Sessions group. */
+  bot: boolean
+}
+
+/**
+ * The Workspace name ds-bot stores, compared and never rendered, so it is not
+ * locale copy: it is the identity that survives ds-bot moving its folder.
+ */
+const BOT_WORKSPACE_NAME = 'DS Bot'
+/** Normalized directory suffix of ds-bot's Workspace: the identity that survives a rename. */
+const BOT_WORKSPACE_PATH_SUFFIX = '.dsh/bot/workspace'
+
+/**
+ * Whether a Workspace belongs to ds-bot, whose Sessions the All Sessions
+ * section folds into its own collapsible group. Two conditions, deliberately:
+ * the directory is the durable identity ds-bot creates and survives the
+ * Workspace being renamed, and the stored name survives ds-bot moving its
+ * folder. Either condition alone would stop matching silently.
+ * @param workspace - a Workspace's directory path and stored title.
+ * @returns whether the Workspace is the bot Workspace.
+ */
+export function isBotWorkspace(workspace: Pick<WorkspaceView, 'path' | 'title'>): boolean {
+  const path = workspace.path.replaceAll('\\', '/').replace(/\/+$/, '').toLowerCase()
+  return path.endsWith(BOT_WORKSPACE_PATH_SUFFIX) || workspace.title.trim() === BOT_WORKSPACE_NAME
 }
 
 /**
@@ -777,9 +801,13 @@ export function deriveAllSessions(
   const pinned = new Set(rowState.pinnedSessionIds)
   const current = mainSessionId(list)
   const workspaceBySession = new Map<SessionId, string>()
+  const botSessions = new Set<SessionId>()
   for (const workspace of workspaces) {
+    const bot = isBotWorkspace(workspace)
     for (const sessionId of workspace.sessionIds) {
-      if (!workspaceBySession.has(sessionId)) workspaceBySession.set(sessionId, workspace.title)
+      if (workspaceBySession.has(sessionId)) continue
+      workspaceBySession.set(sessionId, workspace.title)
+      if (bot) botSessions.add(sessionId)
     }
   }
   const visible = orderByRecency(list.ids.filter((id) => {
@@ -792,6 +820,7 @@ export function deriveAllSessions(
   return sectionMembers(visible, pinned, archived).map(summary => ({
     ...sessionNode(summary, list, statuses, pinned, archived),
     workspace: workspaceBySession.get(summary.id) ?? workspaceLabel(summary.cwd),
+    bot: botSessions.has(summary.id),
   }))
 }
 
