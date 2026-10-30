@@ -1,5 +1,16 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-10-30 - Bot Sessions group inside All Sessions (installed)
+
+- BUILT, commit `8b9510fcd6` on branch `feat/bot-sessions`, cut from `update/v0.2.1-rc.5` in `C:\Projects\worktrees\dsh-bot-sessions`. All Sessions now trails its flat list with a collapsible `Bot Sessions` group, folded when the section opens, and the ordinary rows are unchanged (pins still lead, archived rows still follow the default filter).
+- MEMBERSHIP IS DERIVED, NOT TAGGED: `isBotWorkspace()` matches the bot Workspace by its directory (`.dsh\bot\workspace`, either separator, any case) OR by its stored name `DS Bot`, so a rename and a folder move each survive one of the two conditions. The group is recomputed from the same live snapshot as the ordinary rows, so a session added to that Workspace joins on the next render with nothing to file, and no bot sessions means no header at all.
+- FOLD STATE: `botExpanded` is optional in `dsh.workspace.allSessions.v1`, so a payload written before the group existed parses unchanged and reads as folded. No migration.
+- LEDGER: row `bot-sessions-group` added to `C:\Claude\bin\dsh_local_features.json` (marker `allSessions.botSessions`, 47 features total).
+- INSTALLED 2026-10-30 07:20 from this worktree's `finish-install.ps1`, installer sha256 `2E61A3AC74BDB71706E2DE521ACB18491B5AE07A20CDE938384FCBAA8BD777E7` (290,478,823 bytes), exported to `C:\Projects\exports\2026-10-30-dsh-bot-sessions\` with a BUILD_RECORD. `dsh-preset-rederive.py` was held aside for the run again, so the install did NOT delete the operator's preset; the Brainstorm + approve mode is still missing from an earlier run (item 22).
+- ON SCREEN, read from the installed app: the All Sessions tree holds 14 rows, 6 ordinary then 8 bot rows, and no `DS Bot` row sits among the ordinary six. The real control reports `Collapsed -> Expanded`. The 8 reconcile exactly: the bot Workspace holds 10 sessions, minus 1 archived and minus 1 blank provisional.
+- NOT PROVEN: a brand-new bot chat joining the group live. Pressing New session creates in the last-used Workspace, not the bot one, so this needs ds-bot's own fresh-chat flow (item 26).
+- SIDE EFFECT of the verification: one blank `New Session` row now sits in the `general` workspace, and the group was left expanded because the collapse call did not take while the window was minimised.
+
 ## 2026-10-29 - ds-bot and the native interface side by side (installed)
 
 - INSTALLED 0.2.1-rc.5 from `C:\d215` three times today (last install 16:19, installer 16:18:55); settings vault 20 files `same` each time; Brainstorm + approve mode kept (the preset re-derive was held off by renaming `dsh-preset-rederive.py` for the run; see OPEN_ISSUES 22).

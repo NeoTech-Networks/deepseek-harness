@@ -1,5 +1,17 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-30 - Bot Sessions group: built, packaged, installed, read back
+
+- VERIFIED tests move the right way: `all-sessions.client.spec.tsx` was `4 failed | 5 passed (9)` on the untouched tree and `4 failed | 11 passed (15)` after, with the SAME four failing names both times (`lists every unarchived session newest-first`, `hides archived sessions`, `survives a rail/wide round trip`, `keeps a crashing section visible`). Six new cases, no new failure. Logs in `C:\Projects\logs\2026-10-30-dsh-bot-sessions\` (`baseline-all-sessions.log`, `after-all-sessions.log`). `tree.client.spec.ts` and `sidebar-root.client.spec.tsx` all pass.
+- VERIFIED the gates: `pnpm run build` 9 of 9 (107.81 s), `pnpm run typecheck` 5 of 5 (309.75 s), oxlint on the seven changed files exit 0, `verify-client-ui-i18n` clean over 1095 client sources.
+- VERIFIED the slot catalog does not move: `gen-client-catalog --check` reports it stale, and it reports the SAME staleness with this change stashed, so it is pre-existing (OPEN_ISSUES 25), not caused here.
+- VERIFIED the packaged build: `dsh_local_features_check.py --asar ...\win-unpacked\resources\app.asar` reads 47 of 47 including `bot-sessions-group`; marker `allSessions.botSessions` found 4 times inside that asar; packaged smoke `smoke-packaged-runtime.ts --unsigned` exit 0 in 77.8 s.
+- VERIFIED the install: uninstall key `7808434f-...` reads `0.2.1-rc.5` with one row, the app was closed and relaunched 07:20, and `dsh_local_features_check.py` with no arguments (so it reads the INSTALLED asar) reads 47 of 47.
+- VERIFIED on screen: a captured crop shows the `Bot Sessions` heading directly under an ordinary row (`Build Wix pages...` / `blog-articles`) with indented bot rows beneath it; UI Automation by CONTAINMENT, not position, reports the All Sessions tree holding 14 rows, 6 ordinary then 8 bot, with no `DS Bot` among the ordinary six. A flat position scan gives a wrong count here because the workspace browser beneath is also full of `DS Bot` rows.
+- VERIFIED the fold control: `ExpandCollapsePattern` reads `Collapsed` and `Expand()` moves it to `Expanded`. `Collapse()` did not take while the window was minimised, so the fold-back is not proven.
+- RECONCILED the count: the bot Workspace holds 10 sessions, 1 is archived (hidden by the pre-existing default filter), 1 is a blank provisional (hidden unless selected) = the 8 shown.
+- NOT VERIFIED: a brand-new bot chat joining the group live (OPEN_ISSUES 26).
+
 ## 2026-10-28 - New Session workspace dropdown reset fix
 
 - VERIFIED the cause live (`record.json`): body remount `wd4y4 -> kme6u` and `aria-expanded true -> false` at 53.6 s, the instant `dsh.sessions.current` switched to the picked folder's blank session, 7.2 s after the pick. With no input the chip held for 45 s.
