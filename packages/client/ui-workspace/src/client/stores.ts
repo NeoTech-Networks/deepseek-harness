@@ -144,24 +144,33 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
 type AllSessionsViewState = {
   /** Whether the flat session list under the section header is shown. */
   expanded: boolean
+  /**
+   * Whether the nested Bot Sessions group is open. Optional so a payload
+   * persisted before the group existed still parses; an absent flag reads as
+   * folded, which is the group's default.
+   */
+  botExpanded?: boolean
 }
 
 /** Annotation twin of the actions literal (drift fails assignability). */
 type AllSessionsViewActions = {
   setExpanded: (draft: AllSessionsViewState, expanded: boolean) => void
+  setBotExpanded: (draft: AllSessionsViewState, expanded: boolean) => void
 }
 
 /**
  * Create the "All Sessions" section store handle: one persisted fold flag,
- * defaulting to expanded so the quick-nav list is visible on first load.
+ * defaulting to expanded so the quick-nav list is visible on first load, plus
+ * one for the nested Bot Sessions group defaulting to folded.
  * @returns the store handle.
  */
 export function createAllSessionsStore(): EngineStoreHandle<AllSessionsViewState, AllSessionsViewActions> {
   return defineStore({
-    init: (): AllSessionsViewState => ({ expanded: true }),
+    init: (): AllSessionsViewState => ({ expanded: true, botExpanded: false }),
     persist: 'dsh.workspace.allSessions.v1',
     actions: {
       setExpanded: (d, expanded: boolean) => { d.expanded = expanded },
+      setBotExpanded: (d, expanded: boolean) => { d.botExpanded = expanded },
     },
   })
 }

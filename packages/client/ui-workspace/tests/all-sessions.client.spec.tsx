@@ -39,8 +39,8 @@ const sessionState = (items: readonly SessionSummary[], overrides: Partial<Sessi
   projectionsBySession: {},
   ...overrides,
 })
-const workspace = (id: string, sessionIds: string[], title = id): WorkspaceView => ({
-  workspaceId: wid(id), path: `/projects/${id}`, title,
+const workspace = (id: string, sessionIds: string[], title = id, path = `/projects/${id}`): WorkspaceView => ({
+  workspaceId: wid(id), path, title,
   sessionIds: sessionIds.map(sid), createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
 })
 const workspaceState = (
@@ -174,5 +174,106 @@ describe('AllSessionsSection', () => {
     } finally {
       quiet.mockRestore()
     }
+  })
+})
+
+// ds-bot's Workspace: its directory is the durable identity, its title the
+// fallback. The fixture spells the path with backslashes because that is what
+// the Host reports on Windows.
+const BOT_PATH = 'C:\\Users\\SteveDempsey\\.dsh\\bot\\workspace'
+const botWorkspace = (sessionIds: string[], title = 'DS Bot'): WorkspaceView =>
+  workspace('bot', sessionIds, title, BOT_PATH)
+const BOT_TOGGLE = '展开或收起机器人会话'
+const BOT_GROUP = '机器人会话'
+
+const rowIds = (tree: HTMLElement): (string | undefined)[] =>
+  [...tree.querySelectorAll(':scope > [data-all-sessions-row]')].map(row => (row as HTMLElement).dataset.allSessionsRow)
+
+describe('AllSessionsSection Bot Sessions group', () => {
+  it('moves bot Workspace sessions out of the flat list and into the group', () => {
+    mount({
+      useSessions: hook(sessionState([summary('bot-one', 5)])),
+      useWorkspaces: hook(workspaceState([botWorkspace(['bot-one'])])),
+    })
+    fireEvent.click(screen.getByRole('button', { name: BOT_TOGGLE }))
+
+    const trees = screen.getAllByRole('tree')
+    expect(trees).toHaveLength(2)
+    // Nothing sits directly in the section's own list any more.
+    expect(rowIds(trees[0]!)).toEqual([])
+    // The row is inside the nested tree, not the section's flat one.
+    expect(rowIds(screen.getByRole('tree', { name: BOT_GROUP }))).toEqual(['bot-one'])
+  })
+
+  it('is folded by default and reveals its rows on click', () => {
+    mount({
+      useSessions: hook(sessionState([summary('bot-one', 5)])),
+      useWorkspaces: hook(workspaceState([botWorkspace(['bot-one'])])),
+    })
+    const toggle = screen.getByRole('button', { name: BOT_TOGGLE })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.getAllByRole('tree')).toHaveLength(1)
+    expect(screen.queryByRole('treeitem')).toBeNull()
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getAllByRole('tree')).toHaveLength(2)
+    expect(screen.getAllByRole('treeitem')).toHaveLength(1)
+
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.getAllByRole('tree')).toHaveLength(1)
+  })
+
+  it('leaves an ordinary Workspace session in the flat list, unaffected', () => {
+    mount({
+      useSessions: hook(sessionState([summary('plain', 9), summary('bot-one', 5)])),
+      useWorkspaces: hook(workspaceState([
+        workspace('alpha', ['plain'], 'Alpha'),
+        botWorkspace(['bot-one']),
+      ])),
+    })
+    const outer = screen.getByRole('tree', { name: '全部会话' })
+    expect(rowIds(outer)).toEqual(['plain'])
+  })
+
+  it('renders no group at all when no session lives in the bot Workspace', () => {
+    mount({
+      useSessions: hook(sessionState([summary('plain', 9)])),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['plain'], 'Alpha')])),
+    })
+    expect(screen.queryByRole('button', { name: BOT_TOGGLE })).toBeNull()
+    expect(screen.queryByText(BOT_GROUP)).toBeNull()
+    expect(screen.getAllByRole('tree')).toHaveLength(1)
+  })
+
+  it('puts a session added to the bot Workspace into the group on the next render', () => {
+    const first = mount({
+      useSessions: hook(sessionState([summary('bot-one', 5)])),
+      useWorkspaces: hook(workspaceState([botWorkspace(['bot-one'])])),
+    })
+    fireEvent.click(screen.getByRole('button', { name: BOT_TOGGLE }))
+    expect(rowIds(screen.getByRole('tree', { name: BOT_GROUP }))).toEqual(['bot-one'])
+
+    // A new bot chat: nothing tagged, nothing cached, nothing moved. The group
+    // is derived from the same live snapshot, so the next one carries it.
+    first.view.rerender(
+      <AllSessionsSection
+        {...first.props}
+        useSessions={hook(sessionState([summary('bot-two', 99), summary('bot-one', 5)]))}
+        useWorkspaces={hook(workspaceState([botWorkspace(['bot-two', 'bot-one'])]))}
+      />,
+    )
+    expect(rowIds(screen.getByRole('tree', { name: BOT_GROUP }))).toEqual(['bot-two', 'bot-one'])
+  })
+
+  it('renders nothing on the collapsed rail, group included', () => {
+    const b = mount({
+      wide: false,
+      useSessions: hook(sessionState([summary('bot-one', 5)])),
+      useWorkspaces: hook(workspaceState([botWorkspace(['bot-one'])])),
+    })
+    expect(b.view.container.textContent).toBe('')
+    expect(screen.queryByRole('button', { name: BOT_TOGGLE })).toBeNull()
   })
 })

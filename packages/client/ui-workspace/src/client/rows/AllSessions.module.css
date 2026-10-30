@@ -121,6 +121,48 @@
   color: var(--dsw-alias-label-tertiary);
 }
 
+/* Nested Bot Sessions group. It trails the ordinary rows INSIDE the one
+   scrolling .list above, so it can never become a second scroll container; it
+   is indented one step and set one size down from the section header so it
+   reads as a child of the section rather than a sibling. */
+.group {
+  margin-top: 6px;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.groupHeader:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.groupLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+/* Indents the re-used session rows under the group header. */
+.groupRows {
+  padding-left: 8px;
+}
+
 /* Recovery row for a crash in this section: it replaces the shared slot
    boundary's blank crash face, which gave the operator no reason and no way
    back without restarting the app. */
