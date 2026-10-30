@@ -12,6 +12,18 @@
 - RECONCILED the count: the bot Workspace holds 10 sessions, 1 is archived (hidden by the pre-existing default filter), 1 is a blank provisional (hidden unless selected) = the 8 shown.
 - NOT VERIFIED: a brand-new bot chat joining the group live (OPEN_ISSUES 26).
 
+## 2026-10-30 - Bot Sessions publishes the ids it owns
+
+- VERIFIED build: `pnpm run build` 9 of 9 gates in `C:\d216` (host compiler 268.83 s, host aggregate 171.03 s, client compiler 141.10 s, client aggregate 82.90 s, Client bundle 27.84 s).
+- VERIFIED package: `state=ok` at 13:59:44; the packaged smoke `tsx scripts/smoke-packaged-runtime.ts --unsigned` exited 0 in 66 s with `fatalObserved:false` and `timedOut:false`; `windows-package success:true`. Artifact `deepseek-harness-0.2.1-rc.5-win-x64-unsigned.exe`, 290,477,124 bytes, sha256 `806E1BDC7CF2366E40C908EBAE9DB557AD23E57D6C7A13548A1BD71B2FB0AAAC`. Version deliberately not bumped.
+- VERIFIED the new code shipped: `__dshBotSessions` four times and `dsh-bot:sessions` twice in `packages/client/ui-workspace/lib/client.js`, in the packaged `dsh\node_modules\@deepseek-ai\dsh-client-ui-workspace\lib\client.js`, and in both the packaged and the INSTALLED `app.asar` (205,209,761 bytes).
+- VERIFIED tests and gates: `ui-workspace` 13 files, 524 passed; `pnpm run typecheck` 5 of 5; oxlint clean on the five touched files; the pre-commit lefthook passed on the commit.
+- VERIFIED the plugin patch survived the install: `ds_bot_combined_sidebar_patch.py --check` reads 9 of 9 on the installed `client.js`, and `node --check` exits 0.
+- VERIFIED live over CDP after the install: 7 ids published; 5 rows outside the group with NONE of them published; 6 inside with all of them published; `leakedIntoOuterList` empty and `publishedButNotInGroup` empty. The seventh id is a DS Bot bot identifier rather than a session and appears nowhere in the page.
+- VERIFIED the degrade path: deleting the global and firing the event moved 3 rows back to the main list and left the rest under the folder rule, so the list falls back instead of emptying. The published set was then restored and re-read at 7 published, 5 outside, 6 inside.
+- VERIFIED by eye as well, on `sidebar-crop.png` read with DeepSeek vision: `All Sessions` expanded holding `Build Wix pages fro...` labelled `blog-articles`, and `Bot Sessions` expanded holding `Igor` labelled `session-sessio...` and `YouTube` labelled `sig-railway-ser...`. The OS window capture was stale (PrintWindow) and disagreed, so the renderer pixels over CDP were the evidence used.
+- VERIFIED the running build: `dsh_local_features_check.py` on the installed app reads 48 of 48, including `bot-sessions-published`; `DisplayVersion` 0.2.1-rc.5; the app was then relaunched without the debugging port.
+
 ## 2026-10-29 - Combined ds-bot sidebar, caption launchers, plain sessions
 
 - VERIFIED tests: `ui-sidebar` 74 passed (incl. 4 new combined-sidebar specs; 5 snapshots updated for the seat rename); `ui-workspace` + pickers pass except 4 `all-sessions` and 1 `desktop-picker` failures that reproduce identically with the change stashed.
