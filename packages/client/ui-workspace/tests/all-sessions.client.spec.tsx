@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { GlobalStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { allowAllAccess, bindSnapshotSelector, makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import type { SessionListState, SessionSummary } from '@deepseek-ai/dsh-api-session-controller/client'
 import type {
@@ -29,7 +29,7 @@ const t: AllSessionsProps['t'] = makeTranslate(zh, commonZh)
 const sid = (id: string) => id as SessionId
 const wid = (id: string) => id as WorkspaceId
 const summary = (id: string, updatedAt: number, overrides: Partial<SessionSummary> = {}): SessionSummary => ({
-  id: sid(id), displayTitle: id, running: false, blank: false, updatedAt, ...overrides,
+  id: sid(id), title: id, displayTitle: id, running: false, blank: false, updatedAt, ...overrides,
   retainedBy: overrides.retainedBy ?? {},
 })
 const sessionState = (items: readonly SessionSummary[], overrides: Partial<SessionListState> = {}): SessionListState => ({
@@ -275,5 +275,57 @@ describe('AllSessionsSection Bot Sessions group', () => {
     })
     expect(b.view.container.textContent).toBe('')
     expect(screen.queryByRole('button', { name: BOT_TOGGLE })).toBeNull()
+  })
+})
+
+// The bots work in ordinary project folders the operator also works in, so the
+// folder cannot say who owns a session. ds-bot publishes the ids instead.
+const BOT_EVENT = 'dsh-bot:sessions'
+// The spec's own view of the channel: the publisher is a separate bundle, so
+// the page reads it as `unknown` and the shell tolerates any shape.
+const global2 = window as unknown as { __dshBotSessions?: unknown }
+const publish = (ids: string[]): void => {
+  global2.__dshBotSessions = ids
+  window.dispatchEvent(new CustomEvent(BOT_EVENT))
+}
+
+describe('AllSessionsSection ids published by ds-bot', () => {
+  beforeEach(() => { delete global2.__dshBotSessions })
+
+  it('leaves a normal Workspace session in the flat list and grows no group', () => {
+    mount({
+      useSessions: hook(sessionState([summary('igor', 9)])),
+      useWorkspaces: hook(workspaceState([workspace('playbooks', ['igor'], 'Playbooks')])),
+    })
+    expect(rowIds(screen.getByRole('tree', { name: '全部会话' }))).toEqual(['igor'])
+    expect(screen.queryByRole('button', { name: BOT_TOGGLE })).toBeNull()
+  })
+
+  it('moves a published session into the group when the event fires', () => {
+    mount({
+      useSessions: hook(sessionState([summary('igor', 9), summary('mine', 8)])),
+      useWorkspaces: hook(workspaceState([
+        workspace('playbooks', ['igor'], 'Playbooks'),
+        workspace('alpha', ['mine'], 'Alpha'),
+      ])),
+    })
+    expect(rowIds(screen.getByRole('tree', { name: '全部会话' }))).toEqual(['igor', 'mine'])
+
+    act(() => { publish(['igor']) })
+
+    expect(rowIds(screen.getByRole('tree', { name: '全部会话' }))).toEqual(['mine'])
+    fireEvent.click(screen.getByRole('button', { name: BOT_TOGGLE }))
+    expect(rowIds(screen.getByRole('tree', { name: BOT_GROUP }))).toEqual(['igor'])
+  })
+
+  it('keeps the Workspace rule when ds-bot publishes an empty list', () => {
+    mount({
+      useSessions: hook(sessionState([summary('bot-one', 5)])),
+      useWorkspaces: hook(workspaceState([botWorkspace(['bot-one'])])),
+    })
+    act(() => { publish([]) })
+
+    fireEvent.click(screen.getByRole('button', { name: BOT_TOGGLE }))
+    expect(rowIds(screen.getByRole('tree', { name: BOT_GROUP }))).toEqual(['bot-one'])
   })
 })

@@ -3,9 +3,12 @@
  * `sidebar.allSessions` hole: a collapsible header above the workspace
  * browser, and a flat newest-first list of every unarchived session (pinned
  * first). Each row shows the session's live status mark, its title, and the
- * Workspace it belongs to; clicking a row opens that session. Sessions in the
- * bot Workspace trail the list in their own collapsible "Bot Sessions" group,
+ * Workspace it belongs to; clicking a row opens that session. Sessions the
+ * bots own trail the list in their own collapsible "Bot Sessions" group,
  * derived from the same live snapshot so a new bot chat joins it by itself.
+ * A session is a bot session when its Workspace is ds-bot's, or when ds-bot
+ * published its id: the bots work in ordinary project folders the operator
+ * also works in, so the folder alone does not answer it.
  * Wide-only: the collapsed rail keeps its own search/add icons, so the section
  * renders nothing there.
  */
@@ -14,6 +17,7 @@ import clsx from 'clsx'
 import { IconTriangleRightFillRegular } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { AllSessionsProps } from '../contract/slots.ts'
 import { deriveAllSessions, type AllSessionNode } from '../tree.ts'
+import { useBotSessionIds } from '../bot-sessions.ts'
 import { SessionMark } from './Rows.tsx'
 import css from './AllSessions.module.css'
 
@@ -37,7 +41,7 @@ function AllSessionRow({ node, currentId, onOpen, t }: {
       <span className={css.status}>
         <SessionMark node={node} t={t} />
       </span>
-      <span className={css.title}>{node.blank ? t('session.new') : node.title}</span>
+      <span className={css.title}>{node.blank ? t('session.new') : node.title || t('session.untitled')}</span>
       <span className={css.workspace}>{node.workspace === '' ? t('group.ungrouped') : node.workspace}</span>
     </button>
   )
@@ -114,9 +118,12 @@ function AllSessionsInner({
   const panelActive = usePanelInfo(info => info.activePanelId !== null)
   const expanded = useStore(s => s.expanded)
   const botExpanded = useStore(s => s.botExpanded) === true
+  // ds-bot publishes the sessions it owns: they work in ordinary project
+  // folders, so the Workspace rule alone cannot find them.
+  const botSessionIds = useBotSessionIds()
   const rows = useMemo(
-    () => deriveAllSessions(list, workspaces, { archivedSessionIds, pinnedSessionIds }, statuses),
-    [list, workspaces, archivedSessionIds, pinnedSessionIds, statuses],
+    () => deriveAllSessions(list, workspaces, { archivedSessionIds, pinnedSessionIds }, statuses, botSessionIds),
+    [list, workspaces, archivedSessionIds, pinnedSessionIds, statuses, botSessionIds],
   )
 
   // Wide-only: the rail has no room for a second list and keeps its own icons.
@@ -126,8 +133,8 @@ function AllSessionsInner({
     ? undefined
     : Object.values(list.byId).find(session => (session.retainedBy.mainView ?? 0) > 0)?.id
   // The bot rows are derived from the same live snapshot as the ordinary ones,
-  // so a session created in the bot Workspace joins the group on its next
-  // render with nothing to tag, move or cache.
+  // so a session ds-bot starts owning joins the group on its next render with
+  // nothing to tag, move or cache.
   const ordinaryRows = rows.filter(node => !node.bot)
   const botRows = rows.filter(node => node.bot)
   return (
