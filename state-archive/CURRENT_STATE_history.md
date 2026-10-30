@@ -2,6 +2,32 @@
 
 Auto-archived by state_file_cap.py when CURRENT_STATE.md exceeded 32 KB. Newest-first. On-demand only; not read at session start.
 
+## 2026-10-01 - Session footer "Skills Used" line, 0.2.0-rc.2 rebuilt and installed
+
+- WHAT SHIPPED: a third footer line under `Design Project:`, `Skills Used: <names>`, listing the skills and commands the OPERATOR typed in that Session, first use first, joined with ", ". Commit `4981088f36` on `update/v0.2.0-rc.2` (worktree `C:\d202`), pushed (`3148ab20a1..4981088f36`).
+- HOW: a new host Session projection `skillsUsed` (`packages/api/session-controller/src/skills-used-projection.ts`, stateVersion 1) folds two operator-only records: `user/message` with source `skill-invocation` (written when a typed `/name` resolves to a user-invocable skill) and `command/run`. Model `skill` tool loads are deliberately excluded. Measured over 140 real Session logs before building: 139 operator signals (save-state 79, dashboard-design-sync 18, dashboard-design-code-pull 14, dashboard 14, code-only 5, plan 1) against 19 model loads.
+- CLIENT: `ConversationContent.tsx` renders the row alone when a Session resolves no dashboard; the Dashboard / Design Project pair keeps its exact previous behaviour. Labels `Skills Used:` / `使用的技能：`.
+- REBUILT THE SAME VERSION: installer `deepseek-harness-0.2.0-rc.2-win-x64-unsigned.exe`, 288,654,439 bytes, sha256 `0E723C54...4A8B`, packaged with a hidden-console stage script (no stdio redirection): `runtime:lockfile` passed first time, smoke passed. Installed by Steve 2026-10-01 ~17:33; installed `app.asar` byte-identical to the built one (`06614FF2...13C5`). Feature registry `C:\Claude\bin\dsh_local_features.json` 35 -> 37 rows, all 37 present.
+- LIVE: the projection is folding in the running app (a projection cache row holds `["dashboard-design-sync","save-state"]`). The populated row has NOT yet been seen on screen (OPEN_ISSUES 9).
+- Rollback floor unchanged: the original 0.2.0-rc.2 installer in `C:\Projects\exports\2026-09-30-dsh-020-rc2\`. Session page: `C:\Projects\logs\2026-10-01\dsh-session-footer-ui\SESSION_STATE.md`.
+
+## 2026-09-30 - DSH 0.2.0-rc.2 built, installed and verified
+
+- WHAT SHIPPED: a same-architecture stack REPLAY of the 4 commits on `update/v0.2.0-rc.1` onto upstream `dsh-v0.2.0-rc.2` (released 2026-09-29T09:42Z). Branch `update/v0.2.0-rc.2`, worktree `C:\d202`, three commits: `f6c472733d` (the replay), `92bac69c68` (the fork's nine own packages bumped to 0.2.0-rc.2), `3148ab20a1` (regeneration and the client i18n gate fix). Branch and tag `dsh-v0.2.0-rc.2-fork` pushed and read back. Mechanism: the SAME NATIVE THREE-WAY SQUASH MERGE as last time, chosen for the same measured reason - `merge-base(dsh-v0.2.0-rc.2, update/v0.2.0-rc.1)` is EXACTLY `dsh-v0.2.0-rc.1` (`4878cdabd8`) - so git resolved everything it could and only **23 of the 390 stack-touched files conflicted**. Excluding `docs/`, translations and lockfiles the delta is 865 files, +18,207/-3,626; inside `packages/` 556 files, +11,741/-2,875. **NO package is added or removed** and `tsconfig.base.json` gains one alias, so no alias work was needed.
+- THE HEADLINE: **UPSTREAM SUPERSEDED THE FORK'S OWN PLAN-REVIEW FIX.** rc.2 ships `9a2f353813` and `ebb6b03378`, which fix the same bug the fork fixed in `41ef7921d7`, differently and more widely: the sidebar seat republishes its binding after each commit instead of releasing and rebinding, and the review opener reads the mounted snapshot, retries on each mounted-session change, and records itself opened only once an open reaches a seat. The fork's `packages/client/ui-plan/src/client/auto-open.ts` is DELETED, `ui-plan/src/client/index.ts` is reverted to upstream so `hooks: { sidebarMounted: ... }` returns, and `PlanCard.tsx` plus the two specs and the READMEs are upstream's. Proved in the built artifact: `openWhenSeated` 0, `sidebarMounted` 3.
+- THE SUPERSEDE IS PER FILE, NOT PER PACKAGE, and this nearly cost two unrelated fixes. The plan-review fix also touched `packages/client/ui-sidebar-right`, so taking upstream wholesale there looked like the same decision. It was NOT: the fork's `syncPresentation(presentation, sessionId)` per-session width key and its `onToggleMode` panel-chrome switch (a directly bound control, because the injected command resolves its pane from live DOM focus and can silently do nothing) are separate features upstream did not supersede, while upstream rewrote that package's seat wiring at the same time (`bindService` out, `measureRoom` and `reportAutoFullscreen` in, focus helpers moved into `index.ts`). Resolved as a real union; `onToggleMode` reads 4 in the installed asar.
+- OTHER RESOLUTIONS, each a true union rather than a side: `QuestionComposer.tsx` keeps the fork's heading-in-scrollport design (`QuestionHeading`, `headerExpanded`, `headingInBody`) and takes upstream's wait/countdown status spans into the action row plus upstream's dismissal-aware `dismissFlow` in place of the fork's removed `cancelFlow`, with `answerSurface` focus capture back on the body; `tool-pwsh` keeps BOTH guidance sentences while the fork's real param-led fix in `packages/shell/pwsh-local` was untouched by upstream; `ui-sidebar-files` carries upstream's `files.actions` render slot AND the fork's new-session menu, with `renderSlot` and the fork's six injected props both destructured; `api/remotes` mounts all four of `officeToPdf`, `userQuestions`, `accountUsage` and `pinnedFiles`.
+- THE CATALOG GENERATORS WERE MERGED, NOT TAKEN FROM EITHER SIDE. `scripts/gen-cordis-catalog.ts` and `scripts/gen-tool-catalog.ts` were changed by BOTH sides. Taking HEAD keeps the file valid and the regeneration SUCCEEDS while silently dropping the fork's entries; it was caught only because the regenerated `docs/tool-catalog.md` came out 102 headings against the Chinese side's 104. Ledger 41's "take HEAD for generated files" applies to their OUTPUTS, never their GENERATORS.
+- THE PERSISTED HISTORY HAD FORKED. Upstream's new `2026-09-21-user-question-reply` and the fork's `2026-09-24-vision-routing-source` both declared `previous: 2026-09-16-session-format-v4` for the same four message-source roots, and `persistence-changes` refused it. Fixed with `tsx scripts/persistence-changes.ts --update 2026-09-24-vision-routing-source`, which re-parents the four `previous` fields onto upstream's tip and recomputes every `after` digest; the hashes were NOT hand-edited. `verify-persistence-changes` then reported 63 roots matching 11 records.
+- GATES: **29 of 32 pass**, against 10 of 29 failing at the start of this session. **CLOSED the long-standing `verify-client-ui-i18n` failure** (OPEN_ISSUES item 3a): the two flagged constants are IDENTIFIERS, not copy, and the gate keys on a `_TEXT_` token in the NAME, so `EXPLORER_TEXT_KIND` and `EXPLORER_TEXT_ID` became `EXPLORER_PREVIEW_KIND` and `EXPLORER_PREVIEW_ID` with their string values untouched; the pair of READMEs name the values, so no translation record moved. The 3 remaining failures are all accounted for: `verify-repository-references` (the fork's own `PORT-0.1.7-FEATURE-MAP.md`, item 3(b), still needs a decision), and `verify-cordis-config` plus `verify-client-domain-graph`, BOTH PROVEN UPSTREAM'S BY BLOB this session (the cordis fixture is byte-identical to `dsh-v0.2.0-rc.2`; 39 of the 40 domain-graph offenders are byte-identical and the 40th, `ui-conversation/src/client/skeleton/InputBar.tsx`, differs only in comments and body with no import line touched). `verify-type-equiv` now reads 476 blocks, `verify-translation-pairing` 1178 pairs.
+- COMPLETENESS PROVEN BY BLOB, with a sanity check first on `ui-plan/src/client/PlanCard.tsx` (known to differ) so the loop could not silently compare nothing: **330 of the 332 fork-only files are byte-identical to `update/v0.2.0-rc.1`**, and the two exceptions are exactly the deliberate ones (`auto-open.ts` deleted, `ui-plan/index.ts` reverted). The file-set had to be computed as `git diff dsh-v0.2.0-rc.1 update/v0.2.0-rc.1` minus `git diff dsh-v0.2.0-rc.1 dsh-v0.2.0-rc.2`; a first attempt compared the two TAG trees and produced a meaningless 1353-file set.
+- PACKAGING CORRECTED ITS OWN RUNBOOK, and the old remedy is now known to be INSUFFICIENT. The documented fix (detached `Start-Process` with `-RedirectStandardOutput` and `-RedirectStandardError`) FAILED with the identical signature: `runtime:lockfile` ended `Error: desktop runtime: pnpm exited with 2147483651` right after `PostQueuedCompletionStatus: (6) The handle is invalid.`, and pnpm had already printed `Done in 11.2s`, so the work succeeded and only the exit status was bad. A redirected FILE handle is not a CONSOLE handle. Relaunching with NO stdio redirection at all, `Start-Process pwsh ... -WindowStyle Hidden` so Windows allocates a hidden console, passed `runtime:lockfile` first time. A second correction: the pre-push lefthook typecheck failed twice at about 30 s while `pnpm run typecheck` passed directly, and the stack was `runDepsStatusCheck` - the hook needs `CI=true` EXPORTED for the `git push`, the same rule as the install.
+- THE ARTIFACT: `deepseek-harness-0.2.0-rc.2-win-x64-unsigned.exe`, **288,350,678 bytes**, sha256 `2F4AC466C291FA2B81EF7EDCB87D00575400744098AE158328685142714805E4`, packaged smoke passed (DOCX, XLSX, PPTX to PDF and the skill CLI), and `dsh_local_features_check.py --asar` read **35 of 35** out of the packaged `win-unpacked` BEFORE handover.
+- THE ROLLBACK FLOOR WAS FOUND MISSING. `C:\d17`, `C:\d172`, `C:\d17p` and `C:\d201` had all been cleaned up, so the installer for the version Steve was RUNNING existed nowhere on disk and `~\.dsh\profiles\desktop.rollback` was absent. Steve chose to rely on the pushed branch rather than spend an extra build cycle. The rc.2 artifact is now copied out of the build tree to `C:\Projects\exports\2026-09-30-dsh-020-rc2\` so the next update has a floor.
+- INSTALLED 2026-10-01 by the operator from a NEW PowerShell window. This session runs INSIDE the app (`pwsh<-DeepSeek Harness.exe<-...<-explorer.exe`), so `Test-RunningInsideHarness` DID fire and the `-WhatIf` dry run refused with exit 2, which is the correct behaviour and the reason the install was handed over rather than run here.
+- VERIFIED LIVE against the running app: `DisplayVersion 0.2.0-rc.2` and exactly ONE uninstall row `7808434f-...`; the installed `resources\app.asar` is **byte-identical to the built one**, 127,016,675 bytes, sha256 `6EACBC9356D023DFDD5171820246D9239EF47E260F8B7EFD7E8DB3C6FB22DE8B`; `dsh_local_features_check.py` reads **35 of 35**; `openWhenSeated` 0, `sidebarMounted` 3, `onToggleMode` 4, `headingInBody` 3; port 19387 answers with 7 processes started 04:55:49 to 05:01:03; `settings.yaml.imported` present with the home patch at 20,093 bytes and the profile patch at 5,541 bytes, BOTH identical to their pre-install sizes; `selectedDefault: standard-hooks` with the deliberate `maxBytes: 131072` intact; **443 of 443 `hook/result` events exit 0** with this session showing PreToolUse 222, PostToolUse 221, UserPromptSubmit 3 and Stop 1; SessionStart proven from the bridge's own `emitted-context` record `session-c112bdab-....json` written 05:00:47; a real `memory_search` MCP call answered; 1,161 session files on disk with the newest 6 all readable; and the `AGENTS.md` hardlink holding two names with equal hashes.
+- NOT PROVEN, AND NOT CLAIMED: the mode picker seen ON SCREEN (file read only), the model menu seen visually, and a plan review watched auto-opening - which is OPEN_ISSUES item 1 and now needs a real plan to finish while another session is on screen. One useful side finding: this session runs on `deepseek-flash`, so the DeepSeek route survived the pi-ai 0.87.1 bump in this release despite the release note warning that saved model selections might need re-picking.
+
 ## 2026-09-28 - DSH 0.2.0-rc.1 built, installed and verified
 
 - WHAT SHIPPED: a same-architecture stack REPLAY of the 55 commits on `update/v0.1.7-rc.2` onto upstream `dsh-v0.2.0-rc.1` (released 2026-09-28T12:36Z, merge `4878cdabd8`). Branch `update/v0.2.0-rc.1`, worktree `C:\d201`, HEAD `eea5627d7d`, pushed to origin. Mechanism: a NATIVE THREE-WAY SQUASH MERGE, because `merge-base(dsh-v0.2.0-rc.1, update/v0.1.7-rc.2)` is exactly `dsh-v0.1.7-rc.2` (`477b4f4205`), so git resolved the non-overlapping changes itself and only **9 files conflicted** out of 380. Three commits: `c0caac67fb` (the replay), `41ef7921d7` (the plan-review fix cherry-picked), `eea5627d7d` (version bump and regeneration).
@@ -83,111 +109,6 @@ Auto-archived by state_file_cap.py when CURRENT_STATE.md exceeded 32 KB. Newest-
 - ARCHIVED IN THIS SAVE: OPEN_ISSUES items 28, 32 and 33 came OUT of the list into `state-archive\OPEN_ISSUES_resolved.md`, because the footer they track is live in the installed build and has been photographed.
 - STILL OPEN, unchanged: the hook-bridge firing proof (36b) needs a Session STARTED after the 2026-09-20 install, because this Session predates the `standard-hooks` preset and its own prompts cannot fire the bridge (checked this session: the newest `emitted-context` file is still `s.json`, 2026-09-19 18:21:55); `claude_design_team_account` (36c) mounts only in the app; and the icon set still has no artwork for the eight extensions that fall to the plain grey code glyph.
 - TOOLING NOTE: this file is over the ~32 KB ceiling and the capper was deliberately NOT run against it, per the harness error ledger rows 21 and 22 (the cap and the reconcile both rewrite this repo's state files even on a no-op dry run, and these files have been damaged four times). Archive the oldest sections by hand instead.
-
-## 2026-09-20 - the sidebar stage marks are PHOTOGRAPHED in the running app: the last visual gap on item 34 is closed
-
-- THE ONE THING ITEM 36 LEFT OPEN FOR THE STAGE MARKS IS DONE. The 2026-09-20 evening session could not get the marks on screen because no Session was in a running, waiting or plan state during any of its captures; this session is mid-turn while it looks, so the running state was on screen for the whole capture. Window capture via `C:\Projects\logs\2026-09-18\dsh-footer-intent\capture_app_window.ps1`, cropped with `crop_png.ps1` beside it and with this session's `upscale_crop.ps1` for the 6x zoom. Evidence: `C:\Projects\logs\2026-09-20\dsh-stage-icons\` (`app-window-running.png`, `app-window-running-2.png`, `app-window-running-3.png`, `sidebar-band.png`, `sidebar-band-3.png`, `zoom-sidebar-marks.png`, `zoom-sidebar-marks-frame2.png`, `preinstall-sidebar-band.png`).
-- WHAT THE CAPTURE SHOWS, read back with my own eyes rather than through the vision sidecar that defeated the previous attempt: every running row in the All Sessions list draws the NEW Working mark (two arcs plus a centre dot) in the ongoing blue, not the old bare dot and not the old `right-up` arrow. Three captures over about two minutes put the arcs at a DIFFERENT ROTATION on every row each time, so the loop is genuinely running rather than a static frame. The same capture also shows the populated footer (`Dashboard: https://portal.theseoitguy.net/core30`, `Design Project: Core 30`), independently confirming item 36's footer claim.
-- THE CONTROL THAT MAKES IT A PROOF RATHER THAN A SIGHTING: the pre-install capture of the SAME list at `C:\Projects\logs\2026-09-20\dsh-settings-retention\app-window-3.png` (taken before the install) shows those same rows with NO mark at all, and one of them carrying the OLD amber `right-up` declared-status glyph. Re-cropped here as `preinstall-sidebar-band.png`, it is the same band, the same rows and the same window geometry, so the difference on screen is the build.
-- "SIX ROWS RUNNING AT ONCE LOOKED WRONG, AND WAS MEASURED RATHER THAN ASSUMED." Because the mark can only appear when the app reports that Session running, and the phase logic in `tree.ts` is untouched by this change, five or six simultaneous marks were checked against an independent source instead of being reported either as a fault or as fact: SIX distinct Session projection caches under `~\.dsh\storages\session_projcache\sessions\` were written inside a 3.5 minute window (14:22:10 to 14:25:29). This machine really does run that many Sessions concurrently. The third capture 90 seconds later shows the membership already changing (one row gone from the list, the order and the selection moved), which is a live list, not a frozen one.
-- STILL OPEN FROM ITEM 36, both small and both needing a Session that is actually doing something: the hook bridge firing proof (send one message in the app and check for a new file under `C:\Claude\integrations\dsh-hook-bridge\state\emitted-context\`), and the `claude_design_team_account` read, which mounts only in the app.
-
-## 2026-09-20 - the session-stage-marks build is INSTALLED and verified live, the populated footer is photographed, and the 1.6 question is settled
-
-The 0.1.5-rc.2 rebuild the previous section left PENDING was run the same day at 13:29 to
-13:35 and is proven in the RUNNING app. `finish-install.ps1` from
-`C:\Projects\worktrees\dsh-stage-icons` exited 0 and printed `SETUP COMPLETE. Running
-0.1.5-rc.2`; the installer reported `expected 272, actual 272 / extra 0, missing 0,
-mismatch 0 / PASS: seed integrity clean`; the vault read `20 files, all same` after the
-install and the script closed with `HARDLINK OK (final): AGENTS.md and .claude\CLAUDE.md
-are one file, 2 links, id 0x000000000000000000050000007ad594.`; the provision log
-`provision-2026-09-20T17-30-46-313Z.log` ends `seed integrity verified` / `staged health
-check passed` (17:35:45.379Z) / `staging profile activated as 0.1.5-rc.2` /
-`applyRelease finished`; four processes start afterwards.
-
-- `dsh_local_features_check.py` reads **27 of 27**, exit 0. The three markers that read
-  MISSING before the install (`session-footer-live-read`, `session-stage-marks`,
-  `session-status-failed`) are present, and the running profile carries
-  `dsw-stage-arc-spin` (3), `deploying` (3) and `IconStageWorkingOutline24` (1).
-- An independent 21-file SHA256 fingerprint diff against the pre-install capture is
-  EMPTY, which is a measurement rather than the tool's own claim.
-- Vault snapshot `a4675b9` (`--reason post-install`) pushed to `dsh-config` `main`.
-
-**The populated Session footer was PHOTOGRAPHED**, the thing owed since 2026-09-16.
-Opening the `Pull backlinks in dashboard design code` Session renders `Dashboard:
-https://ops.theseoitguy.net/backlinks` and `Design Project: Backlinks`. That address is the
-exact route the 2026-09-19 `byAddress` fix was built for, so the photograph confirms the
-footer-live-intent work visually too. Files in
-`C:\Projects\logs\2026-09-20\dsh-settings-retention\`.
-
-**The sidebar stage marks are NOT photographed, for a measured reason:** no Session in the
-app was in a running, waiting or plan state during any capture, so the marks that
-distinguish states were not on screen, and at this render scale the glyph column does not
-survive the vision sidecar's per-image token cap row by row. One click and one keystroke in
-the app closes it.
-
-**The 1.6 question is SETTLED, do not re-derive it.** There is no 1.6 release: the newest
-of fifteen upstream releases, ALL prereleases, is `dsh-v0.1.6-alpha.2`. And the ordinary
-upgrade path is closed, because that tag deletes the desktop provisioning layer and about
-a dozen packages the fork's features live in, so a rebase cannot reach it. Two routes
-recorded, operator decision was to stay on 0.1.5-rc.2 and take 0.1.6 as its own project.
-Full detail: `OPEN_ISSUES.md` item 35 and the playbook's `05-neotech-fork.md` section 3.
-
-**One record was corrected:** item 35 was reported missing by the session that planned
-this work, because it read a primary checkout one commit behind `origin/master`. The item
-exists and always did (sync commit `4d173056b7`, 13:14:36). The checkout was fast-forwarded
-instead of writing a duplicate.
-
-## 2026-09-20 - the 0.1.6 update is BLOCKED by upstream deletions, so the install target fell back to the proven 0.1.5-rc.2 build
-
-`dsh-v0.1.6-alpha.2` is NOT a version bump and the fork cannot take it by rebasing. Two
-layers the fork is built on were deleted upstream, both confirmed by direct reads on the
-tag rather than from notes:
-
-- `seed-store.ts`, `provision-log.ts` and ten more files under `apps/desktop/` are GONE,
-  replaced by a runtime-tree / update-journal / mandatory-update architecture. All four
-  provision milestones (`seed integrity verified`, `staged health check passed`,
-  `staging profile activated as`, `applyRelease finished`), `verifySeedIntegrity` and
-  `integrity.json` return ZERO files on the tag, so `finish-install.ps1`, which references
-  `seed` 21 times, cannot drive it.
-- About a dozen packages are GONE: `packages/session-status/*`, `client/ui-sessions-panel`,
-  `vision/routing`, `llm/account-usage`, `llm/llm-route-fallback`, `api/pinned-files`,
-  `client/ui-sidebar-explorer`, `fs/tool-present`, `code-runtime/*`, `e2b/*`,
-  `workflow/workflow-worker-thread`. `derivePhase` does not exist there. These are where
-  the fork's features live.
-
-A rebase cannot recover either: the local stack never modified `seed-store.ts` (its log
-across `dsh-v0.1.5-rc.2..42db6c8038` is empty), so replaying local diffs can never restore
-an upstream deletion. 8 of the 53 local commits were replayed before stopping. The gates
-cannot catch a wrong choice here, because either route can typecheck, build and package
-while leaving first-run provisioning broken. Operator chose the plan's bounded-effort
-fallback: install the proven 0.1.5-rc.2 build. See OPEN_ISSUES 35.
-
-WHAT IS READY TO INSTALL. `C:\Projects\worktrees\dsh-stage-icons` was fast-forwarded one
-commit (`fe3a1a3c14..42db6c8038`) so its `finish-install.ps1` carries the new hardlink
-guard as well as the 11:55 installer (194,849,563 bytes). The already-built installer is
-untouched by that fast-forward, because the script is not part of the app bundle. All three
-features missing from the running build are PROVEN inside that installer's packaged seed:
-`workspaceLinks` 1, `dsw-stage-arc-spin` 3, `deploying` 12. `dsh_local_features_check.py`
-reads 24 of 27 today and must read 27 of 27 after the install.
-
-SETTINGS COVER WIDENED, and the rules file can no longer be silently unlinked. The vault
-went from 18 protected files to 20: `dashboard-links.json` and `design-links.json` had no
-cover at all and the vault's deny list does not match either. `finish-install.ps1` gained a
-hardlink guard so a missing `~\.dsh\AGENTS.md` is re-linked to `~\.claude\CLAUDE.md` BEFORE
-any vault restore can create a separate file, asserted after each restore and once at the
-end. Identity is compared by FILE ID, never by path string: `fsutil` reports long names
-while `$env:TEMP` hands back `C:\Users\STEVED~1\...`, so a string compare false-fails a
-good link and here a false failure stops the install. Six test modes pass, including a
-shortname regression case for exactly that bug, which was found and fixed before shipping.
-
-TWO TOOLING FIXES, both surfaced by the work above. `C:\Claude\bin\dsh_config_vault.py`
-tested `(root/".git").is_dir()`, so it refused a LINKED WORKTREE, where `.git` is a file;
-since this machine mandates one worktree per session, the vault could not run in the layout
-the rules require. And the shared-checkout guard creates its worktree inside the repo, so
-`dsh_config_vault.py`'s `git add -A` would have committed a second copy of the whole vault;
-`dsh-config` now ignores `.claude/worktrees/`.
-# CURRENT_STATE (capped newest-first log)
 
 ## 2026-09-20 - the sidebar stage marks are PHOTOGRAPHED in the running app: the last visual gap on item 34 is closed
 
