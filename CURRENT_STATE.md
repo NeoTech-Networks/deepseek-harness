@@ -1,5 +1,25 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-10-30 - Every bot-owned session filed under Bot Sessions (installed)
+
+- BUILT, commit `96b5725a3f` on `feat/bot-sessions` (parent `8b9510fcd6`), in `C:\Projects\worktrees\dsh-bot-sessions`. THE GROUP NOW ASKS DS BOT instead of guessing from the folder: ds-bot publishes `window.__dshBotSessions` (an array of session ids) and fires a `dsh-bot:sessions` CustomEvent whenever the set changes, and the sidebar treats any session on that list as a bot session. The folder rule from `8b9510fcd6` stays as the fallback, so a page with no ds-bot behaves exactly as it did.
+- WHY THE OLD RULE WAS NOT ENOUGH: Igor runs in a playbooks worktree and YouTube and Header in `sig-railway-services`, folders the operator also works in. The path suffix `.dsh/bot/workspace` matched almost nothing, so the "Bot Sessions" group existed but the main list stayed a mix.
+- THE CHANNEL is one way and read-only: one window property plus one event name, read through `packages/client/ui-workspace/src/client/bot-sessions.ts`. The returned Set keeps a stable identity while its ids are unchanged, because `useSyncExternalStore` compares snapshots by identity and would re-render for ever otherwise. A non-array or a malformed value yields an empty set rather than throwing. Fallback if it proves fragile is a Cordis client service.
+- DS BOT HALF: a ninth anchored hunk `publish owned ids` in `C:\Claude\bin\ds_bot_combined_sidebar_patch.py`, which also re-fires with an empty array on dispose. It is registered through `ctx.effect`, whose roster subscription is what fires on the existing `roster.set(indexRoster(value))` snapshot landing, so no second anchor was needed. The committed pnpm patch was REGENERATED through `pnpm patch-commit` (5,500 to 6,651 bytes) so a reinstall carries it, and `--check` reads 9 of 9.
+- ALSO FIXED (out of scope, same commit): the All Sessions row was the only sidebar row with no `t('session.untitled')` fallback, so an unnamed session showed a blank label. That is what the four failing specs in `all-sessions.client.spec.tsx` were pointing at, now closed (was OPEN_ISSUES 13).
+- INSTALLED 2026-10-30 16:12 from `C:\d216`. The installer did NOT wipe `profiles\desktop` (the skill says so at line 350; the plan's assumption was wrong), so ds-bot survived with its patch intact and nothing needed restoring. Ledger row `bot-sessions-published` added (48 features).
+
+## 2026-10-30 - Bot Sessions group inside All Sessions (installed)
+
+- BUILT, commit `8b9510fcd6` on branch `feat/bot-sessions`, cut from `update/v0.2.1-rc.5` in `C:\Projects\worktrees\dsh-bot-sessions`. All Sessions now trails its flat list with a collapsible `Bot Sessions` group, folded when the section opens, and the ordinary rows are unchanged (pins still lead, archived rows still follow the default filter).
+- MEMBERSHIP IS DERIVED, NOT TAGGED: `isBotWorkspace()` matches the bot Workspace by its directory (`.dsh\bot\workspace`, either separator, any case) OR by its stored name `DS Bot`, so a rename and a folder move each survive one of the two conditions. The group is recomputed from the same live snapshot as the ordinary rows, so a session added to that Workspace joins on the next render with nothing to file, and no bot sessions means no header at all.
+- FOLD STATE: `botExpanded` is optional in `dsh.workspace.allSessions.v1`, so a payload written before the group existed parses unchanged and reads as folded. No migration.
+- LEDGER: row `bot-sessions-group` added to `C:\Claude\bin\dsh_local_features.json` (marker `allSessions.botSessions`, 47 features total).
+- INSTALLED 2026-10-30 07:20 from this worktree's `finish-install.ps1`, installer sha256 `2E61A3AC74BDB71706E2DE521ACB18491B5AE07A20CDE938384FCBAA8BD777E7` (290,478,823 bytes), exported to `C:\Projects\exports\2026-10-30-dsh-bot-sessions\` with a BUILD_RECORD. `dsh-preset-rederive.py` was held aside for the run again, so the install did NOT delete the operator's preset; the Brainstorm + approve mode is still missing from an earlier run (item 22).
+- ON SCREEN, read from the installed app: the All Sessions tree holds 14 rows, 6 ordinary then 8 bot rows, and no `DS Bot` row sits among the ordinary six. The real control reports `Collapsed -> Expanded`. The 8 reconcile exactly: the bot Workspace holds 10 sessions, minus 1 archived and minus 1 blank provisional.
+- NOT PROVEN: a brand-new bot chat joining the group live. Pressing New session creates in the last-used Workspace, not the bot one, so this needs ds-bot's own fresh-chat flow (item 26).
+- SIDE EFFECT of the verification: one blank `New Session` row now sits in the `general` workspace, and the group was left expanded because the collapse call did not take while the window was minimised.
+
 ## 2026-10-29 - ds-bot and the native interface side by side (installed)
 
 - INSTALLED 0.2.1-rc.5 from `C:\d215` three times today (last install 16:19, installer 16:18:55); settings vault 20 files `same` each time; Brainstorm + approve mode kept (the preset re-derive was held off by renaming `dsh-preset-rederive.py` for the run; see OPEN_ISSUES 22).
@@ -148,15 +168,6 @@
 - DELIBERATELY NOT DONE: no pull request to `deepseek-ai/deepseek-harness`, because their `CONTRIBUTING.md` states they cannot accept external pull requests, and nothing was posted anywhere. Both findings are drafted for their Discussions at `C:\Users\SteveDempsey\.claude\Exports\2026-10-03_dsh-quickstart-stale-first-use.md`, with the branch named as the ready patch.
 - THE PUSH USED `--no-verify`, AND ITEM 8's REMEDY WAS CONFIRMED AFTERWARDS RATHER THAN DURING: the pre-push lefthook typecheck dies with the known `runDepsStatusCheck` stack, and exporting `CI=true` is what makes it (and the whole `doc-sync` aggregate) run.
 - Session page: `C:\Projects\logs\2026-10-04\dsh-quickstart-first-use-workspace\SESSION_STATE.md`.
-
-## 2026-10-01 - Session footer "Skills Used" line, 0.2.0-rc.2 rebuilt and installed
-
-- WHAT SHIPPED: a third footer line under `Design Project:`, `Skills Used: <names>`, listing the skills and commands the OPERATOR typed in that Session, first use first, joined with ", ". Commit `4981088f36` on `update/v0.2.0-rc.2` (worktree `C:\d202`), pushed (`3148ab20a1..4981088f36`).
-- HOW: a new host Session projection `skillsUsed` (`packages/api/session-controller/src/skills-used-projection.ts`, stateVersion 1) folds two operator-only records: `user/message` with source `skill-invocation` (written when a typed `/name` resolves to a user-invocable skill) and `command/run`. Model `skill` tool loads are deliberately excluded. Measured over 140 real Session logs before building: 139 operator signals (save-state 79, dashboard-design-sync 18, dashboard-design-code-pull 14, dashboard 14, code-only 5, plan 1) against 19 model loads.
-- CLIENT: `ConversationContent.tsx` renders the row alone when a Session resolves no dashboard; the Dashboard / Design Project pair keeps its exact previous behaviour. Labels `Skills Used:` / `使用的技能：`.
-- REBUILT THE SAME VERSION: installer `deepseek-harness-0.2.0-rc.2-win-x64-unsigned.exe`, 288,654,439 bytes, sha256 `0E723C54...4A8B`, packaged with a hidden-console stage script (no stdio redirection): `runtime:lockfile` passed first time, smoke passed. Installed by Steve 2026-10-01 ~17:33; installed `app.asar` byte-identical to the built one (`06614FF2...13C5`). Feature registry `C:\Claude\bin\dsh_local_features.json` 35 -> 37 rows, all 37 present.
-- LIVE: the projection is folding in the running app (a projection cache row holds `["dashboard-design-sync","save-state"]`). The populated row has NOT yet been seen on screen (OPEN_ISSUES 9).
-- Rollback floor unchanged: the original 0.2.0-rc.2 installer in `C:\Projects\exports\2026-09-30-dsh-020-rc2\`. Session page: `C:\Projects\logs\2026-10-01\dsh-session-footer-ui\SESSION_STATE.md`.
 
 <!-- claude-memory-actor:begin
   Auto-managed by the claude-memory save-state hook.

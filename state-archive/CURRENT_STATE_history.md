@@ -2,6 +2,15 @@
 
 Auto-archived by state_file_cap.py when CURRENT_STATE.md exceeded 32 KB. Newest-first. On-demand only; not read at session start.
 
+## 2026-10-01 - Session footer "Skills Used" line, 0.2.0-rc.2 rebuilt and installed
+
+- WHAT SHIPPED: a third footer line under `Design Project:`, `Skills Used: <names>`, listing the skills and commands the OPERATOR typed in that Session, first use first, joined with ", ". Commit `4981088f36` on `update/v0.2.0-rc.2` (worktree `C:\d202`), pushed (`3148ab20a1..4981088f36`).
+- HOW: a new host Session projection `skillsUsed` (`packages/api/session-controller/src/skills-used-projection.ts`, stateVersion 1) folds two operator-only records: `user/message` with source `skill-invocation` (written when a typed `/name` resolves to a user-invocable skill) and `command/run`. Model `skill` tool loads are deliberately excluded. Measured over 140 real Session logs before building: 139 operator signals (save-state 79, dashboard-design-sync 18, dashboard-design-code-pull 14, dashboard 14, code-only 5, plan 1) against 19 model loads.
+- CLIENT: `ConversationContent.tsx` renders the row alone when a Session resolves no dashboard; the Dashboard / Design Project pair keeps its exact previous behaviour. Labels `Skills Used:` / `使用的技能：`.
+- REBUILT THE SAME VERSION: installer `deepseek-harness-0.2.0-rc.2-win-x64-unsigned.exe`, 288,654,439 bytes, sha256 `0E723C54...4A8B`, packaged with a hidden-console stage script (no stdio redirection): `runtime:lockfile` passed first time, smoke passed. Installed by Steve 2026-10-01 ~17:33; installed `app.asar` byte-identical to the built one (`06614FF2...13C5`). Feature registry `C:\Claude\bin\dsh_local_features.json` 35 -> 37 rows, all 37 present.
+- LIVE: the projection is folding in the running app (a projection cache row holds `["dashboard-design-sync","save-state"]`). The populated row has NOT yet been seen on screen (OPEN_ISSUES 9).
+- Rollback floor unchanged: the original 0.2.0-rc.2 installer in `C:\Projects\exports\2026-09-30-dsh-020-rc2\`. Session page: `C:\Projects\logs\2026-10-01\dsh-session-footer-ui\SESSION_STATE.md`.
+
 ## 2026-09-30 - DSH 0.2.0-rc.2 built, installed and verified
 
 - WHAT SHIPPED: a same-architecture stack REPLAY of the 4 commits on `update/v0.2.0-rc.1` onto upstream `dsh-v0.2.0-rc.2` (released 2026-09-29T09:42Z). Branch `update/v0.2.0-rc.2`, worktree `C:\d202`, three commits: `f6c472733d` (the replay), `92bac69c68` (the fork's nine own packages bumped to 0.2.0-rc.2), `3148ab20a1` (regeneration and the client i18n gate fix). Branch and tag `dsh-v0.2.0-rc.2-fork` pushed and read back. Mechanism: the SAME NATIVE THREE-WAY SQUASH MERGE as last time, chosen for the same measured reason - `merge-base(dsh-v0.2.0-rc.2, update/v0.2.0-rc.1)` is EXACTLY `dsh-v0.2.0-rc.1` (`4878cdabd8`) - so git resolved everything it could and only **23 of the 390 stack-touched files conflicted**. Excluding `docs/`, translations and lockfiles the delta is 865 files, +18,207/-3,626; inside `packages/` 556 files, +11,741/-2,875. **NO package is added or removed** and `tsconfig.base.json` gains one alias, so no alias work was needed.
