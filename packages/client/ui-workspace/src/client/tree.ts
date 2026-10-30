@@ -782,6 +782,12 @@ export function isBotWorkspace(workspace: Pick<WorkspaceView, 'path' | 'title'>)
 }
 
 /**
+ * No bot sessions, used when the page has published none. ds-bot names the
+ * sessions it owns on `window`, and the set is empty on a page without it.
+ */
+const NO_BOT_SESSION_IDS: ReadonlySet<SessionId> = new Set<SessionId>()
+
+/**
  * Derive the All Sessions quick-nav rows (fork): every visible unarchived
  * Session, newest first with pinned rows leading, each labelled with its
  * Workspace. The archived filter of the browser below does not apply here.
@@ -789,6 +795,7 @@ export function isBotWorkspace(workspace: Pick<WorkspaceView, 'path' | 'title'>)
  * @param workspaces - Workspace membership and display labels.
  * @param rowState - registry-global pin and archive sets.
  * @param statuses - unified UI status by Session.
+ * @param botSessionIds - ids ds-bot owns, which the folder rule cannot see.
  * @returns flat rows in render order.
  */
 export function deriveAllSessions(
@@ -796,6 +803,7 @@ export function deriveAllSessions(
   workspaces: readonly WorkspaceView[],
   rowState: Pick<SessionRowState, 'pinnedSessionIds' | 'archivedSessionIds'>,
   statuses: SessionStatuses,
+  botSessionIds: ReadonlySet<SessionId> = NO_BOT_SESSION_IDS,
 ): AllSessionNode[] {
   const archived = new Set(rowState.archivedSessionIds)
   const pinned = new Set(rowState.pinnedSessionIds)
@@ -820,7 +828,7 @@ export function deriveAllSessions(
   return sectionMembers(visible, pinned, archived).map(summary => ({
     ...sessionNode(summary, list, statuses, pinned, archived),
     workspace: workspaceBySession.get(summary.id) ?? workspaceLabel(summary.cwd),
-    bot: botSessions.has(summary.id),
+    bot: botSessions.has(summary.id) || botSessionIds.has(summary.id),
   }))
 }
 

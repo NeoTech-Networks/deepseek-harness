@@ -1046,4 +1046,39 @@ describe('deriveAllSessions bot membership', () => {
     )
     expect(rows.map(row => [row.id, row.bot])).toEqual([['plain', false], ['bot-one', true]])
   })
+
+  it('leaves an ordinary Workspace row alone when the page published no ids', () => {
+    const rows = deriveAllSessions(
+      list(summary('plain', 2)),
+      [workspace('alpha', ['plain'], 'Alpha')],
+      noRows,
+      noAttention,
+      new Set<SessionId>(),
+    )
+    expect(rows.map(row => [row.id, row.bot])).toEqual([['plain', false]])
+  })
+
+  it('flags a session in an ordinary Workspace once ds-bot publishes its id', () => {
+    // The bots work in project folders the operator also works in, so the
+    // folder says nothing; only the published id distinguishes them.
+    const rows = deriveAllSessions(
+      list(summary('plain', 2), summary('igor', 1)),
+      [workspace('alpha', ['plain'], 'Alpha'), workspace('playbooks', ['igor'], 'Playbooks')],
+      noRows,
+      noAttention,
+      new Set<SessionId>([sid('igor')]),
+    )
+    expect(rows.map(row => [row.id, row.bot])).toEqual([['plain', false], ['igor', true]])
+  })
+
+  it('keeps the Workspace rule when the published set is empty', () => {
+    const rows = deriveAllSessions(
+      list(summary('bot-one', 1)),
+      [workspace('bot', ['bot-one'], 'DS Bot', 'C:\\Users\\SteveDempsey\\.dsh\\bot\\workspace')],
+      noRows,
+      noAttention,
+      new Set<SessionId>(),
+    )
+    expect(rows.map(row => [row.id, row.bot])).toEqual([['bot-one', true]])
+  })
 })
