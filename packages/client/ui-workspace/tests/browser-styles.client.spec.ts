@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest'
 
 const css = readFileSync(fileURLToPath(new URL('../src/client/rows/WorkspaceBrowser.module.css', import.meta.url)), 'utf8')
 const rowsCss = readFileSync(fileURLToPath(new URL('../src/client/rows/Rows.module.css', import.meta.url)), 'utf8')
+const allSessionsCss = readFileSync(fileURLToPath(new URL('../src/client/rows/AllSessions.module.css', import.meta.url)), 'utf8')
 
 /**
  * Declarations of one selector rule, keyed by property with whitespace collapsed.
@@ -32,6 +33,45 @@ function declarationsFrom(source: string, selector: string): Map<string, string>
 
 const declarations = (selector: string): Map<string, string> | undefined => declarationsFrom(css, selector)
 const rowDeclarations = (selector: string): Map<string, string> | undefined => declarationsFrom(rowsCss, selector)
+const allSessionsDeclarations = (selector: string): Map<string, string> | undefined =>
+  declarationsFrom(allSessionsCss, selector)
+
+// The sidebar region stacks three foldable sections. Only the open ones grow,
+// so folded headers fall to the bottom of the column instead of leaving a dead
+// strip under the lists. An auto basis (not zero) splits the leftover by
+// content rather than forcing an equal share of the whole column.
+describe('sidebar section height sharing', () => {
+  it('grows the workspace browser from the leftover without a zero basis', () => {
+    expect(declarations('.root')?.get('flex')).toBe('1 1 auto')
+    expect(declarations('.root')?.get('min-height')).toBe('96px')
+  })
+
+  it('still pins the folded browser to its header', () => {
+    expect(declarations('.root.sectionCollapsed')?.get('flex')).toBe('0 0 auto')
+    // The 96px floor is released while folded, so the section is only its header.
+    expect(declarations('.root.sectionCollapsed')?.get('min-height')).toBe('0')
+  })
+
+  it('grows All Sessions only while it is expanded', () => {
+    expect(allSessionsDeclarations('.root')?.get('flex')).toBe('none')
+    const open = allSessionsDeclarations('.rootOpen')
+    expect(open?.get('flex')).toBe('1 1 auto')
+    expect(open?.get('min-height')).toBe('96px')
+    // The grown section owns the list's height, so the container must be a
+    // flex column for the list to take it.
+    expect(open?.get('display')).toBe('flex')
+    expect(open?.get('flex-direction')).toBe('column')
+  })
+
+  it('drops the All Sessions list cap inside the grown section', () => {
+    expect(allSessionsDeclarations('.list')?.get('max-height')).toBe('264px')
+    const openList = allSessionsDeclarations('.rootOpen .list')
+    expect(openList?.get('max-height')).toBe('none')
+    expect(openList?.get('flex')).toBe('1 1 auto')
+    expect(openList?.get('min-height')).toBe('0')
+    expect(allSessionsDeclarations('.rootOpen .list')?.get('overflow-y')).toBeUndefined()
+  })
+})
 
 describe('fork folder presentation', () => {
   it('indents Session rows under their Workspace folder while keeping the tree depth variable', () => {

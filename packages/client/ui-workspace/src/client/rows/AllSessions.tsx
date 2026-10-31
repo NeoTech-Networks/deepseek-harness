@@ -138,7 +138,7 @@ function AllSessionsInner({
   const ordinaryRows = rows.filter(node => !node.bot)
   const botRows = rows.filter(node => node.bot)
   return (
-    <div className={css.root} data-all-sessions="">
+    <div className={clsx(css.root, expanded && css.rootOpen)} data-all-sessions="">
       <button
         type="button"
         className={css.header}

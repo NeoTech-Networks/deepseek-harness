@@ -9,6 +9,16 @@
   box-sizing: border-box;
 }
 
+/* Open, the section claims the leftover height, so the folded headers below it
+   fall to the bottom of the region. The 96px floor keeps three open sections
+   from crushing one to a sliver. */
+.rootOpen {
+  flex: 1 1 auto;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -50,13 +60,20 @@
   line-height: 20px;
 }
 
-/* Bounded so the section can never swallow the workspace browser below; the
-   list scrolls on its own once it grows past the cap. */
+/* Bounded while the section sits in the stack above a fully open browser; open
+   in the grown section it drops the cap and scrolls inside the height it was
+   given instead. */
 .list {
   max-height: 264px;
   overflow-y: auto;
   margin-bottom: 4px;
   padding-right: 2px;
+}
+
+.rootOpen .list {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 0;
 }
 
 .row {
