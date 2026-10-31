@@ -13,6 +13,28 @@
 - VERIFIED the shared rules file after the install's own refusal: both paths report file id `0x00000000000000000004000000bc1cc4`, `fsutil hardlink list` names both, and the content hash is unchanged (`CB489493F90B9817`, 50,014 bytes).
 - UNVERIFIED: the fold surviving an app restart. Nothing has observed the read-back after a restart; the store's persist and the remount spec cover the path, not the live round trip.
 
+## 2026-10-31 - sidebar height sharing and Main Bot tiles
+
+| Check | Expected | Result | Status |
+|---|---|---|---|
+| Build gates | 9 of 9 | `9 passed, 0 failed, 0 skipped in 64.33s` | VERIFIED |
+| Packaged smoke | all stages true | `runtime:smoke True`, `smoke-packaged-runtime.ts` completed, `state=ok` | VERIFIED |
+| CSS in the built bundle | new rules present | `pluginSectionOpen{flex:auto;min-height:96px}`, `pluginBody{...flex:auto;min-height:0;overflow:hidden}`, `rootOpen .list{...max-height:none}`, browser `_root{flex:auto}` | VERIFIED |
+| CSS in the shipped asar | same rules | `pluginSectionOpen` x4, `rootOpen` x5 | VERIFIED |
+| Install | clean, settings kept | `24 files, all same`; every setting survived; `app is up` | VERIFIED |
+| Hardlink | one file, two names | `HARDLINK OK (final)` id `0x...bc1cc4`; `fsutil hardlink list` names both paths | VERIFIED |
+| ds-bot patch after install | 15 of 15 | `APPLIED (15 of 15 changes)` | VERIFIED |
+| pnpm patch survives reinstall | 14 hunks | `grep -c '^@@'` = 14; revert backup present and byte-identical to npm tarball | VERIFIED |
+| Local features | all present | `all 48 local features are present in the running build` | VERIFIED |
+| Hook layer | all OK | settings 70 groups, bridge all 7 events, plugin rc.5, bad merge refused | VERIFIED |
+| No dead strip | gap ~0 | bot list bottom 1173, All Sessions header top 1206, gap 33 physical px (16 CSS px) | VERIFIED |
+| Blank run in the sidebar | no large void | longest run anywhere 65 physical px | VERIFIED |
+| Two Main Bot tiles | side by side | both `top=482`; lefts 66 and 318; height 248 each | VERIFIED |
+| Side-by-side, seen | two tiles one row | vision on a cropped capture: two tiles, one row, Igor / Chief Of Staff and SEO Overlord / Marketing Chief | VERIFIED |
+| Tests | suites green | 21 files, 608 tests passed on the merged tree | VERIFIED |
+| Open Workspaces shrinks Bots | Bots height drops | not exercised: the fold button exposes no actionable UIA pattern and pressing it another way raises the window | UNVERIFIED |
+| Fold survives a restart | stays folded | not exercised this session (the install restart preserved the restored layout, but no fold-toggle cycle was run) | UNVERIFIED |
+
 ## 2026-10-30 - Bot Sessions group: built, packaged, installed, read back
 
 - VERIFIED tests move the right way: `all-sessions.client.spec.tsx` was `4 failed | 5 passed (9)` on the untouched tree and `4 failed | 11 passed (15)` after, with the SAME four failing names both times (`lists every unarchived session newest-first`, `hides archived sessions`, `survives a rail/wide round trip`, `keeps a crashing section visible`). Six new cases, no new failure. Logs in `C:\Projects\logs\2026-10-30-dsh-bot-sessions\` (`baseline-all-sessions.log`, `after-all-sessions.log`). `tree.client.spec.ts` and `sidebar-root.client.spec.tsx` all pass.
@@ -62,7 +84,6 @@
 - VERIFIED the shared rules file after the install's own refusal: both paths report file id `0x00000000000000000004000000bc1cc4`, `fsutil hardlink list` names both, and the content hash is unchanged (`CB489493F90B9817`, 50,014 bytes).
 - LATER RE-MEASURED 2026-10-31 18:14 after a concurrent session added five bot-tile hunks to the same patcher: `ds_bot_combined_sidebar_patch.py --check` now reads 15 of 15 with `one account button` last, and the live window still shows exactly one Account button and one `Toggle Workspaces`.
 - UNVERIFIED: the fold surviving an app restart. Nothing has observed the read-back after a restart; the store's persist and the remount spec cover the path, not the live round trip.
-
 ## 2026-10-28 - New Session workspace dropdown reset fix
 
 - VERIFIED the cause live (`record.json`): body remount `wd4y4 -> kme6u` and `aria-expanded true -> false` at 53.6 s, the instant `dsh.sessions.current` switched to the picked folder's blank session, 7.2 s after the pick. With no input the chip held for 45 s.
