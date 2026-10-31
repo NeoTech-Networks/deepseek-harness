@@ -640,6 +640,14 @@
   box-sizing: border-box;
 }
 
+/* Open sections claim the leftover height and folded headers (which stay
+   `flex: none` at their 36px) fall to the bottom of the region on their own.
+   The 96px floor keeps three open sections from crushing one to a sliver. */
+.pluginSectionOpen {
+  flex: 1 1 auto;
+  min-height: 96px;
+}
+
 .pluginHeader {
   display: flex;
   align-items: center;
@@ -683,15 +691,16 @@
 .pluginBody {
   display: flex;
   flex-direction: column;
-  max-height: min(40vh, 380px);
+  flex: 1 1 auto;
   min-height: 0;
   margin-bottom: 8px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  /* No cap and no scroller of our own: the section that is open takes the
+     leftover height, and ds-bot's own list scrolls inside it. */
+  overflow: hidden;
 }
 
 .pluginBody > * {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
