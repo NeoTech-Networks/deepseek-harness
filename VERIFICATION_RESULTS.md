@@ -1,5 +1,18 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-10-31 - Workspaces fold and one account button, built and installed
+
+- VERIFIED tests: `ui-workspace` 13 files, 527 passed, including 3 new fold specs (opens by default and folds on a press, remembers the fold across a remount, still shows search results while folded). `verify-client-ui-i18n` 1,096 source files clean; oxlint exit 0 on the touched files; the pre-push typecheck hook passed in 87.6 s with `CI=true`.
+- VERIFIED the fresh-worktree `tsc -b` errors were NOT this change: `pnpm run typecheck:contracts-ready` in `C:\Projects\worktrees\dsh-workspaces-collapse` reported 24 errors, all `packages/test-support/remote-mock` and all about a generated `TypertRemoteNamespaceMap` with no `settings`/`session` namespaces, which a worktree that has never run codegen does not have. The same command in `C:\d216` (a built tree) is clean, and `pnpm run build` there passes the client compiler and the client aggregate check.
+- VERIFIED build: `pnpm run build` 9 passed, 0 failed, 0 skipped in 110.08 s (native addon, host compiler, host aggregate check, Host bundle, Desktop bundle, client compiler, Client bundle, Web build, client aggregate check). `stage-build.ps1` then ran every packaging stage to exit 0, ending `smoke-packaged-runtime.ts --unsigned` (46 s) and `windows-package`.
+- VERIFIED the code reached the artifact: `section.workspaces.toggle` x3, `sectionToggle` x15, `setSectionCollapsed` x2 and `Toggle Workspaces` x1 inside the packaged `app.asar` (205,217,352 bytes) and again inside the INSTALLED one.
+- VERIFIED installed: uninstall key `7808434f-469e-5eba-848e-edf64d3b94ce` reads 0.2.1-rc.5, exactly one Harness uninstall row, installer exit 0, settings `24 files, all same`, `[settings] every one of your settings survived the install.`, `app is up`.
+- VERIFIED the fold works on a real press in the running app: a UI Automation click on the header took the workspace group headers from 5 to 0 (buttons 65 to 58) and a second click restored them (58 to 65); `ExpandCollapseState` reads `Expanded` then `Collapsed`; keyboard SPACE/ENTER does the same. Vision read of the header crop: `The text is "Workspaces". Yes, there is a small solid triangle to the left of the text, and it points downward.`
+- VERIFIED exactly one account button, in every census: 1 before the fold, 1 folded, 1 restored, 1 after the install and restart. The plugin patch reads 10 of 10 in the running profile and `uiNow.accountSeated` appears twice in the installed `client.js`.
+- VERIFIED the fold persists to disk: `Select-String` over `%APPDATA%\@deepseek-ai\dsh-desktop\Local Storage\leveldb\*` finds the view blob written twice, `"archivedFilter":"default","collapsed":false` then the same with `"collapsed":true`.
+- VERIFIED the shared rules file after the install's own refusal: both paths report file id `0x00000000000000000004000000bc1cc4`, `fsutil hardlink list` names both, and the content hash is unchanged (`CB489493F90B9817`, 50,014 bytes).
+- UNVERIFIED: the fold surviving an app restart. Nothing has observed the read-back after a restart; the store's persist and the remount spec cover the path, not the live round trip.
+
 ## 2026-10-28 - New Session workspace dropdown reset fix
 
 - VERIFIED the cause live (`record.json`): body remount `wd4y4 -> kme6u` and `aria-expanded true -> false` at 53.6 s, the instant `dsh.sessions.current` switched to the picked folder's blank session, 7.2 s after the pick. With no input the chip held for 45 s.
