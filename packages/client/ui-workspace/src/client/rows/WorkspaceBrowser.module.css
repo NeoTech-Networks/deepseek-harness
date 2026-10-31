@@ -96,6 +96,47 @@
   transition-delay: 0s, 0s, 0s, 0s, 180ms;
 }
 
+/* The header label doubles as the section's fold control (fork). Transparent
+   and borderless so it reads as the label it replaces; box-sizing is set here
+   because the hidden state collapses it to a true zero width through
+   max-width, padding included. */
+.sectionToggle {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border: none;
+  border-radius: var(--dsw-radius-sm);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: 20px;
+  color: inherit;
+  text-align: left;
+}
+
+.sectionToggle:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.sectionToggleText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Folded: the section shrinks to its 36px header and every section below it
+   takes the freed room. */
+.root.sectionCollapsed {
+  flex: 0 0 auto;
+}
+
 .searchSlot {
   flex: 1;
   max-width: 28px;
