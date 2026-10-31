@@ -34,6 +34,12 @@ type WorkspaceViewState = {
    * label-keyed so `retainAccountKeys` never prunes it.
    */
   sectionExpansion?: Record<string, boolean>
+  /**
+   * Whether the browser section's own header is folded (fork). Optional so a
+   * v5 blob written before the fold existed still parses; an absent flag reads
+   * as open, which is the section's default.
+   */
+  collapsed?: boolean
 }
 
 type SessionOrderSource = {
@@ -73,6 +79,7 @@ type WorkspaceViewActions = {
   ) => void
   setArchivedFilter: (draft: WorkspaceViewState, filter: ArchivedFilter) => void
   setSectionExpanded: (draft: WorkspaceViewState, key: string, expanded: boolean) => void
+  setSectionCollapsed: (draft: WorkspaceViewState, collapsed: boolean) => void
 }
 
 /** Copy read-only projections into the persisted mutable store representation. */
@@ -136,6 +143,7 @@ export function createWorkspaceViewStore(): EngineStoreHandle<WorkspaceViewState
         d.sectionExpansion ??= {}
         d.sectionExpansion[key] = expanded
       },
+      setSectionCollapsed: (d, collapsed: boolean) => { d.collapsed = collapsed },
     },
   })
 }

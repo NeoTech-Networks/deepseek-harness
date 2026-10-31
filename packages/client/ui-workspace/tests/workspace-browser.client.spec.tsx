@@ -1270,8 +1270,11 @@ describe('WorkspaceBrowser', () => {
     })
     fireEvent.click(screen.getByText('alpha'))
     expect(screen.getByText('child-s')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /展开|收起/ })).toBeNull()
-    expect(screen.getByText('child-s').closest('[role="treeitem"]')?.getAttribute('draggable')).toBe('true')
+    // Scoped to the row itself: the section header is a fold control now, so a
+    // page-wide twist query would match it instead of the row.
+    const childRow = screen.getByText('child-s').closest('[role="treeitem"]') as HTMLElement
+    expect(within(childRow).queryByRole('button', { name: /展开|收起/ })).toBeNull()
+    expect(childRow.getAttribute('draggable')).toBe('true')
   })
 
   it('expands the target group before starting a session from its ＋', () => {
@@ -2708,5 +2711,70 @@ describe('WorkspaceBrowser named Workspace groups (fork)', () => {
     createWorkspaceViewStore().create().actions.setGroupBy('workspace-tree')
     mount({ useWorkspaces: hook(workspaceState([grouped('alpha', 'NeoTech')])) })
     expect(headers()).toEqual([])
+  })
+})
+
+// The section header is a fold control: the same remembered-per-launch shape
+// the All Sessions header and the named group headers already use.
+describe('WorkspaceBrowser section fold', () => {
+  const toggle = () => screen.getByRole('button', { name: t('section.workspaces.toggle') })
+
+  it('opens by default and folds the whole list away on a press', () => {
+    const b = mount({
+      useSessions: hook(sessionState([summary('one', 5)])),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['one'], 'Alpha')])),
+    })
+    expect(toggle().getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getAllByRole('tree').length).toBeGreaterThan(0)
+
+    fireEvent.click(toggle())
+    expect(toggle().getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('tree')).toBeNull()
+    expect(b.store.getSnapshot().collapsed).toBe(true)
+
+    fireEvent.click(toggle())
+    expect(toggle().getAttribute('aria-expanded')).toBe('true')
+    expect(screen.getAllByRole('tree').length).toBeGreaterThan(0)
+    expect(b.store.getSnapshot().collapsed).toBe(false)
+  })
+
+  it('remembers the fold across a remount', () => {
+    const b = mount({
+      useSessions: hook(sessionState([summary('one', 5)])),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['one'], 'Alpha')])),
+    })
+    fireEvent.click(toggle())
+    b.view.unmount()
+
+    mount({
+      useSessions: hook(sessionState([summary('one', 5)])),
+      useWorkspaces: hook(workspaceState([workspace('alpha', ['one'], 'Alpha')])),
+    })
+    expect(toggle().getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('tree')).toBeNull()
+  })
+
+  it('still shows search results while the section is folded', async () => {
+    vi.useFakeTimers()
+    try {
+      mount({
+        useSessions: hook(sessionState([summary('one', 5, { displayTitle: 'Waterfall token' })])),
+      })
+      fireEvent.click(toggle())
+      expect(screen.queryByRole('tree')).toBeNull()
+
+      const input = screen.getByPlaceholderText<HTMLInputElement>('搜索会话名称')
+      fireEvent.change(input, { target: { value: 'waterfall' } })
+      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
+      expect(screen.getByRole('tree', { name: '搜索结果' })).toBeTruthy()
+      expect(toggle().getAttribute('aria-expanded')).toBe('false')
+
+      // The fold itself is untouched: clearing the query folds it back.
+      fireEvent.change(input, { target: { value: '' } })
+      await act(async () => { await vi.advanceTimersByTimeAsync(250) })
+      expect(screen.queryByRole('tree')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
