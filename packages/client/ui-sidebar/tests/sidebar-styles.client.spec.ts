@@ -77,4 +77,24 @@ describe('SidebarRoot.module.css', () => {
     expect(declarations('.fallbackBrandName')?.get('font-size')).toBe('17px')
     expect(declarations('.fallbackBrandName')?.get('white-space')).toBe('nowrap')
   })
+
+  // The region stacks three foldable sections. Only the open one grows, so the
+  // folded headers beneath it fall to the bottom of the column instead of
+  // leaving a dead strip under the lists.
+  it('lets the open plugin section claim the leftover height', () => {
+    expect(declarations('.pluginSection')?.get('flex')).toBe('none')
+    expect(declarations('.pluginSectionOpen')?.get('flex')).toBe('1 1 auto')
+    // The floor keeps three open sections from crushing one to a sliver.
+    expect(declarations('.pluginSectionOpen')?.get('min-height')).toBe('96px')
+  })
+
+  it('gives the plugin body the grown height instead of a fixed cap', () => {
+    const body = declarations('.pluginBody')
+    expect(body?.get('max-height')).toBeUndefined()
+    expect(body?.get('flex')).toBe('1 1 auto')
+    expect(body?.get('min-height')).toBe('0')
+    // ds-bot's own list scrolls inside the body; a second scroller is redundant.
+    expect(body?.get('overflow')).toBe('hidden')
+    expect(declarations('.pluginBody > *')?.get('flex')).toBe('1 1 auto')
+  })
 })

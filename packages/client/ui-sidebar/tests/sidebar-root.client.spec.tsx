@@ -141,6 +141,23 @@ describe('SidebarRoot combined sidebar (fork)', () => {
     expect(screen.getByText('New Session')).toBeTruthy()
   })
 
+  it('marks only the open section so it can claim the leftover height', () => {
+    mountShell({ takenOver: true })
+    const openSection = screen.getByTestId('plugin-seat').closest('[data-sidebar-plugin-section]')!
+    const openClasses = openSection.className.split(/\s+/).filter(Boolean)
+    cleanup()
+
+    mountShell({ takenOver: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Bots' }))
+    const foldedSection = document.querySelector('[data-sidebar-plugin-section]')!
+    expect(screen.getByRole('button', { name: 'Bots' }).getAttribute('aria-expanded')).toBe('false')
+    const foldedClasses = foldedSection.className.split(/\s+/).filter(Boolean)
+
+    // Folded is the bare section; open adds exactly the height-claiming class.
+    expect(openClasses).toEqual(expect.arrayContaining(foldedClasses))
+    expect(openClasses.length).toBe(foldedClasses.length + 1)
+  })
+
   it('folds the plugin section and remembers the choice', () => {
     mountShell({ takenOver: true })
     fireEvent.click(screen.getByRole('button', { name: 'Bots' }))

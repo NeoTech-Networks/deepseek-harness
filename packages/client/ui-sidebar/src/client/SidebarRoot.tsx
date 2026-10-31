@@ -429,7 +429,7 @@ export function SidebarRoot({
         {takenOver && wide
           ? (
             <>
-              <section className={css.pluginSection} data-sidebar-plugin-section="">
+              <section className={clsx(css.pluginSection, pluginOpen && css.pluginSectionOpen)} data-sidebar-plugin-section="">
                 <button
                   type="button"
                   className={css.pluginHeader}

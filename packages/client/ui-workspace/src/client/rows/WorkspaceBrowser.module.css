@@ -2,8 +2,12 @@
   --dsh-session-list-edge-inset: var(--dsh-sidebar-inline-padding);
   --dsh-session-list-scrollbar-width: 5px;
   --dsh-session-list-scrollbar-offset: 2px;
-  flex: 1;
-  min-height: 0;
+  /* An auto basis (not zero) splits the pane's LEFTOVER height by content, so
+     the browser takes real room when it is open beside another section
+     instead of demanding an equal share of the whole column. */
+  flex: 1 1 auto;
+  /* Floor: three sections open at once can never crush this one to a sliver. */
+  min-height: 96px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -132,9 +136,11 @@
 }
 
 /* Folded: the section shrinks to its 36px header and every section below it
-   takes the freed room. */
+   takes the freed room. The floor is released so a folded section is only as
+   tall as its header. */
 .root.sectionCollapsed {
   flex: 0 0 auto;
+  min-height: 0;
 }
 
 .searchSlot {
