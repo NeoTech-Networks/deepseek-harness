@@ -1004,6 +1004,9 @@ export function WorkspaceBrowser({
   const archivedFilter = useStore(s => s.archivedFilter ?? 'default')
   const groupExpansion = useStore(s => s.groupExpansion)
   const sectionExpansion = useStore(s => s.sectionExpansion)
+  // Blobs written before the header fold existed rehydrate without the flag;
+  // they read as open, which is the section's default.
+  const sectionCollapsed = useStore(s => s.collapsed ?? false)
   const sessionOrderByAccount = useStore(s => s.sessionOrderByAccount)
   // Archived sessions are not openable: the row stays visible under the
   // filter but a click explains instead of navigating.
@@ -1141,6 +1144,10 @@ export function WorkspaceBrowser({
   }
   const [revealSessionId, setRevealSessionId] = useState<SessionId | undefined>(undefined)
   const normalizedQuery = sanitizeSearchQuery(query).trim()
+  // Rail mode keeps its seat regardless: the fold is a wide-only control, and
+  // the rail list is the only thing in that slot. An active search always wins
+  // over the fold, so typing still shows its results.
+  const showListArea = !wide || !sectionCollapsed || normalizedQuery !== ''
   const [remoteSearch, setRemoteSearch] = useState<RemoteSearchState>({
     query: '',
     status: 'idle',
@@ -1259,12 +1266,25 @@ export function WorkspaceBrowser({
     })
   }
   return (
-    <div className={clsx(css.root, !wide && css.rail)}>
+    <div className={clsx(css.root, !wide && css.rail, sectionCollapsed && wide && css.sectionCollapsed)}>
       <div className={clsx(css.sectionHeader, wide && searchSpacingMotionEnabled && css.searchSpacingMotion)}>
         {wide && (
-          <span className={clsx(css.sectionLabel, css.wide, searchExpanded && css.sectionLabelHidden)}>
-            {groupBy === 'flat' ? t('section.sessions') : t('section.workspaces')}
-          </span>
+          // The label IS the fold control, the same way a named group's header
+          // is. The choice is remembered between launches.
+          <button
+            type="button"
+            className={clsx(css.sectionLabel, css.sectionToggle, css.wide, searchExpanded && css.sectionLabelHidden)}
+            aria-expanded={!sectionCollapsed}
+            aria-label={t('section.workspaces.toggle')}
+            onClick={() => { actions.setSectionCollapsed(!sectionCollapsed) }}
+          >
+            <IconTriangleRightFillRegular
+              className={clsx(css.groupChevron, !sectionCollapsed && css.groupChevronOpen)}
+            />
+            <span className={css.sectionToggleText}>
+              {groupBy === 'flat' ? t('section.sessions') : t('section.workspaces')}
+            </span>
+          </button>
         )}
         {wide && (
           <div className={clsx(css.searchSlot, searchExpanded && css.searchSlotExpanded)}>
@@ -1392,9 +1412,11 @@ export function WorkspaceBrowser({
         </Tooltip>
       </div>}
 
-      {/* Always-mounted seat keeps the region's flex slot while the list
-          itself is wide-only. */}
-      <div className={css.listArea}>
+      {/* The seat keeps the region's flex slot while the list itself is
+          wide-only. Folding the header drops the seat as well, so the sections
+          below take its room; an active search always keeps it, so typing still
+          shows results. */}
+      {showListArea && <div className={css.listArea}>
         {wide && (normalizedQuery !== ''
           ? (
             <SearchResults
@@ -1472,7 +1494,7 @@ export function WorkspaceBrowser({
                 setSectionExpanded={actions.setSectionExpanded}
               />
             ))}
-      </div>
+      </div>}
 
       {workspaceActionRequest !== null && <WorkspaceDialogs key={`${workspaceActionRequest.action}/${workspaceActionRequest.workspaceId}`}
         request={workspaceActionRequest} workspaces={workspaces} renameWorkspace={renameWorkspace} deleteWorkspace={deleteWorkspace}
