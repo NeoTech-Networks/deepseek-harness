@@ -1,0 +1,19 @@
+# Bilingual-pair consistency record for 2026-10-31-native-bot-tool-policy.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-10-31-native-bot-tool-policy.md
+/agent-note-native-per-bot-tool-policy:
+  en: 169aba90558f409c
+  zh: 7a7610041cedf327
+/agent-note-native-per-bot-tool-policy/problem:
+  en: ceab3f1a53ee6377
+  zh: e873bbf3f2199121
+/agent-note-native-per-bot-tool-policy/decision:
+  en: e428f7d1cbeecf07
+  zh: 59ff811e6068d0fd
+/agent-note-native-per-bot-tool-policy/alternatives-considered:
+  en: 18adb1b07b284751
+  zh: 4028a0316588c1fb
+/agent-note-native-per-bot-tool-policy/consequences:
+  en: 3647192c1e08ff64
+  zh: 7637dd046dcfa629

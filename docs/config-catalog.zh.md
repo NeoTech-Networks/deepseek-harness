@@ -930,6 +930,25 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-experimental-api-speech-to-text -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-experimental-bot-tool-policy -->
+<a id="deepseek-aidsh-experimental-bot-tool-policy"></a>
+
+## `@deepseek-ai/dsh-experimental-bot-tool-policy`
+
+- `inject`: `agents` · `tools` · `workingDirectory`
+- `source`: [`packages/experimental/bot-tool-policy/src/index.ts:37`](../packages/experimental/bot-tool-policy/src/index.ts)
+
+```ts config-catalog
+/** Locations of the two files the policy reads. */
+export interface Config {
+  /** Side file holding the policy. Defaults to `bot/tool-policy.json` under the DeepSeek Harness home. */
+  readonly policyPath?: string
+  /** DS Bot store mapping Sessions to bots. Defaults to `bot/state.json` under the DeepSeek Harness home. */
+  readonly storePath?: string
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-experimental-bot-tool-policy -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-experimental-browser-use-chrome-devtools-mcp -->
 <a id="deepseek-aidsh-experimental-browser-use-chrome-devtools-mcp"></a>
 

@@ -1,0 +1,64 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/experimental/bot-tool-policy/README.md
+/:
+  en: d7a698402ed1b54d
+  zh: e89428d41cc2b506
+/deepseek-ai-dsh-experimental-bot-tool-policy:
+  en: 455de8d89d923915
+  zh: c128aa07512c6a43
+/deepseek-ai-dsh-experimental-bot-tool-policy/summary:
+  en: 57975dc2d0d82742
+  zh: e682d14a7d3a2f63
+/deepseek-ai-dsh-experimental-bot-tool-policy/table-of-contents:
+  en: b563e4ec4727d0de
+  zh: 61ebd645a536f3f2
+/deepseek-ai-dsh-experimental-bot-tool-policy/use-this-package:
+  en: 5699d4c82c996be6
+  zh: 8a0fa9c2b8b7ead0
+/deepseek-ai-dsh-experimental-bot-tool-policy/use-this-package/the-side-file:
+  en: 1fadc208294b9d41
+  zh: 09ef4e2572325db7
+/deepseek-ai-dsh-experimental-bot-tool-policy/use-this-package/what-a-bot-can-do:
+  en: 7703724a553f70cb
+  zh: b333d4c3c6e3f644
+/deepseek-ai-dsh-experimental-bot-tool-policy/use-this-package/what-failure-looks-like:
+  en: 620dd2c84be839da
+  zh: a8f7c177462eff80
+/deepseek-ai-dsh-experimental-bot-tool-policy/understand-the-implementation:
+  en: df94ce15bce5259c
+  zh: b48b8e71817a1426
+/deepseek-ai-dsh-experimental-bot-tool-policy/understand-the-implementation/source-map:
+  en: d600b2487e0d0edd
+  zh: f7466e915a789bd1
+/deepseek-ai-dsh-experimental-bot-tool-policy/understand-the-implementation/order:
+  en: eeb57aabd27fa60c
+  zh: 167b293f8c7ffbda
+/deepseek-ai-dsh-experimental-bot-tool-policy/understand-the-implementation/identity:
+  en: a6b4fdea174e5c0a
+  zh: 99a94d847248ad60
+/deepseek-ai-dsh-experimental-bot-tool-policy/understand-the-implementation/paths:
+  en: 769694ff4b14a0e0
+  zh: ad1e5fad358c86ba
+/deepseek-ai-dsh-experimental-bot-tool-policy/further-exploration:
+  en: cf6b78f930bf7ac6
+  zh: 409a5e9ce5eb27e6
+/deepseek-ai-dsh-experimental-bot-tool-policy/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-experimental-bot-tool-policy/model-experience/refusals:
+  en: 00bf287b37852b36
+  zh: faa187520aa07cdb
+/deepseek-ai-dsh-experimental-bot-tool-policy/model-experience/refusals/what-the-model-sees:
+  en: 4aee2a88cf65a329
+  zh: 67051a954c396a17
+/deepseek-ai-dsh-experimental-bot-tool-policy/model-experience/refusals/token-effect:
+  en: 1ee422eb8ef00694
+  zh: 77bea01d9915e9e1
+/deepseek-ai-dsh-experimental-bot-tool-policy/model-experience/refusals/kv-cache-effect:
+  en: 0652a478902b8d02
+  zh: c7fb51f12b1baf1a
+/deepseek-ai-dsh-experimental-bot-tool-policy/known-limitations-and-deferred-work:
+  en: 57ef89dfd2b8b577
+  zh: 94976195ade95a07

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Bot Tool Policy",
+    "description": "Limit what each DS Bot may write, from a side file checked before every tool call."
+  }
+}

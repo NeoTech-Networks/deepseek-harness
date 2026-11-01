@@ -101,6 +101,7 @@
     "@deepseek-ai/dsh-agent-preset": "workspace:*",
     "@deepseek-ai/dsh-experimental-voice-input-bundle": "workspace:*",
     "@deepseek-ai/dsh-experimental-auto-review": "workspace:*",
+    "@deepseek-ai/dsh-experimental-bot-tool-policy": "workspace:*",
     "@deepseek-ai/dsh-experimental-cot-translation-bundle": "workspace:*",
     "@deepseek-ai/dsh-experimental-badge-skill-bundle": "workspace:*",
     "@deepseek-ai/dsh-experimental-ralph-bundle": "workspace:*",
