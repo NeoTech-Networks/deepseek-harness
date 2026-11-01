@@ -34,4 +34,4 @@ A missing, empty, or malformed policy file allows the call and logs one warning.
 
 ## Consequences
 
-A bot can still write through a shell. The protection is off, with only a log warning, whenever the policy file is broken. The package is experimental, so a deployment must mount it and supply the policy file itself, and the hook stays in place until a deployment has done so and the same acceptance suite has passed there.
+A bot can still write through a shell. The protection is off, with only a log warning, whenever the policy file is broken. The package ships as a default-off optional bundle, because default-product isolation keeps an experimental package out of every shipped template. A deployment must select the bundle and supply the policy file itself, and the hook stays in place until a deployment has done so and the same acceptance suite has passed there.

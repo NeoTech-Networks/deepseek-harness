@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-experimental-bot-tool-policy` 为 DS Bot 团队中的每个 Bot 设定各自的写入范围。否则 Bot 会继承操作者整台机器的权限，而它的职责只写在指令里。本插件在任何 hook 运行之前检查每次文件和 shell 调用：除非有授权覆盖目标路径，否则拒绝写入；任何 Bot 都不能写入 Bot 存储；任何工具都不能读取 Bot 密钥文件。规则保存在独立文件中，因此无需改动 Bot 记录即可查看、比较和回退。本包为实验性质，不提供稳定性承诺，也没有任何产品组合挂载它。
+`dsh-experimental-bot-tool-policy` 为 DS Bot 团队中的每个 Bot 设定各自的写入范围。否则 Bot 会继承操作者整台机器的权限，而它的职责只写在指令里。本插件在任何 hook 运行之前检查每次文件和 shell 调用：除非有授权覆盖目标路径，否则拒绝写入；任何 Bot 都不能写入 Bot 存储；任何工具都不能读取 Bot 密钥文件。规则保存在独立文件中，因此无需改动 Bot 记录即可查看、比较和回退。本包为实验性质，不提供稳定性承诺，以默认关闭的可选组合包形式随产品分发。
 
 ## 目录
 
@@ -24,12 +24,15 @@ kind: "package-reference"
 <a id="use-this-package"></a>
 ## 使用本包
 
-在运行 DS Bot 的 profile 中挂载：
+安装包内已带有本组合包且默认关闭，任何随附模板都不会选中它。在运行 DS Bot 的 profile 中，打开 **插件 → 官方 → 机器人工具策略**，或把 `@deepseek-ai/dsh-experimental-bot-tool-policy` 加入 `dsh.profile.bundles`。选中它的 profile 会增加一个 Host 行：
 
 ```yaml
-# per-bot tool policy, read from the DeepSeek Harness home
-- name: '@deepseek-ai/dsh-experimental-bot-tool-policy'
+- insert:
+    - id: bot-tool-policy
+      name: '@deepseek-ai/dsh-experimental-bot-tool-policy'
 ```
+
+修改组合包列表后须重启该 profile。后续 patch 层可在 `bot-tool-policy` 行上设置下列字段。
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
@@ -124,7 +127,7 @@ Bot 的存储键是它的记录 id。在 Bot 切换到新分段之前，这个 i
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **实验性原型，不提供稳定性承诺**：按实验性包策略，本包为公开包，但没有任何产品组合挂载它，孵化期间其约定可随时变化。
+- **实验性原型，不提供稳定性承诺**：按实验性包策略，本包为公开包，本包默认关闭，任何随附模板都不会选中它，孵化期间其约定可随时变化。
 - **不在 CLI 或 Desktop 载荷中**：`apps/cli` 不依赖本包，因此已安装的应用仅凭配置文件条目无法加载它。
 - **不检查 shell 写入**：只在 shell 命令中搜索密钥路径，因为误解析命令会阻塞正常工作。Bot 仍可通过 shell 写入其账户能写的任何位置，运行时拼接出的密钥路径也不会被发现。
 - **失败时放行**：策略文件缺失或损坏会解除保护，只留下一条日志警告。

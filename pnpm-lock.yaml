@@ -311,6 +311,9 @@ importers:
       '@deepseek-ai/dsh-experimental-badge-skill-bundle':
         specifier: workspace:*
         version: link:../../packages/experimental/badge-skill-bundle
+      '@deepseek-ai/dsh-experimental-bot-tool-policy':
+        specifier: workspace:*
+        version: link:../../packages/experimental/bot-tool-policy
       '@deepseek-ai/dsh-experimental-cot-translation-bundle':
         specifier: workspace:*
         version: link:../../packages/experimental/cot-translation-bundle

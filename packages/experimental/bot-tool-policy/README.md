@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-experimental-bot-tool-policy` gives each bot on a DS Bot team its own write limits. A bot otherwise inherits the operator's whole machine, and its role lives only in its instructions. This plugin checks each file and shell call before any hook runs: a write is refused unless a grant covers the path, the bot store is written by no bot, and the bot secrets file is reached by no tool. Rules live in a side file, so they can be read, compared, and reverted without touching the bot records. It is experimental, with no stability promise, and no product mounts it.
+`dsh-experimental-bot-tool-policy` gives each bot on a DS Bot team its own write limits. A bot otherwise inherits the operator's whole machine, and its role lives only in its instructions. This plugin checks each file and shell call before any hook runs: a write is refused unless a grant covers the path, the bot store is written by no bot, and the bot secrets file is reached by no tool. Rules live in a side file, so they can be read, compared, and reverted without touching the bot records. It is experimental, with no stability promise, and ships switched off as an optional bundle.
 
 ## Table of Contents
 
@@ -24,12 +24,15 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-Mount it in a profile that runs DS Bot:
+The installation carries this bundle switched off, and no shipped template selects it. In a profile that runs DS Bot, turn on **Plugins → Official → Bot Tool Policy**, or add `@deepseek-ai/dsh-experimental-bot-tool-policy` to `dsh.profile.bundles`. A profile that selects it gains one Host row:
 
 ```yaml
-# per-bot tool policy, read from the DeepSeek Harness home
-- name: '@deepseek-ai/dsh-experimental-bot-tool-policy'
+- insert:
+    - id: bot-tool-policy
+      name: '@deepseek-ai/dsh-experimental-bot-tool-policy'
 ```
+
+Restart the profile after changing its bundle list. A later patch layer can set the fields below on the `bot-tool-policy` row.
 
 | Field | Default | Meaning |
 |---|---|---|
@@ -124,7 +127,7 @@ None. The plugin changes no reusable prefix; a refusal appends after it like any
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **Experimental prototype with no stability promise**: the package is public under the experimental package policy, but no product composition mounts it, and its contracts change freely while it incubates.
+- **Experimental prototype with no stability promise**: the package is public under the experimental package policy, it ships switched off, no shipped template selects it, and its contracts change freely while it incubates.
 - **Not in the CLI or Desktop payload**: `apps/cli` does not depend on this package, so an installed application cannot load it from a profile entry alone.
 - **Shell writes are not checked**: a shell command is searched for secret paths only, because a mis-parsed command would block real work. A bot can still write anywhere its account can through a shell, and a command that builds a secret path at run time is not seen.
 - **Fails open**: a missing or broken policy file removes the protection and leaves only a log warning.

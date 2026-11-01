@@ -1,0 +1,3 @@
+- insert:
+    - id: bot-tool-policy
+      name: '@deepseek-ai/dsh-experimental-bot-tool-policy'
