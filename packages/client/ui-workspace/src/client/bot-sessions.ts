@@ -5,7 +5,8 @@
  * path, and the bots work in ordinary project folders the operator also works
  * in, so almost nothing reached the group. Only ds-bot knows which sessions it
  * owns, so it publishes the set: an array on `window.__dshBotSessions` plus a
- * `dsh-bot:sessions` event whenever it changes.
+ * `ds-bot:sessions` event whenever it changes. Builds of ds-bot before the
+ * rename fire `dsh-bot:sessions` instead, so both names are heard.
  *
  * The channel is one way and read-only, and every reader here tolerates the
  * publisher being absent, so the sidebar keeps its path-only behaviour on a
@@ -14,8 +15,10 @@
 import { useSyncExternalStore } from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
-/** Window event ds-bot fires after it rewrites {@link BOT_SESSION_GLOBAL}. */
-const BOT_SESSIONS_EVENT = 'dsh-bot:sessions'
+/** Window event ds-bot fires after it rewrites `window.__dshBotSessions`. */
+const BOT_SESSIONS_EVENT = 'ds-bot:sessions'
+/** The same event under its name before the rename; dropped once no installed ds-bot fires it. */
+const LEGACY_BOT_SESSIONS_EVENT = 'dsh-bot:sessions'
 
 /** Set returned whenever the page has published nothing usable. */
 export const EMPTY_BOT_SESSIONS: ReadonlySet<SessionId> = new Set<SessionId>()
@@ -88,7 +91,11 @@ export function getBotSessionIds(): ReadonlySet<SessionId> {
 export function subscribeBotSessions(onChange: () => void): () => void {
   if (typeof window === 'undefined') return () => {}
   window.addEventListener(BOT_SESSIONS_EVENT, onChange)
-  return () => { window.removeEventListener(BOT_SESSIONS_EVENT, onChange) }
+  window.addEventListener(LEGACY_BOT_SESSIONS_EVENT, onChange)
+  return () => {
+    window.removeEventListener(BOT_SESSIONS_EVENT, onChange)
+    window.removeEventListener(LEGACY_BOT_SESSIONS_EVENT, onChange)
+  }
 }
 
 /**

@@ -280,13 +280,14 @@ describe('AllSessionsSection Bot Sessions group', () => {
 
 // The bots work in ordinary project folders the operator also works in, so the
 // folder cannot say who owns a session. ds-bot publishes the ids instead.
-const BOT_EVENT = 'dsh-bot:sessions'
+const BOT_EVENT = 'ds-bot:sessions'
+const LEGACY_BOT_EVENT = 'dsh-bot:sessions'
 // The spec's own view of the channel: the publisher is a separate bundle, so
 // the page reads it as `unknown` and the shell tolerates any shape.
 const global2 = window as unknown as { __dshBotSessions?: unknown }
-const publish = (ids: string[]): void => {
+const publish = (ids: string[], event: string = BOT_EVENT): void => {
   global2.__dshBotSessions = ids
-  window.dispatchEvent(new CustomEvent(BOT_EVENT))
+  window.dispatchEvent(new CustomEvent(event))
 }
 
 describe('AllSessionsSection ids published by ds-bot', () => {
@@ -316,6 +317,20 @@ describe('AllSessionsSection ids published by ds-bot', () => {
     expect(rowIds(screen.getByRole('tree', { name: '全部会话' }))).toEqual(['mine'])
     fireEvent.click(screen.getByRole('button', { name: BOT_TOGGLE }))
     expect(rowIds(screen.getByRole('tree', { name: BOT_GROUP }))).toEqual(['igor'])
+  })
+
+  it('still hears a ds-bot that fires the legacy event name', () => {
+    mount({
+      useSessions: hook(sessionState([summary('igor', 9), summary('mine', 8)])),
+      useWorkspaces: hook(workspaceState([
+        workspace('playbooks', ['igor'], 'Playbooks'),
+        workspace('alpha', ['mine'], 'Alpha'),
+      ])),
+    })
+
+    act(() => { publish(['igor'], LEGACY_BOT_EVENT) })
+
+    expect(rowIds(screen.getByRole('tree', { name: '全部会话' }))).toEqual(['mine'])
   })
 
   it('keeps the Workspace rule when ds-bot publishes an empty list', () => {
