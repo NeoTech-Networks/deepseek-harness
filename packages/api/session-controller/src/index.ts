@@ -28,7 +28,6 @@ import { WebController } from './web/controller.ts'
 import { SessionFileReferences } from './file-references.ts'
 import { ApiSessionList } from './list.ts'
 import { buildModelCatalog, hasProviderApiKey } from './catalog.ts'
-import { installModelSelectionProjection } from './model-selection-projection.ts'
 import { installWorkspaceLinksProjection } from './workspace-links-projection.ts'
 import { installSkillsUsedProjection } from './skills-used-projection.ts'
 import { installSessionPurposeProjection } from './session-purpose-projection.ts'
@@ -196,7 +195,6 @@ export class SessionController extends TypertRemoteService {
   protected async [Service.init](): Promise<void> {
     const ctx = this.ctx
     ctx.typert.resources.register('session', { resolve: resolveSessionResource })
-    installModelSelectionProjection(ctx)
     installWorkspaceLinksProjection(ctx)
     installSkillsUsedProjection(ctx)
     installSessionPurposeProjection(ctx)

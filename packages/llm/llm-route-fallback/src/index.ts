@@ -143,7 +143,7 @@ export function apply(ctx: Context, config: Config = {}): void {
     const outcome = planRouteFallback({
       provider: current.provider,
       model: current.model,
-      tools: payload.tools,
+      tools: payload.tools ?? [],
     }, resolved)
     if (outcome.kind === 'kept') return current
     // The loop logs the header AFTER this waterfall returns, so this line and

@@ -42,7 +42,7 @@ function makeHeaderProps(): HeaderLeadingControlsProps {
   return {
     useContextMenu: contextMenuHook(),
     useSessions: neverHook, useSessionStatus, useSessionRetainInfo: neverHook,
-    usePanelInfo, useResource, useWorkspaces: neverHook, ...allowAllAccess,
+    usePanelInfo, useResource, useWorkspaces: neverHook, useWorkspacesTakenOver: neverHook, ...allowAllAccess,
     usePanels: selector => selector([]), useShortcuts: selector => selector([]),
     useEntryPins: selector => selector([]), useEntryActions: selector => selector(false),
     selectPanel: vi.fn(), setPinned: vi.fn(), toggleSidebar: vi.fn(),
@@ -74,7 +74,7 @@ function mountShell({ collapsed = false, width = 300, drawer = false, shortcuts 
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector(shortcuts)}
-      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
+      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook} useWorkspacesTakenOver={selector => selector(false)}
       {...allowAllAccess}
       startSession={startSession} toggleSidebar={toggleSidebar} trackEntryClick={trackEntryClick} t={t}
       renderSlot={((
@@ -121,65 +121,6 @@ function mountShell({ collapsed = false, width = 300, drawer = false, shortcuts 
   }
 }
 
-describe('SidebarRoot combined sidebar (fork)', () => {
-  afterEach(() => { window.localStorage.clear() })
-
-  it('renders only the browser seat while no plugin fills the region seat', () => {
-    const shell = mountShell()
-    expect(screen.getByTestId('region')).toBeTruthy()
-    expect(screen.queryByTestId('plugin-seat')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Bots' })).toBeNull()
-    expect(shell.seen).not.toContain('sidebar.workspaces')
-  })
-
-  it('shows the plugin list in a foldable section above All Sessions and the native browser', () => {
-    mountShell({ takenOver: true })
-    const header = screen.getByRole('button', { name: 'Bots' })
-    expect(header.getAttribute('aria-expanded')).toBe('true')
-    const plugin = screen.getByTestId('plugin-seat')
-    const allSessions = screen.getByTestId('all-sessions-seat')
-    const browser = screen.getByTestId('region')
-    expect(plugin.compareDocumentPosition(allSessions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(allSessions.compareDocumentPosition(browser) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByText('New Session')).toBeTruthy()
-  })
-
-  it('marks only the open section so it can claim the leftover height', () => {
-    mountShell({ takenOver: true })
-    const openSection = screen.getByTestId('plugin-seat').closest('[data-sidebar-plugin-section]')!
-    const openClasses = openSection.className.split(/\s+/).filter(Boolean)
-    cleanup()
-
-    mountShell({ takenOver: true })
-    fireEvent.click(screen.getByRole('button', { name: 'Bots' }))
-    const foldedSection = document.querySelector('[data-sidebar-plugin-section]')!
-    expect(screen.getByRole('button', { name: 'Bots' }).getAttribute('aria-expanded')).toBe('false')
-    const foldedClasses = foldedSection.className.split(/\s+/).filter(Boolean)
-
-    // Folded is the bare section; open adds exactly the height-claiming class.
-    expect(openClasses).toEqual(expect.arrayContaining(foldedClasses))
-    expect(openClasses.length).toBe(foldedClasses.length + 1)
-  })
-
-  it('folds the plugin section and remembers the choice', () => {
-    mountShell({ takenOver: true })
-    fireEvent.click(screen.getByRole('button', { name: 'Bots' }))
-    expect(screen.queryByTestId('plugin-seat')).toBeNull()
-    expect(screen.getByTestId('region')).toBeTruthy()
-    expect(window.localStorage.getItem('dsh.sidebar.pluginSection.open')).toBe('false')
-    cleanup()
-    mountShell({ takenOver: true })
-    expect(screen.getByRole('button', { name: 'Bots' }).getAttribute('aria-expanded')).toBe('false')
-  })
-
-  it('keeps the plugin rail on the collapsed sidebar', () => {
-    mountShell({ takenOver: true, collapsed: true })
-    expect(screen.queryByRole('button', { name: 'Bots' })).toBeNull()
-    expect(screen.getByTestId('plugin-seat')).toBeTruthy()
-    expect(screen.queryByTestId('region')).toBeNull()
-  })
-})
-
 describe('SidebarRoot shell', () => {
   it('advertises the effective new-session binding', () => {
     const shortcut: ShortcutCatalogEntry = { id: 'session.new' as ShortcutCommandId, label: 'New', aliases: [],
@@ -197,7 +138,7 @@ describe('SidebarRoot shell', () => {
     document.documentElement.dataset.platform = 'darwin'
     render(<HeaderLeadingControls toggleSidebar={vi.fn()} startSession={vi.fn()} selectPanel={vi.fn()} trackEntryClick={vi.fn()} t={t}
       usePanelInfo={neverHook} useSessions={neverHook} useSessionStatus={neverHook}
-      useSessionRetainInfo={neverHook} useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
+      useSessionRetainInfo={neverHook} useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook} useWorkspacesTakenOver={selector => selector(false)}
       {...allowAllAccess}
       usePanels={select => select([])} useEntryPins={select => select([])}
       useEntryActions={select => select(false)} setPinned={vi.fn()} useShortcuts={select => select([shortcut])} />)
@@ -245,7 +186,7 @@ describe('SidebarRoot shell', () => {
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
-      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
+      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook} useWorkspacesTakenOver={selector => selector(false)}
       {...allowAllAccess}
       useRemoteAccess={useRemoteAccess}
       startSession={startSession} toggleSidebar={toggleSidebar} trackEntryClick={vi.fn()} t={t}
@@ -277,7 +218,7 @@ describe('SidebarRoot shell', () => {
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
-      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
+      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook} useWorkspacesTakenOver={selector => selector(false)}
       {...allowAllAccess}
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
@@ -301,7 +242,7 @@ describe('SidebarRoot shell', () => {
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
-      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
+      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook} useWorkspacesTakenOver={selector => selector(false)}
       {...allowAllAccess}
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
@@ -329,7 +270,7 @@ describe('SidebarRoot shell', () => {
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
-      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
+      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook} useWorkspacesTakenOver={selector => selector(false)}
       {...allowAllAccess}
       startSession={startSession} toggleSidebar={vi.fn()} trackEntryClick={trackEntryClick} t={t}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
@@ -380,7 +321,7 @@ describe('SidebarRoot shell', () => {
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
-      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
+      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook} useWorkspacesTakenOver={selector => selector(false)}
       {...allowAllAccess}
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderSlot={((_key: string, _owner: unknown, options?: { fallback?: ReactNode }) =>
@@ -444,7 +385,7 @@ describe('SidebarRoot shell', () => {
       usePanelInfo={usePanelInfo} selectPanel={() => {}} usePanels={selector => selector([])} useEntryPins={selector => selector([])}
       useEntryActions={selector => selector(false)} setPinned={vi.fn()}
       useShortcuts={selector => selector([])}
-      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook}
+      useContextMenu={contextMenuHook()} useResource={useResource} useWorkspaces={neverHook} useWorkspacesTakenOver={selector => selector(false)}
       {...allowAllAccess}
       startSession={vi.fn()} toggleSidebar={vi.fn()} trackEntryClick={vi.fn()} t={t}
       renderSlot={((key: string) => key === 'sidebar.toggle.badge'

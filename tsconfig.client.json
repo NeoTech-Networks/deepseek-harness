@@ -172,6 +172,7 @@
     { "path": "./packages/llm/account-usage/tsconfig.client.json" },
     { "path": "./packages/api/pinned-files" },
     { "path": "./packages/client/ui-sidebar-explorer" },
+    { "path": "./packages/client/ui-deepseek-model-label-1017" },
     { "path": "./packages/client/web" },
     { "path": "./packages/context/file-reference" },
     { "path": "./apps/web" }

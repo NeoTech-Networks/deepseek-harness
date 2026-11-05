@@ -284,6 +284,8 @@
       "@deepseek-ai/dsh-api-pinned-files/types": ["./packages/api/pinned-files/src/types.ts"],
       "@deepseek-ai/dsh-client-ui-sidebar-explorer": ["./packages/client/ui-sidebar-explorer/src"],
       "@deepseek-ai/dsh-client-ui-sidebar-explorer/client": ["./packages/client/ui-sidebar-explorer/src/client"],
+      "@deepseek-ai/dsh-client-ui-deepseek-model-label-1017": ["./packages/client/ui-deepseek-model-label-1017/src"],
+      "@deepseek-ai/dsh-client-ui-deepseek-model-label-1017/client": ["./packages/client/ui-deepseek-model-label-1017/src/client"],
       "@deepseek-ai/dsh-client-resources": ["./packages/client/resources/src"],
       "@deepseek-ai/dsh-client-resources/client": ["./packages/client/resources/src/client"],
       "@deepseek-ai/dsh-client-ui-sidebar-files": ["./packages/client/ui-sidebar-files/src"],

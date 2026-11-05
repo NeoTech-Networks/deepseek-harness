@@ -168,7 +168,7 @@ describe('native row drag previews', () => {
     const view = render(kind === 'workspace'
       ? <ProjectRowItem group={{
         key: 'workspace', workspaceId: wid('workspace'), cwd: '/workspace', createdAt: 0,
-        label: 'Draggable row', sessionCount: 0, expanded: true, containsCurrent: false, sessions: [],
+        label: 'Draggable row', group: '', unarchivedCount: 0, sessionCount: 0, expanded: true, containsCurrent: false, sessions: [],
       }} onToggle={vi.fn()} onCreate={vi.fn()} drag={drag} t={t} />
       : <SessionNodeItem node={{
         id: sid('session'), title: 'Draggable row', blank: false, running: false,
@@ -735,7 +735,7 @@ describe('workspace browser rows', () => {
 
   it('workspace row offers only the actions its Workspace access snapshot allows', () => {
     const group: GroupNode = {
-      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project',
+      key: 'project', workspaceId: wid('project'), cwd: '/projects/project', createdAt: 0, label: 'Project', group: '', unarchivedCount: 0,
       sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
     }
     const allowed = new Set<string>(['workspace/rename'])
@@ -766,7 +766,7 @@ describe('workspace browser rows', () => {
 
   it('ungrouped bucket asks the global resource whether it may start a Session', () => {
     const group: GroupNode = {
-      key: 'ungrouped', workspaceId: undefined, cwd: undefined, createdAt: undefined, label: '',
+      key: 'ungrouped', workspaceId: undefined, cwd: undefined, createdAt: undefined, label: '', group: '', unarchivedCount: 0,
       sessionCount: 0, expanded: false, containsCurrent: false, sessions: [],
     }
     const useRemoteAccess = vi.fn((action: string) => action !== 'session/create')

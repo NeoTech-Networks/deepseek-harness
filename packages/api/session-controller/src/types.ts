@@ -9,6 +9,7 @@ import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { LlmAttemptId, MessageId } from '@deepseek-ai/dsh-llm/brand'
 import type { LlmModelBadge, TextBlock } from '@deepseek-ai/dsh-llm'
 import type { SessionId, SessionSeqCursor } from '@deepseek-ai/dsh-session/types'
+import type { SessionStatusValue } from '@deepseek-ai/dsh-session-status/types'
 import type { SessionProjectionMap, SessionProjectionSummaryExcluded, SessionProjectionSummaryValues } from '@deepseek-ai/dsh-session-projection/types'
 import type { Principal } from '@deepseek-ai/dsh-typert-protocol'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
@@ -192,6 +193,8 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     }
     'session/projections-unavailable': Record<string, never>
     'session/writer-held': { readonly sessionId: SessionId }
+    /** A declared session status id is not in the deployment's vocabulary (fork). */
+    'session/status-unknown': { readonly statusId: string }
     'session/agent-busy': { readonly reason: string }
     'session/invalid-time-zone': { readonly value: string }
     'session/workspace-attach-failed': { readonly sessionId: SessionId; readonly workspaceId: string }
@@ -714,3 +717,100 @@ export type SessionProjectionValue = JsonValue
 
 /** Application metadata returned by the serving desktop for one file. */
 export type SessionWorkspacePathApplication = NativeFileApplication
+
+/** The deployment's declared-status vocabulary. */
+export interface SessionListStatusesValue {
+  readonly statuses: readonly SessionStatusValue[]
+}
+
+/** The one-sentence purpose written at Session start; state and wire value alike. */
+export interface SessionPurpose {
+  /** The sentence, or null until the Session's `session/purpose` event lands. */
+  readonly purpose: string | null
+}
+
+/** Session declared-status mutation. */
+export interface SessionSetStatusRequest {
+  readonly sessionId: SessionId
+  /** Vocabulary id to set, or null to clear the current status. */
+  readonly statusId: string | null
+}
+
+/** Session declared-status result value. */
+export interface SessionSetStatusValue {
+  /** The resolved status after the set, or null after a clear. */
+  readonly status: SessionStatusValue | null
+  /** Durable event sequence that committed the change. */
+  readonly seq: number
+}
+
+/**
+ * The skills and commands the operator typed in this Session, first use first.
+ *
+ * Both the folded state and the client-visible wire value: the fold's output is
+ * already the finished answer, so the view is the state itself and an unchanged
+ * answer keeps its reference.
+ */
+export interface SkillsUsed {
+  /** Distinct names, first use first; empty until the operator invokes one. */
+  readonly skills: readonly string[]
+}
+
+/**
+ * One operator message's dashboard signal, stripped of any map dependency.
+ *
+ * This is the foldable half of the message signal: a Session projection stores
+ * it verbatim, and classification against the maps happens on the read side, so
+ * a regenerated map never invalidates folded state. It lives here, and not beside
+ * the resolver, because this module is the package's browser-safe vocabulary and
+ * the projection state must be nameable from the client face.
+ */
+export interface WorkspaceLinkCandidates {
+  /** Seq of the message this was extracted from, for the reader's own ordering. */
+  readonly seq: number
+  /** Dashboard addresses the message carries, in the order they appear. */
+  readonly urls: readonly string[]
+  /** The lowercased `/dashboard <target>` target, or null when it names none. */
+  readonly target: string | null
+}
+
+/** The dashboard and design project a Session workspace belongs to. */
+export interface WorkspaceLinks {
+  /** Front-door URL of the dashboard whose page source is this workspace. */
+  readonly dashboardUrl?: string
+  /** Name of the Claude Design project behind that dashboard. */
+  readonly designProject?: string
+}
+
+/**
+ * Folded state of the dashboard a Session's operator messages name.
+ *
+ * Map-free by construction: the candidates are the raw signals, and only the
+ * projection's client view classifies them against the profile maps. That is
+ * what lets a regenerated map be picked up without invalidating this state.
+ */
+export interface WorkspaceLinksProjectionState {
+  /** The Session's immutable workspace directory, or an empty string. */
+  readonly cwd: string
+  /** Candidate-bearing operator messages retained, oldest first. */
+  readonly candidates: readonly WorkspaceLinkCandidates[]
+}
+
+declare module '@deepseek-ai/dsh-session-projection/types' {
+  interface SessionProjectionStateMap {
+    /** Map-free candidates folded from the dashboard a Session's messages name. */
+    workspaceLinks: WorkspaceLinksProjectionState
+    /** Operator-typed skill and command names folded from the Session's own log. */
+    skillsUsed: SkillsUsed
+    /** The Session's one-sentence purpose, folded from its `session/purpose` event. */
+    sessionPurpose: SessionPurpose
+  }
+  interface SessionProjectionMap {
+    /** Dashboard and Design project the Session footer names, resolved against the live maps. */
+    workspaceLinks: WorkspaceLinks
+    /** Skills and commands the Session footer's third line names, in first-use order. */
+    skillsUsed: SkillsUsed
+    /** The Session footer's fourth line: what the Session is for, or null before it is written. */
+    sessionPurpose: SessionPurpose
+  }
+}

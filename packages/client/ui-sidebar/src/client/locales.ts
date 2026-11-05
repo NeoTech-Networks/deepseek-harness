@@ -39,6 +39,7 @@ export const ja = {
   'navigation.label': 'ナビゲーション',
   'panels.more': 'その他',
   'version.copied': 'バージョンをコピーしました',
+  'pluginSection.title': 'Bots',
 } satisfies Record<keyof typeof en, string>
 
 /** Spanish dictionary, checked against the English keys. */
@@ -51,6 +52,7 @@ export const es = {
   'navigation.label': 'Navegación',
   'panels.more': 'Más',
   'version.copied': 'Versión copiada',
+  'pluginSection.title': 'Bots',
 } satisfies Record<keyof typeof en, string>
 
 /** French dictionary, checked against the English keys. */
@@ -63,6 +65,7 @@ export const fr = {
   'navigation.label': 'Navigation',
   'panels.more': 'Plus',
   'version.copied': 'Version copiée',
+  'pluginSection.title': 'Bots',
 } satisfies Record<keyof typeof en, string>
 
 /** German dictionary, checked against the English keys. */
@@ -75,6 +78,7 @@ export const de = {
   'navigation.label': 'Navigation',
   'panels.more': 'Mehr',
   'version.copied': 'Version kopiert',
+  'pluginSection.title': 'Bots',
 } satisfies Record<keyof typeof en, string>
 
 /** Russian dictionary, checked against the English keys. */
@@ -87,6 +91,7 @@ export const ru = {
   'navigation.label': 'Навигация',
   'panels.more': 'Ещё',
   'version.copied': 'Версия скопирована',
+  'pluginSection.title': 'Bots',
 } satisfies Record<keyof typeof en, string>
 
 /** Portuguese dictionary, checked against the English keys. */
@@ -99,4 +104,5 @@ export const pt = {
   'navigation.label': 'Navegação',
   'panels.more': 'Mais',
   'version.copied': 'Versão copiada',
+  'pluginSection.title': 'Bots',
 } satisfies Record<keyof typeof en, string>

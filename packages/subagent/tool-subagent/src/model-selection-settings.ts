@@ -77,9 +77,12 @@ export class SubagentModelSelectionConfig extends Service {
 
   /**
    * Read a detached selection preference for the next fresh top-level Session.
+   *
+   * Public because the fork's Agent Teams lead resolves a teammate's own route
+   * against the same allowed list before spawning it.
    * @returns the enabled state and exact allowed routes.
    */
-  private current(): SubagentModelSelectionSettings {
+  current(): SubagentModelSelectionSettings {
     const enabled = this.config.enabled.get()
     const allowedModels = this.config.allowedModels.get()
     assertAllowedModelRoutes(allowedModels)

@@ -609,6 +609,11 @@ export const IconMicrophoneOutlineMedium = productIcon('microphone-outline', 'me
  * drops below 16px.
  */
 
+/** Stage marks are drawn at a chosen stroke rather than looked up in the sprite. */
+interface WeightedIconProps extends IconProps {
+  strokeWidth: number
+}
+
 /** Design stroke of the stage marks at their 14px working size. */
 const STAGE_REGULAR_STROKE = 2.2
 

@@ -69,7 +69,10 @@ function mount(overrides: Partial<AllSessionsProps> = {}) {
     open: vi.fn(),
     t,
     ...overrides,
-  }
+    // The section reads exactly the props above; the slot's runtime share also
+    // carries access and resource hooks this fixture supplies through
+    // `allowAllAccess`, whose union no longer satisfies the declared owner type.
+  } as AllSessionsProps
   const view = render(<AllSessionsSection {...props} />)
   return { view, props, store }
 }

@@ -48,14 +48,14 @@ async function liveAgent(ctx: Context, id: string): Promise<Session> {
   return session
 }
 
-const remote = (ctx: Context) => createSessionTestRemote(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
+const remote = async (ctx: Context) => createSessionTestRemote(ctx, { defaultModelSelection: () => ({ provider: 'p', model: 'm' }), cwd: '/tmp' })
 
 describe('sessions.setStatus', () => {
   it('sets a vocabulary id as a whole-value event and echoes the resolved status', async () => {
     const ctx = await composed()
     const source = await liveAgent(ctx, 'session-status-set')
 
-    const set = await remote(ctx).setStatus(request({ sessionId: source.id, statusId: 'stuck' }))
+    const set = await (await remote(ctx)).setStatus(request({ sessionId: source.id, statusId: 'stuck' }))
     expect(set.ok).toBe(true)
     if (!set.ok) return
     expect(set.value.status).toEqual({ id: 'stuck', label: 'Stuck', icon: 'blocked', tone: 'error' })
@@ -67,9 +67,9 @@ describe('sessions.setStatus', () => {
   it('clears on a null statusId', async () => {
     const ctx = await composed()
     const source = await liveAgent(ctx, 'session-status-clear')
-    await remote(ctx).setStatus(request({ sessionId: source.id, statusId: 'finished' }))
+    await (await remote(ctx)).setStatus(request({ sessionId: source.id, statusId: 'finished' }))
 
-    const cleared = await remote(ctx).setStatus(request({ sessionId: source.id, statusId: null }))
+    const cleared = await (await remote(ctx)).setStatus(request({ sessionId: source.id, statusId: null }))
     expect(cleared.ok).toBe(true)
     if (!cleared.ok) return
     expect(cleared.value.status).toBeNull()
@@ -79,7 +79,7 @@ describe('sessions.setStatus', () => {
     const ctx = await composed()
     const source = await liveAgent(ctx, 'session-status-unknown')
 
-    const response = await remote(ctx).setStatus(request({ sessionId: source.id, statusId: 'banana' }))
+    const response = await (await remote(ctx)).setStatus(request({ sessionId: source.id, statusId: 'banana' }))
     expect(response.ok).toBe(false)
     if (!response.ok) {
       expect(response.error.code).toBe('session/status-unknown')
@@ -91,7 +91,7 @@ describe('sessions.setStatus', () => {
     const ctx = await composed(false)
     const source = await liveAgent(ctx, 'session-status-missing')
 
-    const response = await remote(ctx).setStatus(request({ sessionId: source.id, statusId: 'stuck' }))
+    const response = await (await remote(ctx)).setStatus(request({ sessionId: source.id, statusId: 'stuck' }))
     expect(response.ok).toBe(false)
     if (!response.ok) {
       expect(response.error.code).toBe('gateway/internal')
@@ -103,7 +103,7 @@ describe('sessions.setStatus', () => {
 describe('sessions.listStatuses', () => {
   it('returns the shipped vocabulary in declaration order', async () => {
     const ctx = await composed()
-    const listed = await remote(ctx).listStatuses()
+    const listed = await (await remote(ctx)).listStatuses()
     expect(listed.ok).toBe(true)
     if (!listed.ok) return
     expect(listed.value.statuses.map(entry => entry.id)).toEqual([
@@ -113,7 +113,7 @@ describe('sessions.listStatuses', () => {
 
   it('answers internal when the composition mounts no session-status service', async () => {
     const ctx = await composed(false)
-    const listed = await remote(ctx).listStatuses()
+    const listed = await (await remote(ctx)).listStatuses()
     expect(listed.ok).toBe(false)
     if (!listed.ok) expect(listed.error.code).toBe('gateway/internal')
   })

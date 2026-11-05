@@ -116,6 +116,17 @@ export const ja = {
   'error.outsideWorkspace': 'そのディレクトリはワークスペース外のため、サイドバーでは読み取りません。',
   'error.notDirectory': 'それはディレクトリではありません。',
   'error.unavailable': '読み取りに失敗しました: {message}',
+  'menu.newSessionHere': 'New session here',
+  'menu.newSessionEach': 'New session in each sub-folder…',
+  'bulk.title': 'New session in each sub-folder',
+  'bulk.description': 'Register each selected sub-folder as its own workspace, and open a session in the first one.',
+  'bulk.group': 'Group label',
+  'bulk.none': 'This directory has no sub-folders.',
+  'bulk.all': 'Select all',
+  'bulk.cancel': 'Cancel',
+  'bulk.close': 'Close',
+  'bulk.open': 'Open sessions',
+  'bulk.done': '{count} workspaces ready.',
 } satisfies Record<keyof typeof en, string>
 
 /** Spanish dictionary, checked against the English keys. */
@@ -141,6 +152,17 @@ export const es = {
   'error.outsideWorkspace': 'Ese directorio está fuera del espacio de trabajo, por lo que la barra lateral no lo leerá.',
   'error.notDirectory': 'Eso no es un directorio.',
   'error.unavailable': 'Error de lectura: {message}',
+  'menu.newSessionHere': 'New session here',
+  'menu.newSessionEach': 'New session in each sub-folder…',
+  'bulk.title': 'New session in each sub-folder',
+  'bulk.description': 'Register each selected sub-folder as its own workspace, and open a session in the first one.',
+  'bulk.group': 'Group label',
+  'bulk.none': 'This directory has no sub-folders.',
+  'bulk.all': 'Select all',
+  'bulk.cancel': 'Cancel',
+  'bulk.close': 'Close',
+  'bulk.open': 'Open sessions',
+  'bulk.done': '{count} workspaces ready.',
 } satisfies Record<keyof typeof en, string>
 
 /** French dictionary, checked against the English keys. */
@@ -166,6 +188,17 @@ export const fr = {
   'error.outsideWorkspace': 'Ce répertoire se trouve en dehors de l’espace de travail, donc la barre latérale ne le lira pas.',
   'error.notDirectory': "Ce n'est pas un répertoire.",
   'error.unavailable': 'Échec de lecture : {message}',
+  'menu.newSessionHere': 'New session here',
+  'menu.newSessionEach': 'New session in each sub-folder…',
+  'bulk.title': 'New session in each sub-folder',
+  'bulk.description': 'Register each selected sub-folder as its own workspace, and open a session in the first one.',
+  'bulk.group': 'Group label',
+  'bulk.none': 'This directory has no sub-folders.',
+  'bulk.all': 'Select all',
+  'bulk.cancel': 'Cancel',
+  'bulk.close': 'Close',
+  'bulk.open': 'Open sessions',
+  'bulk.done': '{count} workspaces ready.',
 } satisfies Record<keyof typeof en, string>
 
 /** German dictionary, checked against the English keys. */
@@ -191,6 +224,17 @@ export const de = {
   'error.outsideWorkspace': 'Dieses Verzeichnis liegt außerhalb des Arbeitsbereichs und wird daher von der Seitenleiste nicht gelesen.',
   'error.notDirectory': 'Das ist kein Verzeichnis.',
   'error.unavailable': 'Lesen fehlgeschlagen: {message}',
+  'menu.newSessionHere': 'New session here',
+  'menu.newSessionEach': 'New session in each sub-folder…',
+  'bulk.title': 'New session in each sub-folder',
+  'bulk.description': 'Register each selected sub-folder as its own workspace, and open a session in the first one.',
+  'bulk.group': 'Group label',
+  'bulk.none': 'This directory has no sub-folders.',
+  'bulk.all': 'Select all',
+  'bulk.cancel': 'Cancel',
+  'bulk.close': 'Close',
+  'bulk.open': 'Open sessions',
+  'bulk.done': '{count} workspaces ready.',
 } satisfies Record<keyof typeof en, string>
 
 /** Russian dictionary, checked against the English keys. */
@@ -216,6 +260,17 @@ export const ru = {
   'error.outsideWorkspace': 'Этот каталог находится за пределами рабочей области, поэтому боковая панель его не читает.',
   'error.notDirectory': 'Это не каталог.',
   'error.unavailable': 'Не удалось прочитать: {message}.',
+  'menu.newSessionHere': 'New session here',
+  'menu.newSessionEach': 'New session in each sub-folder…',
+  'bulk.title': 'New session in each sub-folder',
+  'bulk.description': 'Register each selected sub-folder as its own workspace, and open a session in the first one.',
+  'bulk.group': 'Group label',
+  'bulk.none': 'This directory has no sub-folders.',
+  'bulk.all': 'Select all',
+  'bulk.cancel': 'Cancel',
+  'bulk.close': 'Close',
+  'bulk.open': 'Open sessions',
+  'bulk.done': '{count} workspaces ready.',
 } satisfies Record<keyof typeof en, string>
 
 /** Portuguese dictionary, checked against the English keys. */
@@ -241,4 +296,15 @@ export const pt = {
   'error.outsideWorkspace': 'Esse diretório está fora da área de trabalho, portanto a barra lateral não o lerá.',
   'error.notDirectory': 'Isso não é um diretório.',
   'error.unavailable': 'Falha na leitura: {message}',
+  'menu.newSessionHere': 'New session here',
+  'menu.newSessionEach': 'New session in each sub-folder…',
+  'bulk.title': 'New session in each sub-folder',
+  'bulk.description': 'Register each selected sub-folder as its own workspace, and open a session in the first one.',
+  'bulk.group': 'Group label',
+  'bulk.none': 'This directory has no sub-folders.',
+  'bulk.all': 'Select all',
+  'bulk.cancel': 'Cancel',
+  'bulk.close': 'Close',
+  'bulk.open': 'Open sessions',
+  'bulk.done': '{count} workspaces ready.',
 } satisfies Record<keyof typeof en, string>

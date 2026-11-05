@@ -1193,6 +1193,17 @@ export const ja = {
   'terminal.expandRest': '… 残り{n}行',
   'terminal.sendInput': '(入力を送信)',
   'terminal.session': 'ターミナル {sessionId}',
+  'input.shortcutUnavailable': 'This session cannot accept input right now, so the shortcut did nothing',
+  'input.chordHint': 'Ctrl+Shift+S saves state · Ctrl+Shift+P deploys',
+  'input.shortcutMoved': 'Composer shortcuts changed: Ctrl+Shift+S saves state, Ctrl+Shift+P deploys',
+  'input.save': 'Save',
+  'input.saveState': 'Save state (/save-state) · Ctrl+Shift+S',
+  'input.production': 'Production',
+  'input.deployProduction': 'Deploy to production (sends the promote phrase) · Ctrl+Shift+P',
+  'footer.dashboard': 'Dashboard:',
+  'footer.designProject': 'Design Project:',
+  'footer.skillsUsed': 'Skills Used:',
+  'footer.purpose': 'Purpose:',
 } satisfies Record<keyof typeof en, string>
 
 /** Spanish dictionary, checked against the English keys. */
@@ -1582,6 +1593,17 @@ export const es = {
   'detail.schedule.active': 'Habilitado',
   'detail.schedule.paused': 'Pausada',
   'detail.schedule.ended': 'Finalizada',
+  'input.shortcutUnavailable': 'This session cannot accept input right now, so the shortcut did nothing',
+  'input.chordHint': 'Ctrl+Shift+S saves state · Ctrl+Shift+P deploys',
+  'input.shortcutMoved': 'Composer shortcuts changed: Ctrl+Shift+S saves state, Ctrl+Shift+P deploys',
+  'input.save': 'Save',
+  'input.saveState': 'Save state (/save-state) · Ctrl+Shift+S',
+  'input.production': 'Production',
+  'input.deployProduction': 'Deploy to production (sends the promote phrase) · Ctrl+Shift+P',
+  'footer.dashboard': 'Dashboard:',
+  'footer.designProject': 'Design Project:',
+  'footer.skillsUsed': 'Skills Used:',
+  'footer.purpose': 'Purpose:',
 } satisfies Record<keyof typeof en, string>
 
 /** French dictionary, checked against the English keys. */
@@ -1971,6 +1993,17 @@ export const fr = {
   'detail.schedule.active': 'Activé',
   'detail.schedule.paused': 'Suspendue',
   'detail.schedule.ended': 'Terminée',
+  'input.shortcutUnavailable': 'This session cannot accept input right now, so the shortcut did nothing',
+  'input.chordHint': 'Ctrl+Shift+S saves state · Ctrl+Shift+P deploys',
+  'input.shortcutMoved': 'Composer shortcuts changed: Ctrl+Shift+S saves state, Ctrl+Shift+P deploys',
+  'input.save': 'Save',
+  'input.saveState': 'Save state (/save-state) · Ctrl+Shift+S',
+  'input.production': 'Production',
+  'input.deployProduction': 'Deploy to production (sends the promote phrase) · Ctrl+Shift+P',
+  'footer.dashboard': 'Dashboard:',
+  'footer.designProject': 'Design Project:',
+  'footer.skillsUsed': 'Skills Used:',
+  'footer.purpose': 'Purpose:',
 } satisfies Record<keyof typeof en, string>
 
 /** German dictionary, checked against the English keys. */
@@ -2360,6 +2393,17 @@ export const de = {
   'detail.schedule.active': 'Aktiviert',
   'detail.schedule.paused': 'Pausiert',
   'detail.schedule.ended': 'Beendet',
+  'input.shortcutUnavailable': 'This session cannot accept input right now, so the shortcut did nothing',
+  'input.chordHint': 'Ctrl+Shift+S saves state · Ctrl+Shift+P deploys',
+  'input.shortcutMoved': 'Composer shortcuts changed: Ctrl+Shift+S saves state, Ctrl+Shift+P deploys',
+  'input.save': 'Save',
+  'input.saveState': 'Save state (/save-state) · Ctrl+Shift+S',
+  'input.production': 'Production',
+  'input.deployProduction': 'Deploy to production (sends the promote phrase) · Ctrl+Shift+P',
+  'footer.dashboard': 'Dashboard:',
+  'footer.designProject': 'Design Project:',
+  'footer.skillsUsed': 'Skills Used:',
+  'footer.purpose': 'Purpose:',
 } satisfies Record<keyof typeof en, string>
 
 /** Russian dictionary, checked against the English keys. */
@@ -2749,6 +2793,17 @@ export const ru = {
   'detail.schedule.active': 'Включено',
   'detail.schedule.paused': 'Приостановлена',
   'detail.schedule.ended': 'Завершена',
+  'input.shortcutUnavailable': 'This session cannot accept input right now, so the shortcut did nothing',
+  'input.chordHint': 'Ctrl+Shift+S saves state · Ctrl+Shift+P deploys',
+  'input.shortcutMoved': 'Composer shortcuts changed: Ctrl+Shift+S saves state, Ctrl+Shift+P deploys',
+  'input.save': 'Save',
+  'input.saveState': 'Save state (/save-state) · Ctrl+Shift+S',
+  'input.production': 'Production',
+  'input.deployProduction': 'Deploy to production (sends the promote phrase) · Ctrl+Shift+P',
+  'footer.dashboard': 'Dashboard:',
+  'footer.designProject': 'Design Project:',
+  'footer.skillsUsed': 'Skills Used:',
+  'footer.purpose': 'Purpose:',
 } satisfies Record<keyof typeof en, string>
 
 /** Portuguese dictionary, checked against the English keys. */
@@ -3138,4 +3193,15 @@ export const pt = {
   'detail.schedule.active': 'Habilitado',
   'detail.schedule.paused': 'Pausada',
   'detail.schedule.ended': 'Concluída',
+  'input.shortcutUnavailable': 'This session cannot accept input right now, so the shortcut did nothing',
+  'input.chordHint': 'Ctrl+Shift+S saves state · Ctrl+Shift+P deploys',
+  'input.shortcutMoved': 'Composer shortcuts changed: Ctrl+Shift+S saves state, Ctrl+Shift+P deploys',
+  'input.save': 'Save',
+  'input.saveState': 'Save state (/save-state) · Ctrl+Shift+S',
+  'input.production': 'Production',
+  'input.deployProduction': 'Deploy to production (sends the promote phrase) · Ctrl+Shift+P',
+  'footer.dashboard': 'Dashboard:',
+  'footer.designProject': 'Design Project:',
+  'footer.skillsUsed': 'Skills Used:',
+  'footer.purpose': 'Purpose:',
 } satisfies Record<keyof typeof en, string>

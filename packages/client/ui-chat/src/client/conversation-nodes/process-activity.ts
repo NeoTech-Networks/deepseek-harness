@@ -5,7 +5,6 @@ import type { ProcessActivity, ProcessActivitySummary } from '../contract/proces
 import type { ChatNode } from '../contract/chat-nodes.ts'
 import { isRunningTool } from '../contract/chat-nodes.ts'
 import type { ToolCallBlock } from '../contract/snapshot.ts'
-import { reasoningText } from '../reasoning-text.ts'
 
 function activity(name: string): ProcessActivity {
   if (name === 'read') return 'read'

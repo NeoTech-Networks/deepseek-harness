@@ -79,12 +79,15 @@ async function setup(options: SetupOptions = {}) {
 
 function execute(ctx: Context, agent: Agent, args: Record<string, unknown>) {
   return ctx.tools.execute({
-    callId: ToolCallId(`team-model-call-${++callNumber}`),
-    name: 'spawn_teammate',
-    arguments: { description: 'cheap helper', prompt: 'do the thing', ...args },
+    calls: [{
+      type: 'tool-call',
+      id: ToolCallId(`team-model-call-${++callNumber}`),
+      name: 'spawn_teammate',
+      arguments: JSON.stringify({ description: 'cheap helper', prompt: 'do the thing', ...args }),
+    }],
     signal: SIGNAL,
     agent,
-  })
+  }).then(batch => batch.results[0]!.result)
 }
 
 function text(result: Awaited<ReturnType<typeof execute>>): string {

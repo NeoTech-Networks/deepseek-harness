@@ -401,7 +401,7 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
 export function RightbarSeat({
   sessionId, width, viewportWidth, canShow, useStore, actions, t, renderSlot, syncPresentation, measureRoom, reportAutoFullscreen,
   openTab, closeTab, useContextMenu, useContextMenuTarget, useTabTypes, useTabNavigation, occurrence, retainTab,
-  active, useShortcuts, splitPane, toggleFullscreen, useFlash,
+  active, useShortcuts, splitPane, useFlash,
 }: RightbarSeatProps): ReactNode {
   const { getTriggerProps } = useContextMenu()
   const getTabTriggerProps: PanelProps['getTabTriggerProps'] = (tab, paneId, handlers) =>
@@ -472,7 +472,7 @@ export function RightbarSeat({
   const panel: PanelProps = {
     sessionId, actions, t, renderSlot, surface, openTab, closeTab, getTabTriggerProps, tabMenuOpen, useTabTypes, useTabNavigation,
     useStore, useFlash, occurrence,
-    fullscreen, autoFullscreen, reportRoom, active, retainTab, shortcuts, splitPane, toggleFullscreen,
+    fullscreen, autoFullscreen, reportRoom, active, retainTab, shortcuts, splitPane,
     // The chrome's display-mode switch, built from this seat's own state. The
     // rule is the controller's own: a narrow viewport's automatic fullscreen
     // exits by collapsing the panel, and the recorded mode follows. It does not

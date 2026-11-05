@@ -43,11 +43,14 @@ function callStatus(ctx: Context, args: unknown, over: { agent?: Agent | undefin
   const agent = 'agent' in over ? over.agent : agentWithSession()
   return ctx.tools.execute({
     signal: testToolSignal,
-    callId: ToolCallId(`call-${++callCounter}`),
-    name: 'set_session_status',
-    arguments: args,
+    calls: [{
+      type: 'tool-call',
+      id: ToolCallId(`call-${++callCounter}`),
+      name: 'set_session_status',
+      arguments: JSON.stringify(args),
+    }],
     ...agent ? { agent } : {},
-  })
+  }).then(batch => batch.results[0]!.result)
 }
 
 function text(result: { content: { type: string; text?: string }[] }): string {

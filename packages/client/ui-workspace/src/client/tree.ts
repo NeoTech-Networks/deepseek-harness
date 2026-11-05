@@ -520,7 +520,6 @@ function sessionNode(
     archived: archived.has(s.id),
     updatedAt: s.updatedAt,
     ...(s.cwd === undefined || s.cwd === '' ? {} : { cwd: s.cwd }),
-    ...(pendingInteraction === undefined ? {} : { pendingInteraction }),
   }
 }
 

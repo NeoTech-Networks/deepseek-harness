@@ -537,6 +537,8 @@ export const ja = {
   mandatoryCopyFailed: 'リンクをコピーできませんでした。以下から選択してコピーしてください。',
   mandatoryAddress: 'ダウンロードリンク',
   mandatoryNotification: 'アプリに戻り、インストールと再起動を確認してください。',
+  quitConfirmTitle: 'Quit DeepSeek Harness',
+  quitConfirmMessage: 'Are you sure you want to quit?',
 } satisfies Record<keyof typeof en, string>
 
 /** Spanish dictionary, checked against the English keys. */
@@ -715,6 +717,8 @@ export const es = {
   mandatoryCopyFailed: 'No se pudo copiar el enlace. Selecciónelo y cópielo a continuación.',
   mandatoryAddress: 'Enlace de descarga',
   mandatoryNotification: 'Regrese a la aplicación para confirmar la instalación y reiniciar.',
+  quitConfirmTitle: 'Quit DeepSeek Harness',
+  quitConfirmMessage: 'Are you sure you want to quit?',
 } satisfies DesktopMessages
 
 /** French dictionary, checked against the English keys. */
@@ -893,6 +897,8 @@ export const fr = {
   mandatoryCopyFailed: 'Impossible de copier le lien. Sélectionnez-le et copiez-le ci-dessous.',
   mandatoryAddress: 'Lien de téléchargement',
   mandatoryNotification: "Revenez à l'application pour confirmer l'installation et redémarrer.",
+  quitConfirmTitle: 'Quit DeepSeek Harness',
+  quitConfirmMessage: 'Are you sure you want to quit?',
 } satisfies DesktopMessages
 
 /** German dictionary, checked against the English keys. */
@@ -1071,6 +1077,8 @@ export const de = {
   mandatoryCopyFailed: 'Der Link konnte nicht kopiert werden. Wählen Sie es aus und kopieren Sie es unten.',
   mandatoryAddress: 'Download-Link',
   mandatoryNotification: 'Kehren Sie zur Anwendung zurück, um die Installation zu bestätigen und neu zu starten.',
+  quitConfirmTitle: 'Quit DeepSeek Harness',
+  quitConfirmMessage: 'Are you sure you want to quit?',
 } satisfies DesktopMessages
 
 /** Russian dictionary, checked against the English keys. */
@@ -1249,6 +1257,8 @@ export const ru = {
   mandatoryCopyFailed: 'Не удалось скопировать ссылку. Выделите и скопируйте его ниже.',
   mandatoryAddress: 'Ссылка для скачивания',
   mandatoryNotification: 'Вернитесь в приложение, чтобы подтвердить установку и перезапустить.',
+  quitConfirmTitle: 'Quit DeepSeek Harness',
+  quitConfirmMessage: 'Are you sure you want to quit?',
 } satisfies DesktopMessages
 
 /** Portuguese dictionary, checked against the English keys. */
@@ -1427,6 +1437,8 @@ export const pt = {
   mandatoryCopyFailed: 'Não foi possível copiar o link. Selecione e copie abaixo.',
   mandatoryAddress: 'Link de download',
   mandatoryNotification: 'Retorne ao aplicativo para confirmar a instalação e reinicie.',
+  quitConfirmTitle: 'Quit DeepSeek Harness',
+  quitConfirmMessage: 'Are you sure you want to quit?',
 } satisfies DesktopMessages
 
 const dictionaries = { en, zh, ja, es, fr, de, ru, pt }

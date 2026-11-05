@@ -14,7 +14,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import { z as zod } from 'zod'
 import type { ZodType } from 'zod'
 import type { Session } from '@deepseek-ai/dsh-session'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
+import type { ProjectionDefinition, ProjectionHandle } from '@deepseek-ai/dsh-session-projection'
 import type {} from '@deepseek-ai/dsh-session-projection'
 import { applySessionStatusProjection, INITIAL_SESSION_STATUS_STATE, sessionStatusOf } from './fold.ts'
 import type {
@@ -177,13 +177,19 @@ export class SessionStatusService extends Service {
   static inject = ['sessionProjections']
 
   private readonly byId: ReadonlyMap<string, SessionStatusValue>
+  private projectionHandle: ProjectionHandle<SessionStatusProjectionState> | undefined
 
   constructor(ctx: Context, config: SessionStatusConfig = { vocabulary: DEFAULT_VOCABULARY }) {
     super(ctx, 'sessionStatus')
     const vocabulary = resolveVocabulary(config)
     const byId = new Map(vocabulary.map(entry => [entry.id, entry]))
     this.byId = byId
-    ctx.sessionProjections.register(
+  }
+
+  protected async [Service.init](): Promise<void> {
+    const ctx = this.ctx
+    const byId = this.byId
+    this.projectionHandle = await ctx.sessionProjections.register(
       createSessionStatusProjectionDefinition(id => byId.get(id)),
     )
   }
@@ -225,8 +231,10 @@ export class SessionStatusService extends Service {
    * @returns the current declared status, or null.
    */
   current(session: Session): SessionStatusValue | null {
-    const state = this.ctx.sessionProjections.stateOf(session, 'sessionStatus')
-    if (state === undefined) throw new Error('session-status requires the sessionStatus session projection')
+    if (this.projectionHandle === undefined) {
+      throw new Error('session-status requires the sessionStatus session projection')
+    }
+    const state = this.projectionHandle.stateOf(session)
     return sessionStatusOf(state)
   }
 }

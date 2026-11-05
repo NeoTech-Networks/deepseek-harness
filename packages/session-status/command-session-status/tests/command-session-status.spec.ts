@@ -21,6 +21,8 @@ function stubAgent(ctx: Context, id: string): { agent: Agent; session: Session }
     session,
     inbox,
     ctx: new Context(),
+    // This command never reads or changes model selection.
+    model: {} as Agent['model'],
     get status() { return status },
     send: () => {},
     followup: () => {},

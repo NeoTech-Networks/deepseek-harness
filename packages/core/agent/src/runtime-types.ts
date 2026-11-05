@@ -375,7 +375,7 @@ declare module '@deepseek-ai/cordis' {
      * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
      * @mode waterfall
     */
-    'agent/request'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; tools: readonly ToolSchema[]; signal: AbortSignal }, next: () => Promise<LlmCallConfig>): Promise<LlmCallConfig>
+    'agent/request'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; tools?: readonly ToolSchema[]; signal: AbortSignal }, next: () => Promise<LlmCallConfig>): Promise<LlmCallConfig>
     /**
      * Handle one failed model-request attempt before the loop retries or closes
      * its step. A listener returns `{ kind: 'retry' }` without calling `next()`

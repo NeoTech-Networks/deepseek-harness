@@ -102,8 +102,18 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'session/openWorkspacePath': 'owner-only', // owner opens a Workspace path
   'session/search': 'owner-only', // owner searches across Sessions
   'session/selectModel': 'owner-only', // owner selects a Session model
+  'session/setStatus': 'owner-only', // owner declares a Session status (fork)
+  'session/listStatuses': 'owner-only', // owner reads the deployment status vocabulary (fork)
   'session/updateQueue': 'owner-only', // owner edits queued input
   'session/workspacePathApplications': 'owner-only', // owner applies a Workspace path
+  'workspace/setGroup': 'owner-only', // owner files a Workspace under a named group (fork)
+  'accountUsage/read': 'owner-only', // owner reads the account usage meters (fork)
+  'pinnedFiles/state': 'owner-only', // owner reads the pinned-directory explorer state (fork)
+  'pinnedFiles/addRoot': 'owner-only', // owner pins a directory (fork)
+  'pinnedFiles/removeRoot': 'owner-only', // owner unpins a directory (fork)
+  'pinnedFiles/setAutoOpen': 'owner-only', // owner changes the explorer's auto-open default (fork)
+  'pinnedFiles/list': 'owner-only', // owner lists a pinned directory (fork)
+  'pinnedFiles/read': 'owner-only', // owner reads a pinned file (fork)
   'credentials/describe': 'owner-only', // owner credentials; secrets never reach a reader
   'credentials/set': 'owner-only', // owner credentials; secrets never reach a reader
   'credentials/unset': 'owner-only', // owner credentials; secrets never reach a reader
