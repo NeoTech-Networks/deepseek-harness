@@ -1,5 +1,41 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-11-05 - Bot team restore and 0.2.2-rc.1, what was proved and what was not
+
+- VERIFIED the bot team is back, from disk: destination `state.json` re-parsed
+  to 39 bots, 7 rooms, 600 exchanges, revision 8312, and its sha256 equals
+  `C:\tmp\state.json`. `memory\reviewed.json` 7,506 bytes, 134 entries.
+- VERIFIED the install: uninstall key `7808434f-...` reads DisplayVersion
+  `0.2.2-rc.1` with exactly ONE row.
+- VERIFIED the running code carries the fork: `dsh_local_features_check.py`
+  against the installed `app.asar` (236,226,230 bytes) reads 47 of 48. The
+  missing one is `workspace-picker-groups`, dropped deliberately.
+- VERIFIED the settings survived: the install log reads `verify: 24 files, all
+  same` and `[settings] every one of your settings survived the install.`
+- VERIFIED the hook bridge is LOADED, not merely installed: the three bridge
+  packages are pinned at `0.2.2-rc.1`, plugin mtime 11:44:46, earliest app
+  process 11:45:09, so the process started after the plugin landed.
+- VERIFIED the hardlink is whole: both paths share one file id and
+  `fsutil hardlink list` names `\Users\SteveDempsey\.claude\CLAUDE.md` and
+  `\Users\SteveDempsey\.dsh\AGENTS.md`, 50,363 bytes each.
+- VERIFIED the bot team is on screen, by UI Automation: the sidebar tree lists
+  Igor, SEO Overlord, ABC Overlord, Clients Overlord, NeoTech Overlord,
+  Composio, Sundack Code, SIG Code, Jetway PayComm Code, Google Business,
+  NeoTech Code, Cabana Code and the rest of the roster.
+- VERIFIED the ds-bot sidebar patch still applies: TeamSidebar, LeftColumn and
+  SIDEBAR_CSS all present in the patched client.
+- NOT VERIFIED, and not claimed: the composer Save / Production row on 0.2.2.
+  It is absent from the accessibility tree, and the built guard is
+  `variant === 'composer' && !activity && input && sessionId`, so it hides while
+  an activity strip is showing. The session open during the check was mid-turn.
+  This needs one look at an IDLE session.
+- NOT VERIFIED, and not claimed: four `hook/result` exit 0 entries on a
+  tool-using turn after the install. The app was reopened onto an existing
+  session, so no turn was taken.
+- MEASURED, not a claim: 38 bridged sessions started in 5 minutes from the
+  SIG Growth and SIG Content rooms, while `exchanges` stayed at 600 and
+  `revision` stayed at 8352.
+
 ## 2026-10-31 - Workspaces fold and one account button, built and installed
 
 - VERIFIED tests: `ui-workspace` 13 files, 527 passed, including 3 new fold specs (opens by default and folds on a press, remembers the fold across a remount, still shows search results while folded). `verify-client-ui-i18n` 1,096 source files clean; oxlint exit 0 on the touched files; the pre-push typecheck hook passed in 87.6 s with `CI=true`.
