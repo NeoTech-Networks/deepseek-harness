@@ -17,7 +17,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import type { ChangeEvent, KeyboardEvent, MouseEvent } from 'react'
 import clsx from 'clsx'
 import {
-  IconPlusOutlineMedium, IconWarningOutlineRegular, Toast, Tooltip,
+  focusWithoutRing, IconPlusOutlineMedium, IconWarningOutlineRegular, isMobileDevice, Toast, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 // Type-only: the `plan` projection key merge (the TodoDock posture — the
 // composer reads a host-computed value; the domain owns the key).
@@ -31,7 +31,7 @@ import type { Translate } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ComposerBarProps } from '../contract/slots.ts'
 import { DraftEditor } from '../input/editor/DraftEditor.tsx'
 import {
-  focusDraftEditor, installDraftFilePicker, installDraftKeymap, installDraftWheel,
+  focusDraftEditor, installDraftFilePicker, installDraftKeyboardDismissal, installDraftKeymap, installDraftWheel,
   keepDraftFocus, revealDraftSelection,
 } from '../input/editor/view-binding.ts'
 import { resolveSubmitMode } from '../input/submission-policy.ts'
@@ -41,53 +41,6 @@ import { ContextMeter } from './ContextMeter.tsx'
 import { observeControlRow } from './control-row-layout.ts'
 import css from './InputBar.module.css'
 
-/** Ctrl+Shift+S fills the composer with this operator command and submits it. */
-const SAVE_STATE_SHORTCUT = '/save-state'
-/**
- * Ctrl+Shift+P fills the composer with this text and submits it. Lowercase and
- * exact: it is the operator's canonical production promote phrase, and
- * downstream tooling matches it verbatim.
- */
-const DEPLOY_SHORTCUT = 'deploy to production'
-
-/**
- * Single-flight window for the operator chords, in milliseconds.
- *
- * Measured 2026-09-11 against the installed build: of 181 promote-phrase
- * submissions in the session logs, 26 were doubles, 22 of them 3 to 10 ms
- * apart, each pair carrying two distinct client request ids (so two prompts
- * really left the client). The handler's `locked || machineBusy` test cannot
- * stop that: both are values from the last render, and 3 ms later the composer
- * still reads idle, so the duplicate passes the same stale check. A held chord
- * on a keydown binding repeats for the same reason.
- *
- * Module scope rather than a ref on purpose: every mounted composer listens on
- * the window, so one chord reaches all of them and a per-instance latch cannot
- * see its twin. Each Electron window is its own JavaScript realm, so this
- * cannot leak between windows.
- */
-const CHORD_LATCH_MS = 300
-let chordLatchUntil = 0
-
-/**
- * The operator chord's letter, resolved from the physical code first and the
- * typed character second.
- *
- * `code` is the faithful signal and stays first. But Chromium derives `code`
- * from the hardware scan code, so a keyboard, KVM or remote session that
- * carries no scan code delivers the letter with an EMPTY code and the chord
- * dies with no event, no toast and no trace. `key` is the fallback that keeps
- * it working there. Measured 2026-09-11: that portability gap is invisible to
- * both the unit tests and a real headless browser run.
- */
-function chordLetter(event: WindowEventMap['keydown']): 'save' | 'deploy' | null {
-  if (event.code === 'KeyS') return 'save'
-  if (event.code === 'KeyP') return 'deploy'
-  if (event.key === 's' || event.key === 'S') return 'save'
-  if (event.key === 'p' || event.key === 'P') return 'deploy'
-  return null
-}
-
 export type InputBarProps = ComposerBarProps
 
 export const InputBar = memo(function InputBar({
@@ -95,6 +48,7 @@ export const InputBar = memo(function InputBar({
   retryFileUpload,
   toggleCommandMenu, stop, t,
   renderSlot, useBusyEnter, useFileUploads, useNotices, useLexicon, useMenuLauncher, useStopShortcut,
+  useAccess,
   useProjection, sessionId, variant, disabled: inert = false, blocked,
   workspacePickerOpen = false, onRequestWorkspace,
   placeholder, accessory,
@@ -103,6 +57,13 @@ export const InputBar = memo(function InputBar({
   const notice = useNotices(s => s)
   const busyEnter = useBusyEnter(s => s)
   const stopKeys = useStopShortcut(keys => keys)
+  // A page whose access snapshot excludes prompting, stopping, or uploading to this Session is offered
+  // no Send, no Stop, or no file intake rather than a disabled control. `useAccess` is undefined only
+  // without a Session, where the bar is an inert placeholder with no keyboard, stop, or file intake.
+  const promptDenied = useAccess('session/prompt') === false
+  const cancelDenied = useAccess('session/cancel') === false
+  const uploadDenied = useAccess('fileUploads/upload') === false
+  const stopAction = cancelDenied ? undefined : stop
   void useLexicon // hook seat stays bound by the inject compartment; text-ref decoration rides the shell's editor transforms
   const commandMenuOpen = useMenuLauncher(source => source === 'command')
   const [activity, setActivity] = useState(false)
@@ -127,11 +88,12 @@ export const InputBar = memo(function InputBar({
   )
   const empty = draft.trim() === '' && attachments.length === 0
   const uploads = useFileUploads(snapshot => snapshot)
-  // Send waits for every picked file: uploading and failed drafts both hold
-  // the gate (a failed upload is retried or removed, never silently dropped).
-  const uploadsPending = attachments.some(
-    attachment => attachment.kind === 'file' && uploads[attachment.id]?.status !== 'ready',
-  )
+  // Send waits for every picked file and every uploading image: uploading and
+  // failed drafts both hold the gate (a failed upload is retried or removed,
+  // never silently dropped). An image draft without an upload sends inline.
+  const uploadsPending = attachments.some(attachment => attachment.kind === 'file'
+    ? uploads[attachment.id]?.status !== 'ready'
+    : uploads[attachment.id] !== undefined && uploads[attachment.id]?.status !== 'ready')
   // Transient error banner (machine notices, image-intake rejections, and
   // prompt failures): the seq keys the Toast so an identical repeated message
   // restarts the hold-then-fade cycle instead of reusing the faded one.
@@ -145,6 +107,11 @@ export const InputBar = memo(function InputBar({
   // The deployment's image-intake limits (absent while no attachment service
   // is composed — the pre-check below then defers entirely to the host).
   const imageLimits = useProjection('imageLimits')
+  // Enter while uploads hold the send explains the first failed draft; a Host refusal names its reason.
+  const failedUpload = attachments.map(attachment => uploads[attachment.id]).find(upload => upload?.status === 'error')
+  const uploadsHeldText = failedUpload?.status !== 'error'
+    ? t('file.stillUploading')
+    : failedUpload.reason === undefined ? t('file.uploadFailed') : attachmentErrorText(t, failedUpload.reason, imageLimits)
   // Prompt failures are ordinary failures (no create/attach transaction exists
   // anymore): the toast announces promptError, the draft stays in the machine,
   // and the user resubmits. A remount over a session whose machine still holds
@@ -191,7 +158,9 @@ export const InputBar = memo(function InputBar({
   // the composer asking for the only thing it prevents. The other reasons to
   // be disabled do lock it — there is no session to choose a model for.
   const modelSeatLocked = removed || inert || !live
-  const machineBusy = input?.phase === 'adjudicating' || input?.phase === 'submitting'
+  const machineBusy = input?.phase === 'adjudicating' || input?.phase === 'submitting' || input?.phase === 'sending'
+  // The message waits for the Host to accept it; Send shows progress instead of the arrow.
+  const sending = input?.phase === 'sending'
   // The no-workspace surface remains the resident DOM node but acts as the
   // existing picker trigger. Message controls stay locked until a Session
   // exists; the trigger itself is read-only rather than disabled so pointer
@@ -219,15 +188,33 @@ export const InputBar = memo(function InputBar({
     revealDraftSelection(scrollRef)
   }
 
-  // Unlock (mount / session switch) returns focus to the box, and owns the
-  // reveal that comes with it. Lexical's focus() suppresses the browser's
-  // scroll walk (preventScroll inside), so the reveal in our own scrollport
-  // is ours to perform — switching to a longer draft otherwise leaves the
-  // caret (restored at the draft's end) off screen.
+  // Automatic desktop focus restores and reveals the draft selection without
+  // scrolling the conversation.
   useEffect(() => {
     if (locked || editor === null) return
+    if (isMobileDevice()) return
     focusDraftEditor(editor, revealSelection)
   }, [locked, sessionId, editor])
+
+  // A read-only phase can move focus to the body. Restore the composer's
+  // keyboard position without reopening the mobile keyboard or taking focus
+  // from a control the user selected meanwhile.
+  const busyPhaseSeen = useRef(false)
+  useEffect(() => {
+    if (machineBusy) {
+      busyPhaseSeen.current = true
+      return
+    }
+    if (!busyPhaseSeen.current) return
+    busyPhaseSeen.current = false
+    if (locked || editor === null) return
+    if (document.activeElement !== null && document.activeElement !== document.body) return
+    if (isMobileDevice()) {
+      if (cardRef.current !== null) focusWithoutRing(cardRef.current, { preventScroll: true })
+    } else {
+      focusDraftEditor(editor, revealSelection)
+    }
+  }, [machineBusy])
 
   // A persisted draft arrives AFTER the unlock effect: DefaultConversationViews
   // adopts it in its own mount effect, and a parent's mount effect runs after
@@ -257,7 +244,8 @@ export const InputBar = memo(function InputBar({
   // The host enforces the same image limits at submit for callers that bypass
   // this composer.
   const intakeFiles = useCallback((files: readonly File[], directories?: ReadonlySet<File>): void => {
-    if (locked || machineBusy || (subagent !== null && !continuable) || addFiles === undefined || files.length === 0) return
+    if (uploadDenied || locked || machineBusy || (subagent !== null && !continuable)
+      || addFiles === undefined || files.length === 0) return
     const rejected = ((): string | null => {
       // Child prompts support images, but not generic file receipts or the
       // Desktop path-reference fallback. Refuse mixed batches before intake.
@@ -283,9 +271,9 @@ export const InputBar = memo(function InputBar({
       return addFiles(files, directories)
     })()
     if (rejected !== null) showToast(rejected)
-  }, [locked, machineBusy, subagent, continuable, addFiles, attachments, imageLimits, showToast, t])
+  }, [uploadDenied, locked, machineBusy, subagent, continuable, addFiles, attachments, imageLimits, showToast, t])
 
-  const canAcceptDrop = (subagent === null || continuable) && !locked && !machineBusy && addFiles !== undefined
+  const canAcceptDrop = !uploadDenied && (subagent === null || continuable) && !locked && !machineBusy && addFiles !== undefined
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const onPickFiles = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -299,11 +287,11 @@ export const InputBar = memo(function InputBar({
   // registration survives re-renders without re-arming per keystroke.
   const gate = useRef({
     locked, machineBusy, canSteerQueue, running, steeringAvailable, busyEnter,
-    intakeFiles, uploadsPending, showToast, t, canAcceptDrop,
+    intakeFiles, uploadsPending, uploadsHeldText, showToast, canAcceptDrop,
   })
   gate.current = {
     locked, machineBusy, canSteerQueue, running, steeringAvailable, busyEnter,
-    intakeFiles, uploadsPending, showToast, t, canAcceptDrop,
+    intakeFiles, uploadsPending, uploadsHeldText, showToast, canAcceptDrop,
   }
 
   useEffect(() => {
@@ -316,82 +304,10 @@ export const InputBar = memo(function InputBar({
     return installDraftKeymap(editor, keyboard, gate)
   }, [editor, keyboard])
 
-  // Operator shortcuts: Ctrl+Shift+S submits the save-state command,
-  // Ctrl+Shift+P submits the production promote phrase. A renderer-level
-  // listener keeps these inside the focused app window, so they never collide
-  // with system-wide hotkeys. The draft is replaced wholesale (setDraft), then
-  // submitted through the same path as the primary send button; /save-state is
-  // not a slash command, so it falls through to the default sink and resolves
-  // as a user-invocable skill.
-  //
-  // NOT ALT (measured 2026-09-09 on Windows, against the packaged Electron
-  // runtime with real scan-code input): Electron on Windows never delivers the
-  // keydown of an Alt+letter chord to the renderer; only `Alt` itself arrives
-  // as a keydown and the letter arrives solely as a keyup carrying altKey. The
-  // first version bound keyup, which made the shortcut fire, but the Alt
-  // keydown still woke the native menu bar whose first item is "Desktop
-  // Plugins…", so Alt+P popped that window open. Ctrl+Shift is delivered
-  // normally on both keydown and keyup, so we bind keydown and leave the menu
-  // bar alone.
-  // One submit path for the operator commands, shared by the keyboard chord and
-  // the Save button beside the context meter, so both refuse aloud, share the
-  // single-flight latch, and replace the draft the same way.
-  // Returns true when the command was actually submitted.
-  const runOperatorCommand = useCallback((target: 'save' | 'deploy'): boolean => {
-    // Refusing in silence is indistinguishable from a broken shortcut, so an
-    // absent machine (no current Session), a locked composer, and a
-    // mid-admission one all say so rather than swallowing the press.
-    if (inputActions === undefined || locked || machineBusy) {
-      showToast(t('input.shortcutUnavailable'))
-      return false
-    }
-    // The latch is armed only on the path that actually submits: a refusal is
-    // not a send, and arming it there would swallow the next real press.
-    const now = Date.now()
-    if (now < chordLatchUntil) return false
-    chordLatchUntil = now + CHORD_LATCH_MS
-    inputActions.setDraft(target === 'save' ? SAVE_STATE_SHORTCUT : DEPLOY_SHORTCUT)
-    inputActions.submit()
-    return true
-  }, [inputActions, locked, machineBusy, showToast, t])
-
   useEffect(() => {
-    // Registered even while no Session is current. The bar renders the same DOM
-    // inert in that state, and a chord that is simply not listened for there is
-    // indistinguishable from a broken shortcut. Measured 2026-09-11: the
-    // operator lost hours to exactly that silence after the chord moved off
-    // Alt, and the previous version returned on this line before listening.
-    const onShortcut = (event: WindowEventMap['keydown']): void => {
-      // A held chord auto-repeats; an OS repeat arrives with repeat: true.
-      if (event.repeat) return
-      if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return
-      const target = chordLetter(event)
-      if (target === null) return
-      if (runOperatorCommand(target)) event.preventDefault()
-    }
-    window.addEventListener('keydown', onShortcut)
-    return () => { window.removeEventListener('keydown', onShortcut) }
-  }, [runOperatorCommand])
-
-  // The chord moved off Alt in 0.1.5-rc.2 and nothing told the operator, so his
-  // old keys produced no event at all: on Windows Electron never delivers the
-  // keydown of an Alt+letter chord, only a keyup carrying altKey, and nothing
-  // matches that keyup any more. Answering it costs one listener and turns a
-  // dead press into the keys he should be using.
-  //
-  // It NEVER submits. The Alt chord cannot be bound on keydown here, and
-  // binding it on keyup is exactly what popped the "Desktop Plugins" window
-  // open through the native menu bar the Alt keydown wakes.
-  useEffect(() => {
-    const onLegacyChord = (event: WindowEventMap['keyup']): void => {
-      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
-      if (chordLetter(event) === null) return
-      event.preventDefault()
-      showToast(t('input.shortcutMoved'))
-    }
-    window.addEventListener('keyup', onLegacyChord)
-    return () => { window.removeEventListener('keyup', onLegacyChord) }
-  }, [showToast, t])
+    if (editor === null) return
+    return installDraftKeyboardDismissal(editor, cardRef)
+  }, [editor])
 
   // Button presses steal focus from the editor; suppress at mousedown so
   // typing continues seamlessly. Lexical's focus() carries preventScroll and
@@ -408,7 +324,7 @@ export const InputBar = memo(function InputBar({
     if (target.closest('[data-composer-overlay]') !== null) return
     if (scrollRef.current?.contains(target)) return
     const control = target.closest('button, a, input, select, textarea, [role="button"], [contenteditable], [tabindex]')
-    if (control !== null && e.currentTarget.contains(control)) return
+    if (control !== null && control !== e.currentTarget && e.currentTarget.contains(control)) return
     e.preventDefault()
     // Lexical's stored selection can lag behind native caret moves, so calling
     // editor.focus() on a focused editor can restore an older caret.
@@ -443,21 +359,24 @@ export const InputBar = memo(function InputBar({
   // claimed command nor a `/` line headed for adjudication — so it never
   // describes a delivery the click cannot or does not perform; every other
   // state keeps plain Send. A continuable child keeps Send primary and
-  // exposes Stop independently.
-  const primaryStops = running && subagent === null && (empty || blocked !== undefined)
+  // exposes Stop independently, and so does a running session while a
+  // message waits for the Host.
+  const primaryStops = running && subagent === null && !sending && (empty || blocked !== undefined)
   // Disabled native buttons may omit mouseleave; their tooltip must close from state.
-  const primaryDisabled = primaryStops ? stop === undefined : empty || disabled || machineBusy || uploadsPending
-  const interruptible = running && continuable
+  const primaryDisabled = primaryStops ? stopAction === undefined : empty || disabled || machineBusy || uploadsPending
+  const interruptible = running && (continuable || (sending && subagent === null))
   const primarySubmitMode = resolveSubmitMode(busyEnter, running, 'enter', steeringAvailable)
   const plainMessageDraft = !empty && input?.phase === 'plain' && !draft.trimStart().startsWith('/')
   const primaryLabel = primaryStops
     ? t('input.stop')
-    : running && steeringAvailable && !disabled && !uploadsPending && plainMessageDraft
-      ? t(primarySubmitMode === 'steer' ? 'input.send.steer' : 'input.send.queue')
-      : t('input.send')
+    : sending
+      ? t('input.sending')
+      : running && steeringAvailable && !disabled && !uploadsPending && plainMessageDraft
+        ? t(primarySubmitMode === 'steer' ? 'input.send.steer' : 'input.send.queue')
+        : t('input.send')
   const onPrimary = (): void => {
     if (primaryStops) {
-      stop?.()
+      stopAction?.()
       return
     }
     if (keyboard === undefined) return // absent machine: the button is disabled
@@ -518,6 +437,7 @@ export const InputBar = memo(function InputBar({
           click's reopen (close-then-open flickers the chip's open echo). */}
       <div
         ref={cardRef}
+        tabIndex={-1}
         className={clsx(css.card, workspaceTrigger && css.cardWorkspaceTrigger)}
         data-composer-card
         onClick={workspaceTrigger ? onRequestWorkspace : undefined}
@@ -535,6 +455,7 @@ export const InputBar = memo(function InputBar({
           onRemoveAttachment: (id) => { removeAttachment?.(id) },
           uploads,
           onRetryFile: (id) => { retryFileUpload?.(id) },
+          uploadFailureText: reason => attachmentErrorText(t, reason, imageLimits),
           dropLimits: imageLimits === undefined ? undefined : {
             count: imageLimits.maxImagesPerMessage,
             size: imageSizeText(imageLimits.maxImageBytes),
@@ -562,7 +483,7 @@ export const InputBar = memo(function InputBar({
         />
         <div ref={rowRef} className={css.row}>
           <div className={css.tools} hidden={activity}>
-            <Tooltip label={t('input.commands')} side="top" delayMs={500}>
+            <Tooltip label={t('input.commands')} side="top" delayMs={500} portal>
               <button
                 type="button"
                 className={css.add}
@@ -580,7 +501,7 @@ export const InputBar = memo(function InputBar({
               ref={fileInputRef}
               type="file"
               multiple
-              disabled={subagent !== null}
+              disabled={!canAcceptDrop || subagent !== null}
               hidden
               onChange={onPickFiles}
             />
@@ -602,15 +523,15 @@ export const InputBar = memo(function InputBar({
             {input === undefined || sessionId === undefined ? null : <div className={activity ? css.activityExpanded : css.activity}>
               {renderSlot('conversation.input.activity', { locked, onActiveChange: setActivity })}
             </div>}
-            {interruptible && (
-              <Tooltip label={t('input.stop')} shortcutKeys={stopKeys} side="top" delayMs={500} disabled={stop === undefined}>
+            {interruptible && !cancelDenied && (
+              <Tooltip label={t('input.stop')} shortcutKeys={stopKeys} side="top" delayMs={500} disabled={stopAction === undefined} portal>
                 <button
                   type="button"
                   className={css.primary}
                   aria-label={t('input.stop')}
-                  disabled={stop === undefined}
+                  disabled={stopAction === undefined}
                   onMouseDown={keepFocus}
-                  onClick={stop}
+                  onClick={stopAction}
                 >
                   <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
                     <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
@@ -618,35 +539,35 @@ export const InputBar = memo(function InputBar({
                 </button>
               </Tooltip>
             )}
-            {/* The chord is named on the control that performs it: the one
-                discoverable surface the composer has, and the reason the move
-                off Alt can never again be invisible to the operator. */}
-            <Tooltip
-              label={primaryStops ? t('input.stop') : `${primaryLabel} · ${t('input.chordHint')}`}
-              shortcutKeys={primaryStops ? stopKeys : undefined}
-              side="top"
-              delayMs={500}
-              disabled={primaryDisabled}
-            >
-              <button
-                type="button"
-                className={css.primary}
-                aria-label={primaryLabel}
-                disabled={primaryDisabled}
-                onMouseDown={keepFocus}
-                onClick={onPrimary}
-              >
-                {primaryStops ? (
-                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-                    <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-                    <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />
-                  </svg>
-                )}
-              </button>
-            </Tooltip>
+            {(primaryStops ? cancelDenied : promptDenied) ? null : (
+              <Tooltip label={primaryStops ? t('input.stop') : primaryLabel} shortcutKeys={primaryStops ? stopKeys : undefined} side="top" delayMs={500} disabled={primaryDisabled} portal>
+                <button
+                  type="button"
+                  className={css.primary}
+                  aria-label={primaryLabel}
+                  aria-busy={sending}
+                  data-sending={sending ? '' : undefined}
+                  disabled={primaryDisabled}
+                  onMouseDown={keepFocus}
+                  onClick={onPrimary}
+                >
+                  {primaryStops ? (
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+                      <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
+                    </svg>
+                  ) : sending ? (
+                    <svg className={css.sendingSpinner} viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+                      <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeOpacity="0.35" strokeWidth="2" />
+                      <path d="M8 2a6 6 0 0 1 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+                      <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />
+                    </svg>
+                  )}
+                </button>
+              </Tooltip>
+            )}
           </div>
         </div>
       </div>
@@ -655,40 +576,6 @@ export const InputBar = memo(function InputBar({
           ? renderSlot('conversation.composer.dock', {})
           : null}
         {activity ? null : <ContextMeter useProjection={useProjection} t={t} />}
-        {/* Session actions beside the meter: Save submits /save-state through
-            the chord's own path; the trailing slot carries business-owned
-            actions (ui-workspace's Archive). Rendered even before the meter has
-            a reading so they are always reachable. */}
-        {variant === 'composer' && !activity && input !== undefined && sessionId !== undefined && (
-          <span className={css.meterActions} data-composer-meter-actions>
-            <Tooltip label={t('input.saveState')} side="top" delayMs={500} disabled={locked}>
-              <button
-                type="button"
-                className={css.meterAction}
-                aria-label={t('input.saveState')}
-                disabled={locked}
-                onMouseDown={keepFocus}
-                onClick={() => { runOperatorCommand('save') }}
-              >
-                {t('input.save')}
-              </button>
-            </Tooltip>
-            {renderSlot('conversation.composer.meter.trailing', {})}
-            <Tooltip label={t('input.deployProduction')} side="top" delayMs={500} disabled={locked}>
-              <button
-                type="button"
-                className={css.meterAction}
-                aria-label={t('input.deployProduction')}
-                data-composer-deploy
-                disabled={locked}
-                onMouseDown={keepFocus}
-                onClick={() => { runOperatorCommand('deploy') }}
-              >
-                {t('input.production')}
-              </button>
-            </Tooltip>
-          </span>
-        )}
       </div>
     </div>
   )

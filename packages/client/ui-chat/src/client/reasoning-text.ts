@@ -11,9 +11,10 @@ export function reasoningText(text: string): string {
   const opening = '<signature>'
   if (opening.startsWith(text)) return ''
   if (!text.startsWith(opening)) return text
-  const end = text.indexOf('</signature>', 11)
+  const closing = '</signature>'
+  const end = text.indexOf(closing, opening.length)
   if (end === -1) return ''
-  let start = end + 12
+  let start = end + closing.length
   while (start < text.length) {
     if (text[start] === '\n') start++
     else if (text[start] === '\r' && text[start + 1] === '\n') start += 2

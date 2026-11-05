@@ -25,7 +25,9 @@ English | [中文](README.zh.md)
 <a id="use-this-package"></a>
 ## Use this package
 
-Load this plugin alongside a `ctx.fs` backend and the `dsh-tool-fs` tools when a deployment wants the model to read a file before it can overwrite or edit it. The plugin needs no configuration and injects no service; it only listens for the `fs/*` events the tools dispatch.
+`fs/delete-intent` requires the same present observation as `fs/edit-intent`: unseen sources fail with `FS_NOT_OBSERVED`, confirmed-absent sources fail with `FS_NOT_FOUND`, and present sources supply their observed version. Patches and move sources reuse `fs/edit-intent`; move destinations reuse `fs/write-intent`.
+
+Load this plugin alongside a `ctx.fs` backend and the `dsh-tool-fs` tools when a deployment wants the model to read a file before it can overwrite or edit it. The plugin needs no configuration and injects no service; it only listens for the `fs/*` events the tools dispatch. The shipped compositions leave it off: [`dsh-base`](../../bundle/base/cordis.patch.yml) lists its `fs-observation-policy` row `disabled: true`; set that row to `disabled: false` to restore the guard for every mutating tool. The [defaults Agent Note](../../../.agents/notes/implemented/feature/2026-10-29-shipped-fs-mutation-defaults.md) records why.
 
 ### Minimal composition
 
@@ -39,11 +41,11 @@ Load a backend, then this plugin, then the tools. The policy listener should be 
 
 ### What changes for the model
 
-With the policy mounted, `write` creates new files but refuses to overwrite an existing file that the session has not read, `edit` of a never-read file is applied unconditionally, anchored on its exact, unique `old_string` (NeoTech fork, `EDIT_SELF_OBSERVE`, 2026-09-23; upstream refuses it), and a file that changed since it was read fails with `FS_STALE_VERSION`. Absence is recorded too: reading a missing file marks it confirmed absent, so a later `write` may recreate it through the guarded-create flow. A session resumes with no observed state, so it must re-read files before guarded mutations succeed again.
+With the policy mounted, `write` creates new files but refuses to overwrite an existing file that the session has not read, `edit` requires a prior read of the target, and a file that changed since it was read fails with `FS_STALE_VERSION`. Absence is recorded too: reading a missing file marks it confirmed absent, so a later `write` may recreate it through the guarded-create flow. A session resumes with no observed state, so it must re-read files before guarded mutations succeed again.
 
 ### Failures and recovery
 
-An edit by an actor with no agent session fails with code `FS_NOT_OBSERVED` and policy reason `edit requires reading "<path>" first`; editing a target observed absent fails with `FS_NOT_FOUND`. The tools normalize unread policy and provider failures to `cannot modify "<path>": file has not been read — read the file, then retry` while preserving the code and original cause. Following the remedy on an externally deleted file records absence, so the next guarded write can recreate it without clobbering a concurrent creator.
+An edit without a prior observation fails with code `FS_NOT_OBSERVED` and policy reason `edit requires reading "<path>" first`; editing a target observed absent fails with `FS_NOT_FOUND`. The tools normalize unread policy and provider failures to `cannot modify "<path>": file has not been read — read the file, then retry` while preserving the code and original cause. Following the remedy on an externally deleted file records absence, so the next guarded write can recreate it without clobbering a concurrent creator.
 
 -----
 
@@ -66,12 +68,12 @@ The plugin is built on two ideas:
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | The three `fs/*` listeners and the observed-state gate |
+| [`src/index.ts`](src/index.ts) | The four `fs/*` listeners and the observed-state gate |
 | [`src/types.ts`](src/types.ts) | The opaque event actor shape from which the owner session is derived |
 
 ### Decision flow
 
-`fs/write-intent` resolves unseen or confirmed absent to `{ kind: 'createIfAbsent' }` and observed present to `{ kind: 'replaceIfVersion', version: vObserved }`. `fs/edit-intent` rejects an actor with no session with `FS_NOT_OBSERVED`, resolves a session's unseen target to `undefined` (an unconditional atomic edit, anchored on `old_string`), a confirmed-absent target with `FS_NOT_FOUND`, and otherwise supplies the observed version as the compare-and-swap basis. `fs/observed` records `{ kind: 'present', version }` or `{ kind: 'absent' }` for the owner and target — a synchronous, side-effect-only `WeakMap.set`, because successful mutations have already committed.
+`fs/write-intent` maps unseen or absent state to guarded creation and present state to guarded replacement. `fs/edit-intent` and `fs/delete-intent` share the present-state check. `fs/observed` synchronously records presence/version or absence for the opaque owner and target. All four listeners and the recorded state are released on disposal.
 
 ### Single-slot, first-wins
 

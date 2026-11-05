@@ -9,7 +9,7 @@
 import type { Context } from '@deepseek-ai/cordis'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import z from '@deepseek-ai/schemastery'
-import { registerTimedAskUser } from './timed.ts'
+import { registerTimedAskUser, skippedAnswerGuidance } from './timed.ts'
 import '@deepseek-ai/dsh-user-questions'
 
 /** Cordis row selecting the tool schema and its default foreground wait. */
@@ -30,7 +30,8 @@ export const inject = ['tools', 'userQuestions']
 
 const description = 'Ask the user a concise question when you need confirmation, a choice, or missing information before proceeding. '
   + 'Keep each paragraph to at most two sentences and separate paragraphs with a blank line; '
-  + 'put background, tradeoffs and lists in `detail` instead of lengthening the question line.'
+  + 'put background, tradeoffs and lists in `detail` instead of lengthening the question line. '
+  + skippedAnswerGuidance
 
 export function apply(ctx: Context, config: Config = {}): void {
   if (config.mode === 'timed') {

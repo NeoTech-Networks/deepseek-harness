@@ -368,9 +368,8 @@ export function startConnection(ctx: Context, config: Config, policy: ResolvedRe
         const generation = client
         if (!generation || connectedAt === undefined) throw new Error(`${label}: server is disconnected`)
         const options = { signal: exec.signal, timeout: config.toolCallTimeoutMs }
-        // A server that does not advertise `resources` must not be listed: the
-        // SDK fallback writes a diagnostic to stdout, where the ACP profile
-        // carries JSON-RPC.
+        // The SDK answers an unadvertised capability with the same empty page, but
+        // writes a console.debug line to stdout, which the ACP profile reserves for JSON-RPC.
         const listable = generation.getServerCapabilities()?.resources !== undefined
         switch (request.method) {
           case 'resources/list':

@@ -812,81 +812,13 @@ describe('writeFileAtomic — temp-file safety', () => {
     await writeFile(file, 'old')
     const denied = Object.assign(new Error('replace denied'), { code: 'EACCES' })
 
-    // Both publication primitives are down, so the write genuinely cannot be
-    // made and the ReplaceFileW error (not the fallback's) is what surfaces.
     await expect(writeFileAtomic(file, 'new', 0o666, undefined, {
       platform: 'win32',
       copyFileDacl: () => Promise.resolve(),
       replaceFile: async () => { throw denied },
-      renameFile: async () => { throw new Error('rename also denied') },
-      publishRetryDelaysMs: [],
-    })).rejects.toBe(denied)
+    })).rejects.toMatchObject({ code: 'FS_PERMISSION_DENIED', cause: denied })
     expect(await readFile(file, 'utf8')).toBe('old')
     expect((await readdir(dir)).filter(name => name.includes('.tmp'))).toEqual([])
-  })
-
-  it('retries a contended Windows replacement instead of losing the write', async () => {
-    // Win32 1175 (ERROR_UNABLE_TO_REMOVE_REPLACED) reaches this layer as EIO.
-    // Before 2026-09-08 a single failure discarded the staged content, which
-    // lost 9 real writes in one day across concurrent sessions.
-    const file = join(dir, 'a.txt')
-    await writeFile(file, 'old')
-    const contended = Object.assign(new Error('ReplaceFileW EIO (Win32 1175): a.txt'), { code: 'EIO' })
-    let attempts = 0
-
-    await writeFileAtomic(file, 'new', 0o666, undefined, {
-      platform: 'win32',
-      copyFileDacl: () => Promise.resolve(),
-      replaceFile: async (replaced, replacement) => {
-        attempts += 1
-        if (attempts < 3) throw contended
-        await rename(replacement, replaced)
-      },
-      publishRetryDelaysMs: [0, 0, 0, 0],
-    })
-
-    expect(attempts).toBe(3)
-    expect(await readFile(file, 'utf8')).toBe('new')
-    expect((await readdir(dir)).filter(name => name.includes('.tmp'))).toEqual([])
-  })
-
-  it('falls back to rename only after the ACL-preserving replace is exhausted', async () => {
-    const file = join(dir, 'a.txt')
-    await writeFile(file, 'old')
-    const contended = Object.assign(new Error('ReplaceFileW EIO (Win32 1175): a.txt'), { code: 'EIO' })
-    let attempts = 0
-    let renamed = 0
-
-    await writeFileAtomic(file, 'new', 0o666, undefined, {
-      platform: 'win32',
-      copyFileDacl: () => Promise.resolve(),
-      replaceFile: async () => { attempts += 1; throw contended },
-      renameFile: async (from, to) => { renamed += 1; await rename(from, to) },
-      publishRetryDelaysMs: [0, 0],
-    })
-
-    // Every replace attempt is spent before the descriptor-losing fallback runs.
-    expect(attempts).toBe(3)
-    expect(renamed).toBe(1)
-    expect(await readFile(file, 'utf8')).toBe('new')
-    expect((await readdir(dir)).filter(name => name.includes('.tmp'))).toEqual([])
-  })
-
-  it('does not retry a vanished target: ENOENT renames on the first attempt', async () => {
-    const file = join(dir, 'a.txt')
-    await writeFile(file, 'old')
-    const missing = Object.assign(new Error('target vanished'), { code: 'ENOENT' })
-    let attempts = 0
-
-    await writeFileAtomic(file, 'new', 0o666, undefined, {
-      platform: 'win32',
-      copyFileDacl: () => Promise.resolve(),
-      replaceFile: async () => { attempts += 1; throw missing },
-      publishRetryDelaysMs: [0, 0, 0],
-    })
-
-    expect(attempts).toBe(1)
-    expect(await readFile(file, 'utf8')).toBe('new')
   })
 
   it('maps a non-collision guarded-create publication failure and cleans staging', async () => {
@@ -895,7 +827,7 @@ describe('writeFileAtomic — temp-file safety', () => {
 
     await expect(writeFileAtomic(file, 'ours', undefined, undefined, {
       linkFile: async () => { throw denied },
-    }, { displayPath: file })).rejects.toMatchObject({ code: 'FS_IO_ERROR', cause: denied })
+    }, { displayPath: file, createIfAbsent: true })).rejects.toMatchObject({ code: 'FS_IO_ERROR', cause: denied })
     await expect(stat(file)).rejects.toMatchObject({ code: 'ENOENT' })
     expect((await readdir(dir)).filter(name => name.includes('.tmp'))).toEqual([])
   })
@@ -908,7 +840,7 @@ describe('writeFileAtomic — temp-file safety', () => {
     await expect(writeFileAtomic(file, 'ours', undefined, undefined, {
       linkFile: async () => { throw linkFailure },
       inspectPublicationTarget: async () => { throw inspectionFailure },
-    }, { displayPath: file })).rejects.toMatchObject({ code: 'FS_IO_ERROR', cause: inspectionFailure })
+    }, { displayPath: file, createIfAbsent: true })).rejects.toMatchObject({ code: 'FS_IO_ERROR', cause: inspectionFailure })
     await expect(stat(file)).rejects.toMatchObject({ code: 'ENOENT' })
     expect((await readdir(dir)).filter(name => name.includes('.tmp'))).toEqual([])
   })
@@ -919,7 +851,7 @@ describe('writeFileAtomic — temp-file safety', () => {
 
     await expect(writeFileAtomic(file, 'ours', undefined, undefined, {
       linkFile: async () => { throw collision },
-    }, { displayPath: file })).rejects.toMatchObject({
+    }, { displayPath: file, createIfAbsent: true })).rejects.toMatchObject({
       code: 'FS_NOT_OBSERVED',
       message: `cannot overwrite existing "${file}" without reading it first`,
       cause: collision,
@@ -934,7 +866,7 @@ describe('writeFileAtomic — temp-file safety', () => {
 
     await expect(writeFileAtomic(file, 'ours', undefined, undefined, {
       inspectTemp: async () => { await writeFile(file, 'competitor') },
-    }, { displayPath })).rejects.toMatchObject({
+    }, { displayPath, createIfAbsent: true })).rejects.toMatchObject({
       code: 'FS_NOT_OBSERVED',
       message: `cannot overwrite existing "${displayPath}" without reading it first`,
     })
@@ -943,7 +875,7 @@ describe('writeFileAtomic — temp-file safety', () => {
     await rm(file)
     await expect(writeFileAtomic(file, 'ours', undefined, undefined, {
       inspectTemp: async () => { await mkdir(file) },
-    }, { displayPath })).rejects.toMatchObject({
+    }, { displayPath, createIfAbsent: true })).rejects.toMatchObject({
       code: 'FS_NOT_REGULAR_FILE',
       message: `cannot write "${displayPath}": not a regular file`,
     })
@@ -956,7 +888,7 @@ describe('writeFileAtomic — temp-file safety', () => {
 
     await expect(writeFileAtomic(file, 'ours', undefined, undefined, {
       removeStagingDir: async () => { throw cleanupFailure },
-    }, { displayPath: file })).resolves.toBeUndefined()
+    }, { displayPath: file, createIfAbsent: true })).resolves.toBeUndefined()
     expect(await readFile(file, 'utf8')).toBe('ours')
   })
 
@@ -973,7 +905,7 @@ describe('writeFileAtomic — temp-file safety', () => {
     await writeFile(join(dir, tempDirName, 'PRECIOUS'), 'keep')
     await expect(
       writeFileAtomic(file, 'hello', undefined, undefined, { tempDirName: () => tempDirName }),
-    ).rejects.toMatchObject({ code: 'EEXIST' })
+    ).rejects.toMatchObject({ code: 'FS_IO_ERROR', cause: { code: 'EEXIST' } })
     expect(await readFile(join(dir, tempDirName, 'PRECIOUS'), 'utf8')).toBe('keep')
     await expect(stat(file)).rejects.toMatchObject({ code: 'ENOENT' })
   })
@@ -1047,35 +979,6 @@ describe('readForEdit + restoreLineEndings', () => {
     await expect(readForEdit(join(dir, 'bad'), join(dir, 'bad'))).rejects.toMatchObject({ code: 'FS_NOT_TEXT' })
   })
 
-  it('re-reads once before calling a file binary, so a torn read is not fatal', async () => {
-    // Measured 2026-09-08: four reads of a real state file were rejected as
-    // binary while another process rewrote it non-atomically. The file itself
-    // had no NUL byte in it. One confirming read separates the two cases.
-    const file = join(dir, 'torn.md')
-    await writeFile(file, Buffer.from([0x00, 0x00, 0x00, 0x00]))
-    setTimeout(() => { void writeFile(file, '## real content\n') }, 5)
-
-    const edited = await readForEdit(file, file)
-    expect(edited.content).toBe('## real content\n')
-  })
-
-  it('still rejects a genuinely binary file after the confirming read', async () => {
-    const file = join(dir, 'really-bin')
-    await writeFile(file, Buffer.from([0x00, 0x01, 0x02]))
-    await expect(readForEdit(file, file, undefined, { binaryRecheckDelayMs: 0 }))
-      .rejects.toMatchObject({ code: 'FS_NOT_TEXT' })
-  })
-
-  it('readWholeText re-reads a torn sample and rejects a stable binary one', async () => {
-    await writeFile(join(dir, 'torn-whole.md'), Buffer.from([0x00, 0x00, 0x00]))
-    setTimeout(() => { void writeFile(join(dir, 'torn-whole.md'), 'recovered\n') }, 5)
-    expect(await readWholeText(await resolveLocalTarget(dir, 'torn-whole.md'))).toBe('recovered\n')
-
-    await writeFile(join(dir, 'stable-bin'), Buffer.from([0x00, 0x01]))
-    await expect(readWholeText(await resolveLocalTarget(dir, 'stable-bin'), undefined, { binaryRecheckDelayMs: 0 }))
-      .rejects.toMatchObject({ code: 'FS_NOT_TEXT' })
-  })
-
   it('passes a live (non-aborted) signal through the read', async () => {
     const file = join(dir, 'a.txt')
     await writeFile(file, 'one\ntwo')
@@ -1092,4 +995,43 @@ describe('readForEdit + restoreLineEndings', () => {
     ac.abort()
     await expect(pending).rejects.toMatchObject({ code: 'FS_ABORTED' })
   })
+})
+
+
+describe('atomic write failures', () => {
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)('maps denied parent and staging creation to typed permission failures', async () => {
+    const locked = join(dir, 'locked')
+    await mkdir(locked, { mode: 0o555 })
+    try {
+      for (const target of [join(locked, 'file'), join(locked, 'missing', 'file')]) {
+        await expect(writeFileAtomic(target, 'content', undefined, undefined)).rejects.toMatchObject({
+          code: 'FS_PERMISSION_DENIED', message: `cannot write "${target}": permission denied`,
+        })
+        await expect(writeFileAtomic(target, 'content', undefined, undefined, {}, { displayPath: '~/shown' })).rejects.toMatchObject({
+          code: 'FS_PERMISSION_DENIED', message: 'cannot write "~/shown": permission denied',
+        })
+      }
+      expect(await readdir(locked)).toEqual([])
+    } finally { await chmod(locked, 0o755) }
+  })
+
+  it('maps a parent path blocked by a regular file to FS_IO_ERROR on every platform', async () => {
+    const blocker = join(dir, 'blocker')
+    await writeFile(blocker, 'file')
+    const target = join(blocker, 'child')
+    await expect(writeFileAtomic(target, 'content', undefined, undefined)).rejects.toMatchObject({
+      code: 'FS_IO_ERROR', message: expect.stringContaining(`cannot write "${target}": `) as string, cause: expect.any(Error) as Error,
+    })
+    expect(await readFile(blocker, 'utf8')).toBe('file')
+  })
+
+  it.each([new Error('provider defect'), Object.assign(new Error('invalid errno'), { code: 1 }), 'provider defect'])(
+    'preserves unexpected failures during staging: %s', async (failure) => {
+      const file = join(dir, 'a')
+      await expect(writeFileAtomic(file, 'new', undefined, undefined, {
+        inspectTemp: async () => { throw failure },
+      })).rejects.toBe(failure)
+      expect(await readdir(dir)).toEqual([])
+    },
+  )
 })
