@@ -1,0 +1,3 @@
+started 2026-11-05 11:01:12
+2026-11-05 11:01:12  pnpm run package:desktop:win:x64:unsigned  -> running
+2026-11-05 11:14:46  EXIT 0 (packaging finished)

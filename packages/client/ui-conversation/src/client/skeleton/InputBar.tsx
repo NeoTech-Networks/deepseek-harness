@@ -700,6 +700,39 @@ export const InputBar = memo(function InputBar({
           ? renderSlot('conversation.composer.dock', {})
           : null}
         {activity ? null : <ContextMeter useProjection={useProjection} t={t} />}
+        {/* Fork: Save, the workspace Archive slot, and Production sit right of
+            the context percentage. Rendered even before the meter has a reading
+            so they are always reachable. */}
+        {variant === 'composer' && !activity && input !== undefined && sessionId !== undefined && (
+          <span className={css.meterActions} data-composer-meter-actions>
+            <Tooltip label={t('input.saveState')} side="top" delayMs={500} disabled={locked} portal>
+              <button
+                type="button"
+                className={css.meterAction}
+                aria-label={t('input.saveState')}
+                disabled={locked}
+                onMouseDown={keepFocus}
+                onClick={() => { runOperatorCommand('save') }}
+              >
+                {t('input.save')}
+              </button>
+            </Tooltip>
+            {renderSlot('conversation.composer.meter.trailing', {})}
+            <Tooltip label={t('input.deployProduction')} side="top" delayMs={500} disabled={locked} portal>
+              <button
+                type="button"
+                className={css.meterAction}
+                aria-label={t('input.deployProduction')}
+                data-composer-deploy
+                disabled={locked}
+                onMouseDown={keepFocus}
+                onClick={() => { runOperatorCommand('deploy') }}
+              >
+                {t('input.production')}
+              </button>
+            </Tooltip>
+          </span>
+        )}
       </div>
     </div>
   )
