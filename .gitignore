@@ -53,3 +53,8 @@ package-status.json
 
 # Generated company-signed CUA release record.
 /packages/experimental/cua-macos/cua-helper.json
+
+# Local packaging run status and launcher (not part of the build).
+packaging-status.txt
+packaging.log
+run-package.ps1
