@@ -299,7 +299,8 @@ describe('WorkspacePicker', () => {
         ]))}
         useSessionStatus={hook(noPendingInteraction)}
         useSessionRetainInfo={() => undefined}
-        usePanelInfo={usePanelInfo} useResource={useResource}
+        usePanelInfo={usePanelInfo} useContextMenu={contextMenuHook()} useResource={useResource}
+        {...allowAllAccess}
         selectedId={wid('beta')}
         onPick={vi.fn()} onClose={vi.fn()} createWorkspace={vi.fn()}
         useDirectoryFlow={occupancySource().useDirectoryFlow} renderSlot={renderSlot} t={t}
