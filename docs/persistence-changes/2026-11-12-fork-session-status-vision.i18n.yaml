@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for 2026-11-12-fork-session-status-vision.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/persistence-changes/2026-11-12-fork-session-status-vision.md
+/:
+  en: 3d5a424ae7d7e46b
+  zh: c22a8e4a62d8cc1a
+/2026-11-12-fork-session-status-vision:
+  en: a86c3d3e22972190
+  zh: af10fe2d46b6ed3c
+/2026-11-12-fork-session-status-vision/summary:
+  en: 6c1338a100165be6
+  zh: 4a93e42c2a6e685c
+/2026-11-12-fork-session-status-vision/table-of-contents:
+  en: 6cf314a069ceb451
+  zh: 9adff678e9ecab3b
+/2026-11-12-fork-session-status-vision/declaration:
+  en: 6907136f28e48c90
+  zh: 02f8298485f3d8e7
+/2026-11-12-fork-session-status-vision/compatibility:
+  en: ee5dfff1ab0c8240
+  zh: 9409ca628070c31c
+/2026-11-12-fork-session-status-vision/verification:
+  en: 670247647142222e
+  zh: 9d8ef3e32b203f4f
+/2026-11-12-fork-session-status-vision/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

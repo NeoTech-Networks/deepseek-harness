@@ -110,7 +110,7 @@ Append-only; the description is part of the new user message and does not invali
 <details>
 <summary>Working context for maintainers, click to expand</summary>
 
-The design record is the [vision routing Agent Note](../../../.agents/notes/implemented/feature/2026-09-08-vision-routing.md). The persistence acknowledgement for the new source kind is [2026-09-24-vision-routing-source](../../../docs/persistence-changes/2026-09-24-vision-routing-source.md).
+The design record is the [vision routing Agent Note](../../../.agents/notes/implemented/feature/2026-09-08-vision-routing.md). The persistence acknowledgement for the new source kind is [2026-11-12-fork-session-status-vision](../../../docs/persistence-changes/2026-11-12-fork-session-status-vision.md).
 
 </details>
 

@@ -110,7 +110,7 @@ describe 请求带有自己的消息来源 kind `vision-routing`，声明在 `Me
 <details>
 <summary>面向维护者的工作上下文，点击展开</summary>
 
-设计记录见[视觉路由 Agent Note](../../../.agents/notes/implemented/feature/2026-09-08-vision-routing.zh.md)。新来源 kind 的持久化确认记录见 [2026-09-24-vision-routing-source](../../../docs/persistence-changes/2026-09-24-vision-routing-source.zh.md)。
+设计记录见[视觉路由 Agent Note](../../../.agents/notes/implemented/feature/2026-09-08-vision-routing.zh.md)。新来源 kind 的持久化确认记录见 [2026-11-12-fork-session-status-vision](../../../docs/persistence-changes/2026-11-12-fork-session-status-vision.zh.md)。
 
 </details>
 
