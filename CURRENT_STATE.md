@@ -1,5 +1,16 @@
 # CURRENT_STATE (capped newest-first log)
 
+## 2026-11-14 - 0.2.2-rc.3 installed and verified; DS Bot 0.3.6
+
+- UPDATE: upstream `dsh-v0.2.2-rc.3` (2026-11-13, six commits: experimental `deepseek-chat-import` plugin, not in any shipped bundle; Windows NSIS restart-status fix for failed in-app updates). Branch `update/v0.2.2-rc.3`, worktree `C:\dsh\223`, HEAD `ffa0c4406f`, fork tag `dsh-v0.2.2-rc.3-fork`, both pushed and read back.
+- METHOD: tag MERGED into `update/v0.2.2-rc.2` (`f6c22dc64f`), 3 conflicts (ui-workspace index keep-both; slot and api catalogs regenerated; capability-seams pairing re-recorded). One upstream trailing blank line trimmed for the whitespace hook.
+- COMPLETENESS: rc.2 branch is an ancestor of HEAD; 351 of 351 fork-only files byte-identical.
+- INSTALLED 09:15 from Claude Code (`-WhatIf` clean, no Harness in the ancestry). Installer 326,390,808 bytes, sha256 `FF281162...1AEC`, kept in `C:\Projects\exports\2026-11-14-dsh-0.2.2-rc.3\`. Installed `app.asar` byte-identical to the built one.
+- HARDLINK REPAIRED again: AGENTS.md was the newer side (11-12 and 11-13 rulebook sections); its bytes written into CLAUDE.md in place, link remade, both originals kept beside the installer.
+- PROFILE: five plugins re-pinned to `0.2.2-rc.3` and ds-bot 0.3.5 to 0.3.6 in one `dsh.cmd plugin --profile desktop add`; `patches/ds-bot@0.3.6.patch` is the 0.3.5 patch byte-for-byte (0.3.6 changes `package.json` only). App relaunched through Explorer, process 09:26:01 > plugin 09:25:15. Backups `*.bak-before-036-20261114` in the profile.
+- Previous: 0.2.2-rc.2 installed 2026-11-12 09:45 from `C:\dsh\222` (`66c3fee7cf`), see the playbook version row.
+- Session log: `C:\Projects\logs\2026-11-14\dsh-0.2.2-rc.3\`.
+
 ## 2026-10-24 - 0.2.1-rc.3 installed and verified (43 of 43 features)
 
 - UPDATE: upstream `dsh-v0.2.1-rc.3` (2026-10-23, six commits: More menus, navigation pins, New Session draft kept, analytics click events, API-key route follows `/models`). Branch `update/v0.2.1-rc.3`, worktree `C:\d213`, HEAD `35ba87ca75`, fork tag `dsh-v0.2.1-rc.3-fork`, both pushed and read back.
