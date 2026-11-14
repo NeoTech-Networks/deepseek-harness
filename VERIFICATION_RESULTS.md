@@ -1,5 +1,15 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-11-14 - 0.2.2-rc.3 and DS Bot 0.3.6, what was proved and what was not
+
+- VERIFIED install: one uninstall row `7808434f-...` DisplayVersion `0.2.2-rc.3`; installer exit 0; 25 of 25 vault files same; preset check "up to date".
+- VERIFIED running code: installed `app.asar` sha256 `85502d7d...9035` equals the packaged one; `dsh_local_features_check.py` 47 of 48 (`team-teammate-model` absent, unchanged since rc.1).
+- VERIFIED gates: build 10 of 10, typecheck 5 of 5; packaged smoke passed on the second run (first run: pnpm smoke spawn timeout after its ok line).
+- VERIFIED hooks after the restart, from session logs: UserPromptSubmit, PreToolUse, PostToolUse and Stop `hook/result` all exit 0; 7 SessionStart cards written after 09:26. SessionStart chain 17 hooks, all exit 0, 10.25 s serial.
+- VERIFIED MCP: a `composio_vendors` shared Postgres call answered `successful: true` (the bot's query returned no rows).
+- VERIFIED DS Bot 0.3.6: `node_modules/ds-bot` reads 0.3.6, patch applied (not in pnpm's unused list), a bot session answered 5 assistant messages; its request carried only allowed `composio_vendors` groups, none of the MONDAY, NINJAONE or NANOBANANA prefixes, so `mcpOffFor` holds.
+- NOT SEEN ON SCREEN: the mode picker (`selectedDefault: standard-hooks` file-read only), the combined sidebar, the chat import.
+
 ## 2026-11-05 - Bot team restore and 0.2.2-rc.1, what was proved and what was not
 
 - VERIFIED the bot team is back, from disk: destination `state.json` re-parsed
