@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "secretFiles": ["C:\\Users\\SteveDempsey\\.dsh\\bot\\secrets.json"],
+  "secretCommandFragments": [".dsh/bot/secrets.json"],
+  "operatorRoot": {
+    "root": "C:\\Users\\SteveDempsey\\.dsh\\bot",
+    "except": [
+      "C:\\Users\\SteveDempsey\\.dsh\\bot\\workspace",
+      "C:\\Users\\SteveDempsey\\.dsh\\bot\\logs",
+      "C:\\Users\\SteveDempsey\\.dsh\\bot\\memory"
+    ]
+  },
+  "everyone": [
+    { "root": "C:\\Users\\SteveDempsey\\.dsh\\bot\\workspace", "kinds": ["write"] },
+    { "root": "C:\\Users\\SteveDempsey\\.claude\\Exports", "kinds": ["write"] }
+  ],
+  "tiers": [
+    {
+      "name": "main",
+      "bots": ["Igor", "SEO Overlord", "Chief"],
+      "grants": [
+        { "root": "C:\\Users\\SteveDempsey\\.claude", "kinds": ["write"] },
+        { "root": "C:\\Claude", "kinds": ["write"] },
+        { "root": "C:\\Projects\\repos\\agent-skills", "kinds": ["write"] },
+        { "root": "C:\\Projects\\temp", "kinds": ["write"] },
+        { "root": "C:\\Projects\\_tmp", "kinds": ["write"] }
+      ]
+    },
+    {
+      "name": "coding-owner",
+      "bots": ["NeoTech Code", "ABC Code", "SIG Code", "Vercel Dashboards", "Composio"],
+      "grants": [
+        { "root": "C:\\Projects\\_wt", "kinds": ["write"] }
+      ]
+    }
+  ],
+  "bots": {
+    "NeoTech Code": [
+      { "root": "C:\\Projects\\repos\\neotech-railway-services", "kinds": ["write"] },
+      { "root": "C:\\Projects\\repos\\shared-services", "kinds": ["write"] }
+    ],
+    "ABC Code": [
+      { "root": "C:\\Projects\\repos\\abc-railway-services", "kinds": ["write"] }
+    ],
+    "SIG Code": [
+      { "root": "C:\\Projects\\repos\\sig-railway-services", "kinds": ["write"] }
+    ],
+    "Vercel Dashboards": [
+      { "root": "C:\\Projects\\repos\\vercel-services", "kinds": ["write"] }
+    ],
+    "Composio": [
+      { "root": "C:\\Projects\\repos\\playbooks", "kinds": ["write"] }
+    ]
+  }
+}

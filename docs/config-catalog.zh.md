@@ -582,6 +582,24 @@ export interface Config {
 
 来源：[`packages/experimental/agent-team/src/types.ts:124`](../packages/experimental/agent-team/src/types.ts)
 
+<a id="deepseek-aidsh-experimental-bot-tool-policy"></a>
+
+## `@deepseek-ai/dsh-experimental-bot-tool-policy`
+
+需要：`agents` · `tools`
+
+```ts config-catalog
+/** Locations of the two files the policy reads. */
+export interface Config {
+  /** Side file holding the policy. Defaults to `bot/tool-policy.json` under the DeepSeek Harness home. */
+  readonly policyPath?: string
+  /** DS Bot store mapping Sessions to bots. Defaults to `bot/state.json` under the DeepSeek Harness home. */
+  readonly storePath?: string
+}
+```
+
+来源：[`packages/experimental/bot-tool-policy/src/index.ts:36`](../packages/experimental/bot-tool-policy/src/index.ts)
+
 <a id="deepseek-aidsh-experimental-code-runtime-python"></a>
 
 ## `@deepseek-ai/dsh-experimental-code-runtime-python`
