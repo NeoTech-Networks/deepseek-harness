@@ -57,6 +57,26 @@ describe('local attachment service', () => {
       .toThrow(expect.objectContaining({ code: 'INVALID_ATTACHMENT_REF' }))
   })
 
+  it('stores a thin image under the pixel budget with its long edge at 8000 or less', async () => {
+    // Claude models refuse any image side over 8000 px. A 200x8150 source is
+    // admitted (8192 per side), under the total-pixel budget, and inside the
+    // 8001 to 8192 window, so only the long-edge default can shrink it.
+    const dshHome = await mkdtemp(join(tmpdir(), 'dsh-attachment-long-edge-'))
+    try {
+      const service = new LocalAttachmentStore(new Context(), { dshHome })
+      const source = new Uint8Array(await sharp({
+        create: { width: 200, height: 8150, channels: 3, background: { r: 200, g: 210, b: 220 } },
+      }).png().toBuffer())
+      const saved = await service.saveImage({ data: source, mediaType: 'image/png' })
+      expect(Math.max(saved.width, saved.height)).toBeLessThanOrEqual(8000)
+      const metadata = await sharp((await service.readImage(saved)).data).metadata()
+      expect(Math.max(metadata.width ?? 0, metadata.height ?? 0)).toBeLessThanOrEqual(8000)
+      expect(DEFAULT_NORMALIZED_IMAGE_MAX_DIMENSION).toBe(8000)
+    } finally {
+      await rm(dshHome, { recursive: true, force: true })
+    }
+  })
+
   it('resolves and validates the instance image-compression concurrency', () => {
     expect(new LocalAttachmentStore(new Context(), { imageCompressionConcurrency: 1 }).imageCompressionConcurrency).toBe(1)
     for (const imageCompressionConcurrency of [0, 1.5, 9]) {
