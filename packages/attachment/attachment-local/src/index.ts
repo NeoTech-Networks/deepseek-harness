@@ -48,8 +48,8 @@ export const DEFAULT_MAX_IMAGE_DIMENSION = 8192
  * a long-edge rule.
  */
 export const DEFAULT_NORMALIZED_IMAGE_MAX_PIXELS = 2048 * 2048
-/** Default long-edge cap of the stored normalized image, applied after the total-pixel budget. */
-export const DEFAULT_NORMALIZED_IMAGE_MAX_DIMENSION = 8192
+/** Default long-edge cap of the stored normalized image, after the total-pixel budget; 8000 because Claude models refuse a side over 8000 px. */
+export const DEFAULT_NORMALIZED_IMAGE_MAX_DIMENSION = 8000
 /** Default encoded-byte target for one stored normalized image. */
 export const DEFAULT_NORMALIZED_IMAGE_MAX_BYTES = 4 * 1024 * 1024
 /** Conservative default number of simultaneous native image transformations per store. */
