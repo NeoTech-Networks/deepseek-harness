@@ -1,5 +1,29 @@
 # VERIFICATION_RESULTS (capped newest-first log)
 
+## 2026-11-22 - Harness 0.2.2-rc.5 and DS Bot 0.3.10
+
+- VERIFIED version: uninstall key `7808434f-...` reads `0.2.2-rc.5`, one row; installed `app.asar` dated 2026-11-19 18:30.
+- VERIFIED features: `dsh_local_features_check.py` on the installed asar, 47 of 48; the absent row is `team-teammate-model` (absent since rc.3).
+- VERIFIED no dropped commits: subject-list diff `dsh-v0.2.2-rc.3..update/v0.2.2-rc.3` vs `dsh-v0.2.2-rc.5..update/v0.2.2-rc.5` printed nothing.
+- VERIFIED hardlink: `~\.dsh\AGENTS.md` and `~\.claude\CLAUDE.md` share file id `0x...170000000a94a4`; `fsutil hardlink list` names both.
+- VERIFIED DS Bot install: `node_modules/ds-bot/package.json` 0.3.10; all 30 patched files byte-identical to the merge worktree; lockfile `patch_hash=74505a56...`; lockfile diff is only the ds-bot and five plugin rows. `card-gate.log` wrote `gate-loaded` at 21:06:09 (local module running).
+- VERIFIED patch: `git apply --check` clean on a fresh `npm pack ds-bot@0.3.10`; applied copy byte-identical to the merge for all 30 files.
+- VERIFIED hooks live: Igor session `befe7f5e` after the restart logged `hook/result` exit 0 for UserPromptSubmit (21:10:26, 21:13:05), Stop (21:13:01), PreToolUse and PostToolUse (21:13:40, 21:13:48, around a `pwsh` tool call). SessionStart card `emitted-context/session-befe7f5e-....json` exists.
+- VERIFIED a Bot turn end to end: Igor turn 113 completed at 21:13:01 after one Kimi OAuth-refresh timeout retry.
+- TESTS: merge suite 3984 tests, 3896 pass, 8 fail, 80 skipped; clean v0.3.10 baseline 3845 tests, 11 fail. New-vs-baseline: symlink EPERM (environmental) and one load-timing flake (passes alone 3 of 3). 0.3.10 origin-only reply tests skipped with the fan-out reason.
+- NOT A REGRESSION: four `connector ... upstream POST HTTP 400` warnings (context7, github, vercel, deepwiki) appear before and after the restart.
+- SEEN BY STEVE, not this session: sidebar, a bot chat and the Settings screen.
+- UNPROVEN: a real Telegram card on 0.3.10; per-bot tool count on a live request.
+
+## 2026-11-17 - DS Bot 0.3.8
+
+- VERIFIED method: patch rebuilt from `33b96332` equals the live 0.3.6 patch byte for byte (sha256 `bbd42f41...`).
+- VERIFIED tests: merged tree 2982 pass, 3 fail, 32 skipped; the 3 failures (link build, connectors-gateway, phone) also fail on a clean v0.3.8 worktree. Lint: no errors. `build-client.mjs --check` current.
+- VERIFIED install: `node_modules/ds-bot` version 0.3.8; all 30 patched files byte-identical to the merged source; `mcpOffFor` present; 9 `[2026-11-17 local]` markers; lockfile changed only the ds-bot rows plus `semver`/`undici`.
+- VERIFIED live: card gate reloaded 08:20:55; SEO Overlord turn completed 08:24:19 and handed work to YouTube, which answered; Railway Health request 202 tools (970 without the cut); no new parts; 0 new diagnostics errors.
+- CODE-READ only: Telegram typed-answer button (`typedButton`, `typeable`) and `cardLayout` in the installed `im/index.js`; combined sidebar (`bt-tile-grid`) in the installed `client.js`; `updateCheck: false` still in the profile.
+- NOT SEEN: reading pill, sidebar and a bot chat on screen (Steve to glance). Flaky once under full-suite load: `queued deliveries are kept whole, not cut at fifty` (passes alone).
+
 ## 2026-11-17 - DS Bot restart bundle (#25, #26, #27, image cap)
 
 - VERIFIED installed code: lockfile `patch_hash` reads `bbd42f41...` on all three lines; `node_modules/ds-bot` has `flushHeld` (6 hits, #26), `WAIT_CEILING_MS` (2, #27), `forceReply: chat.kind === 'group'` (#25) and `mcpOffFor`; the patch reverse-applies cleanly; `client.js` byte-identical to the pre-bundle build (`8127d8ca...`).
@@ -184,30 +208,3 @@
 - VERIFIED MCP: 10 of 10 mounted servers answered a read-only call (composio on a retry after a transient `fetch failed`). Screaming Frog is not mounted because its local app was not running.
 - SEEN on screen (headless against the live host): mode picker "Standard + Claude Code hooks"; More menu with Browse other plugins and Create your plugin; New Session draft kept after switching away and back (probe text cleared afterwards); composer Save / Archive / Production buttons; footer Skills Used and Purpose lines.
 - VERIFIED hardlink: `fsutil hardlink list` names both paths, both file ids `0x...01116b38`.
-
-## 2026-10-18 - 0.2.1-rc.2 post-upgrade review (hooks, plan mode, worktree guard)
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| Hook bridge package in profile | both at 0.2.1-rc.2 | package.json and both node_modules copies read `0.2.1-rc.2` | VERIFIED |
-| Hooks fire after restart | non-zero `hook/result`, exit 0 | session f4db5a32: 341 PreToolUse, 340 PostToolUse, 23 UserPromptSubmit, Stop 5 pass + 1 block | VERIFIED |
-| Deny path | worktree guard refuses a primary-checkout Write | refused 10:10, with the `working_directory` hint | VERIFIED |
-| Plan dismissal is a decline | `{approved:false}` and 0.2.1 text not read as approval | `test_plan_handoff_dsh.py` 17 passed | VERIFIED |
-| Guard and bridge suites | green | 134 passed (guard + backend capability), 106 passed (bridge) | VERIFIED |
-| Skill copies | three equal hashes, v5 | all `D7DF0900...`; `skill_version.py` "both copies agree" | VERIFIED |
-
-## 2026-10-18 - Claude route and hook bridge after the 0.2.1-rc.2 install
-
-| Check | Expected | Result | Status |
-|---|---|---|---|
-| Anthropic hosts resolve | 3 hosts | api.anthropic.com, claude.ai, console.anthropic.com all 160.79.104.10 (DoH, status 0) | VERIFIED |
-| Anthropic TCP 443 | connects | 20 of 20 over 60 s, 13 to 46 ms; Cloudflare 20 of 20; DeepSeek 8 of 8 | VERIFIED |
-| Stored OAuth token valid | HTTP 200 | `GET /v1/models` 200 in 0.33 s, 14 models, expires 2026-10-18T20:04:52Z | VERIFIED |
-| Endpoint reaches Anthropic | any HTTP answer | `POST /v1/messages` HTTP 429 in 0.30 s (rate limited, request understood) | VERIFIED |
-| A turn completes | `kind: completed` | `turn/end` `{"kind":"completed"}`, 0 retries, `claude-opus-5-5` | VERIFIED |
-| Tool call ran | tool/result present | `pwsh` echo, tool/call seq 26, tool/result seq 33, PreToolUse and PostToolUse each exit 0 | VERIFIED |
-| Hooks fire after restart | exit 0 per point | UserPromptSubmit 1, PreToolUse 1, PostToolUse 1, Stop 1, all exit 0 | VERIFIED for those four points |
-| SessionStart | fires | not logged as `hook/result` (OPEN_ISSUES 16, reconfirmed over 13 records), but its emitted-context card for the test session was written 09:21:25 carrying the railway orientation block | VERIFIED by card, not by log |
-| Bridge loaded, not just installed | process start earlier than plugin mtime | plugins written 08:19:14, processes started 08:04:20 before restart; 09:06:46 after | VERIFIED |
-| Not a regression of the upgrade | model setting unchanged | `anthropic / claude-opus-5-5` identical to the 2026-10-07 backup | VERIFIED |
-| NordVPN change was the fix | a change was made | NO change made: tunnel last transitioned 07:31:32 and the path cleared on its own | NOT APPLICABLE, recorded as intermittent |
